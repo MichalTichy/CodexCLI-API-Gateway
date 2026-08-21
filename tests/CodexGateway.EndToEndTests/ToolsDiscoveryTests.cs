@@ -66,7 +66,10 @@ public sealed class ToolsDiscoveryTests : IDisposable
             Name = "Alpha",
             Enabled = true,
             Url = "https://config-secret.example.test/mcp?token=secret-query-value",
-            BearerTokenEnvironmentVariable = "TOOLS_DISCOVERY_HTTP_SECRET",
+            EnvironmentHeaders = new Dictionary<string, string>
+            {
+                ["X-Api-Key"] = "TOOLS_DISCOVERY_HTTP_SECRET"
+            },
             AvailableTools = ["write", "delete", "read"]
         });
         await CreateProjectAsync(
@@ -129,7 +132,7 @@ public sealed class ToolsDiscoveryTests : IDisposable
             Assert.DoesNotContain("\"command\"", serialized, StringComparison.Ordinal);
             Assert.DoesNotContain("\"arguments\"", serialized, StringComparison.Ordinal);
             Assert.DoesNotContain("\"environment_variables\"", serialized, StringComparison.Ordinal);
-            Assert.DoesNotContain("\"bearer_token_environment_variable\"", serialized, StringComparison.Ordinal);
+            Assert.DoesNotContain("\"environment_headers\"", serialized, StringComparison.Ordinal);
         }
 
         await AssertDiscoveryCrossedContainerBoundaryAndCleanedUpAsync();

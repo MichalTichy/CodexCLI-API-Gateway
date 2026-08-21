@@ -13,7 +13,7 @@ namespace CodexGateway.Tests;
 public sealed class GatewayMcpSessionManagerTests
 {
     [Fact]
-    public async Task Http_session_replaces_runner_token_with_gateway_api_key_and_expires_with_its_lease()
+    public async Task Http_session_replaces_runner_token_with_environment_backed_upstream_headers()
     {
         const string secretVariable = "CODEX_GATEWAY_MCP_TEST_SECRET";
         const string apiKey = "upstream-api-key";
@@ -29,7 +29,10 @@ public sealed class GatewayMcpSessionManagerTests
                 Name = "Remote tools",
                 ExecutionMode = McpExecutionMode.Gateway,
                 Url = "https://mcp.example.test/stream",
-                BearerTokenEnvironmentVariable = secretVariable
+                EnvironmentHeaders = new Dictionary<string, string>
+                {
+                    ["X-Api-Key"] = secretVariable
+                }
             };
 
             await using var lease = await sessions.CreateAsync(
@@ -50,10 +53,9 @@ public sealed class GatewayMcpSessionManagerTests
                 CancellationToken.None);
 
             Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-            Assert.NotNull(upstream.Authorization);
-            Assert.Equal("Bearer", upstream.Authorization.Scheme);
-            Assert.Equal(apiKey, upstream.Authorization.Parameter);
-            Assert.NotEqual(connection.BearerToken, upstream.Authorization.Parameter);
+            Assert.Null(upstream.Authorization);
+            Assert.Equal(apiKey, upstream.ApiKey);
+            Assert.NotEqual(connection.BearerToken, upstream.ApiKey);
             Assert.Equal("""{"jsonrpc":"2.0","id":1,"method":"tools/list"}""", upstream.Body);
         }
         finally
@@ -78,7 +80,10 @@ public sealed class GatewayMcpSessionManagerTests
                 Name = "Remote tools",
                 ExecutionMode = McpExecutionMode.Gateway,
                 Url = "https://mcp.example.test/stream",
-                BearerTokenEnvironmentVariable = secretVariable
+                EnvironmentHeaders = new Dictionary<string, string>
+                {
+                    ["X-Api-Key"] = secretVariable
+                }
             };
 
             await using var lease = await sessions.CreateAsync(
@@ -96,6 +101,7 @@ public sealed class GatewayMcpSessionManagerTests
 
             Assert.Equal(StatusCodes.Status401Unauthorized, context.Response.StatusCode);
             Assert.Null(upstream.Authorization);
+            Assert.Null(upstream.ApiKey);
         }
         finally
         {
@@ -184,6 +190,8 @@ public sealed class GatewayMcpSessionManagerTests
     {
         public AuthenticationHeaderValue? Authorization { get; private set; }
 
+        public string? ApiKey { get; private set; }
+
         public string? Body { get; private set; }
 
         protected override async Task<HttpResponseMessage> SendAsync(
@@ -191,6 +199,9 @@ public sealed class GatewayMcpSessionManagerTests
             CancellationToken cancellationToken)
         {
             Authorization = request.Headers.Authorization;
+            ApiKey = request.Headers.TryGetValues("X-Api-Key", out var values)
+                ? values.SingleOrDefault()
+                : null;
             Body = request.Content is null
                 ? null
                 : await request.Content.ReadAsStringAsync(cancellationToken);

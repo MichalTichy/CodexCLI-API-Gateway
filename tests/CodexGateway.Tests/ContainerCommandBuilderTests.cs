@@ -210,7 +210,10 @@ public sealed class ContainerCommandBuilderTests
             Name = "Gateway MCP",
             ExecutionMode = McpExecutionMode.Gateway,
             Url = "https://upstream.example.test/mcp",
-            BearerTokenEnvironmentVariable = "UPSTREAM_TOKEN",
+            EnvironmentHeaders = new Dictionary<string, string>
+            {
+                ["X-Api-Key"] = "UPSTREAM_TOKEN"
+            },
             EnvironmentVariables = ["UPSTREAM_EXTRA"],
             AvailableTools = ["read"]
         };
@@ -258,14 +261,17 @@ public sealed class ContainerCommandBuilderTests
             Id = "metadata-mcp",
             Name = "Metadata MCP",
             Url = "https://mcp.example.test",
-            BearerTokenEnvironmentVariable = "MCP_TOKEN",
+            EnvironmentHeaders = new Dictionary<string, string>
+            {
+                ["X-Api-Key"] = "MCP_TOKEN"
+            },
             EnvironmentVariables = ["MCP_EXTRA"],
             AvailableTools = ["lookup", "write"]
         };
         var source = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
         {
             ["PATH"] = "/safe/bin",
-            ["MCP_TOKEN"] = "bearer-secret",
+            ["MCP_TOKEN"] = "header-secret",
             ["MCP_EXTRA"] = "extra-secret",
             ["OPENAI_API_KEY"] = "provider-secret",
             ["Gateway__ApiKeys__0__Key"] = "gateway-secret"
@@ -303,6 +309,9 @@ public sealed class ContainerCommandBuilderTests
         Assert.Contains("--read-only", arguments);
         Assert.Contains("mcp_servers={}", arguments);
         Assert.Contains("mcp_servers.metadata_mcp.enabled_tools=[\"lookup\"]", arguments);
+        Assert.Contains(
+            "mcp_servers.metadata_mcp.env_http_headers={\"X-Api-Key\"=\"MCP_TOKEN\"}",
+            arguments);
         Assert.Contains("CODEX_HOME=/codex-home", arguments);
         Assert.Contains("HOME=/codex-home", arguments);
         Assert.Contains(
@@ -311,13 +320,13 @@ public sealed class ContainerCommandBuilderTests
         Assert.Contains("MCP_TOKEN", arguments);
         Assert.Contains("MCP_EXTRA", arguments);
         Assert.DoesNotContain("OPENAI_API_KEY", arguments);
-        Assert.Equal("bearer-secret", startInfo.Environment["MCP_TOKEN"]);
+        Assert.Equal("header-secret", startInfo.Environment["MCP_TOKEN"]);
         Assert.Equal("extra-secret", startInfo.Environment["MCP_EXTRA"]);
         Assert.False(startInfo.Environment.ContainsKey("OPENAI_API_KEY"));
         Assert.False(startInfo.Environment.ContainsKey("Gateway__ApiKeys__0__Key"));
         Assert.DoesNotContain(
             arguments,
-            argument => argument.Contains("bearer-secret", StringComparison.Ordinal) ||
+            argument => argument.Contains("header-secret", StringComparison.Ordinal) ||
                         argument.Contains("extra-secret", StringComparison.Ordinal) ||
                         argument.Contains("provider-secret", StringComparison.Ordinal) ||
                         argument.Contains("gateway-secret", StringComparison.Ordinal));
@@ -511,8 +520,10 @@ public sealed class ContainerCommandBuilderTests
             Id = "test-mcp",
             Name = "Test MCP",
             Url = "https://mcp.example.test",
-            BearerTokenEnvironmentVariable = "MCP_TOKEN",
-            EnvironmentVariables = ["MCP_TOKEN"],
+            EnvironmentHeaders = new Dictionary<string, string>
+            {
+                ["X-Api-Key"] = "MCP_TOKEN"
+            },
             AvailableTools = ["read"]
         };
         return new CodexRunRequest(

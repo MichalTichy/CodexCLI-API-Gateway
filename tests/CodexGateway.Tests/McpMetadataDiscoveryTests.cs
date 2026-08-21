@@ -155,7 +155,10 @@ public sealed class McpMetadataDiscoveryTests
         {
             Definition = (HttpMcpServerDefinition)CreateResolved("alpha", required: false).Definition with
             {
-                BearerTokenEnvironmentVariable = "ALPHA_TOKEN",
+                EnvironmentHeaders = new Dictionary<string, string>
+                {
+                    ["X-Api-Key"] = "ALPHA_TOKEN"
+                },
                 EnvironmentVariables = ["ALPHA_EXTRA"]
             }
         };
@@ -184,7 +187,10 @@ public sealed class McpMetadataDiscoveryTests
             Definition = (HttpMcpServerDefinition)CreateResolved("gateway", required: false).Definition with
             {
                 ExecutionMode = McpExecutionMode.Gateway,
-                BearerTokenEnvironmentVariable = "UPSTREAM_TOKEN",
+                EnvironmentHeaders = new Dictionary<string, string>
+                {
+                    ["X-Api-Key"] = "UPSTREAM_TOKEN"
+                },
                 EnvironmentVariables = ["UPSTREAM_EXTRA"]
             }
         };

@@ -18,7 +18,7 @@ public sealed class GatewayMcpEndpointTests : IAsyncDisposable
     private readonly string _root = Path.Combine(Path.GetTempPath(), "codex-gateway-mcp-e2e", Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public async Task Internal_gateway_mcp_endpoint_uses_scoped_token_and_forwards_real_api_key()
+    public async Task Internal_gateway_mcp_endpoint_uses_scoped_token_and_forwards_environment_header()
     {
         Directory.CreateDirectory(_root);
         var (upstreamUrl, capture, disposeUpstream) = await StartUpstreamAsync();
@@ -35,7 +35,10 @@ public sealed class GatewayMcpEndpointTests : IAsyncDisposable
                 Name = "Gateway HTTP",
                 ExecutionMode = McpExecutionMode.Gateway,
                 Url = upstreamUrl,
-                BearerTokenEnvironmentVariable = ApiKeyEnvVar,
+                EnvironmentHeaders = new Dictionary<string, string>
+                {
+                    ["X-Api-Key"] = ApiKeyEnvVar
+                },
                 AvailableTools = ["read"]
             };
 
@@ -54,9 +57,8 @@ public sealed class GatewayMcpEndpointTests : IAsyncDisposable
             response.EnsureSuccessStatusCode();
 
             var received = await capture.Task.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            Assert.Equal("Bearer", received.AuthorizationScheme);
-            Assert.Equal("real-api-key-value", received.AuthorizationParameter);
-            Assert.NotEqual(connection.BearerToken, received.AuthorizationParameter);
+            Assert.Equal("real-api-key-value", received.ApiKey);
+            Assert.NotEqual(connection.BearerToken, received.ApiKey);
 
             using var wrong = new HttpRequestMessage(HttpMethod.Post, path);
             wrong.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "wrong-token");
@@ -95,7 +97,7 @@ public sealed class GatewayMcpEndpointTests : IAsyncDisposable
                 {
                     var context = await listener.GetContextAsync();
                     var body = await new StreamReader(context.Request.InputStream, context.Request.ContentEncoding).ReadToEndAsync();
-                    capture.Record(context.Request.Headers["Authorization"], body);
+                    capture.Record(context.Request.Headers["X-Api-Key"], body);
                     var payload = Encoding.UTF8.GetBytes("{\"ok\":true}");
                     context.Response.StatusCode = 200;
                     context.Response.ContentType = "application/json";
@@ -136,15 +138,14 @@ public sealed class GatewayMcpEndpointTests : IAsyncDisposable
         public int Count => Volatile.Read(ref _count);
         public TaskCompletionSource<ReceivedRequest> Task { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public void Record(string? authorization, string body)
+        public void Record(string? apiKey, string body)
         {
             if (Interlocked.Increment(ref _count) == 1)
             {
-                var parts = authorization?.Split(' ', 2) ?? [];
-                Task.TrySetResult(new ReceivedRequest(parts.Length > 0 ? parts[0] : null, parts.Length > 1 ? parts[1] : null, body));
+                Task.TrySetResult(new ReceivedRequest(apiKey, body));
             }
         }
     }
 
-    private sealed record ReceivedRequest(string? AuthorizationScheme, string? AuthorizationParameter, string Body);
+    private sealed record ReceivedRequest(string? ApiKey, string Body);
 }
