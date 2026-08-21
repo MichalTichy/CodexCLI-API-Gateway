@@ -153,7 +153,7 @@ public sealed class McpMetadataDiscoveryTests
     {
         var resolved = CreateResolved("alpha", required: false) with
         {
-            Definition = CreateResolved("alpha", required: false).Definition with
+            Definition = (HttpMcpServerDefinition)CreateResolved("alpha", required: false).Definition with
             {
                 BearerTokenEnvironmentVariable = "ALPHA_TOKEN",
                 EnvironmentVariables = ["ALPHA_EXTRA"]
@@ -181,7 +181,7 @@ public sealed class McpMetadataDiscoveryTests
     {
         var resolved = CreateResolved("gateway", required: false) with
         {
-            Definition = CreateResolved("gateway", required: false).Definition with
+            Definition = (HttpMcpServerDefinition)CreateResolved("gateway", required: false).Definition with
             {
                 ExecutionMode = McpExecutionMode.Gateway,
                 BearerTokenEnvironmentVariable = "UPSTREAM_TOKEN",
@@ -332,11 +332,10 @@ public sealed class McpMetadataDiscoveryTests
     }
 
     private static ResolvedMcpServer CreateResolved(string id, bool required) => new(
-        new McpServerDefinition
+        new HttpMcpServerDefinition
         {
             Id = id,
             Name = id,
-            Transport = McpTransport.Http,
             Url = "https://mcp.example.test",
             AvailableTools = ["lookup"]
         },

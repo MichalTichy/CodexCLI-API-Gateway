@@ -347,12 +347,11 @@ public sealed class ProtocolNeutralApplicationTests
     [Fact]
     public async Task Tool_catalog_is_typed_and_distinguishes_visible_from_invocable_tools()
     {
-        var server = new McpServerDefinition
+        var server = new HttpMcpServerDefinition
         {
             Id = "catalog",
             Name = "Catalog",
             Enabled = true,
-            Transport = McpTransport.Http,
             Url = "https://mcp.example.test",
             AvailableTools = ["read", "write", "hidden"]
         };
@@ -371,8 +370,7 @@ public sealed class ProtocolNeutralApplicationTests
                         {
                             ServerId = server.Id,
                             Required = true,
-                            EnabledTools = ["write"],
-                            VisibleTools = ["read", "write"]
+                            EnabledTools = ["read", "write"]
                         }
                     ]
                 }
@@ -398,8 +396,6 @@ public sealed class ProtocolNeutralApplicationTests
         var catalogServer = Assert.Single(result.Servers);
         Assert.True(catalogServer.Required);
         Assert.Equal(["read", "write"], catalogServer.Tools.Select(tool => tool.Name));
-        Assert.False(catalogServer.Tools.Single(tool => tool.Name == "read").CanInvoke);
-        Assert.True(catalogServer.Tools.Single(tool => tool.Name == "write").CanInvoke);
         Assert.Equal("catalog/write", catalogServer.Tools.Single(tool => tool.Name == "write").Id);
     }
 

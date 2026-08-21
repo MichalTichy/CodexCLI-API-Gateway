@@ -23,12 +23,11 @@ public sealed class GatewayMcpSessionManagerTests
         {
             var upstream = new RecordingHttpMessageHandler();
             var sessions = CreateManager(upstream);
-            var server = new McpServerDefinition
+            var server = new HttpMcpServerDefinition
             {
                 Id = "remote-tools",
                 Name = "Remote tools",
                 ExecutionMode = McpExecutionMode.Gateway,
-                Transport = McpTransport.Http,
                 Url = "https://mcp.example.test/stream",
                 BearerTokenEnvironmentVariable = secretVariable
             };
@@ -73,12 +72,11 @@ public sealed class GatewayMcpSessionManagerTests
         {
             var upstream = new RecordingHttpMessageHandler();
             var sessions = CreateManager(upstream);
-            var server = new McpServerDefinition
+            var server = new HttpMcpServerDefinition
             {
                 Id = "remote-tools",
                 Name = "Remote tools",
                 ExecutionMode = McpExecutionMode.Gateway,
-                Transport = McpTransport.Http,
                 Url = "https://mcp.example.test/stream",
                 BearerTokenEnvironmentVariable = secretVariable
             };
@@ -112,12 +110,11 @@ public sealed class GatewayMcpSessionManagerTests
         Directory.CreateDirectory(workspace);
         try
         {
-            var server = new McpServerDefinition
+            var server = new StdioMcpServerDefinition
             {
                 Id = "local-tools",
                 Name = "Local tools",
                 ExecutionMode = McpExecutionMode.Gateway,
-                Transport = McpTransport.Stdio,
                 Command = "node",
                 Arguments = [Path.Combine(AppContext.BaseDirectory, "test-assets", "mcp-smoke-server.mjs")]
             };

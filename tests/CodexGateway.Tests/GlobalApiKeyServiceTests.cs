@@ -73,12 +73,11 @@ public sealed class GlobalApiKeyServiceTests : IDisposable
     {
         var services = CreateServices();
         await services.SaveMcp.Handle(
-            new CreateOrUpdateMcpServerUseCase(new McpServerDefinition
+            new CreateOrUpdateMcpServerUseCase(new HttpMcpServerDefinition
             {
                 Id = "trusted-mcp",
                 Name = "Trusted MCP",
                 Enabled = true,
-                Transport = McpTransport.Http,
                 Url = "https://mcp.example.test",
                 AvailableTools = ["read", "write"]
             }),

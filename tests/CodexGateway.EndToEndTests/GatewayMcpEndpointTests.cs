@@ -29,12 +29,11 @@ public sealed class GatewayMcpEndpointTests : IAsyncDisposable
             using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
             var sessionFactory = factory.Services.GetRequiredService<IGatewayMcpSessionFactory>();
 
-            var server = new McpServerDefinition
+            var server = new HttpMcpServerDefinition
             {
                 Id = "gateway-http",
                 Name = "Gateway HTTP",
                 ExecutionMode = McpExecutionMode.Gateway,
-                Transport = McpTransport.Http,
                 Url = upstreamUrl,
                 BearerTokenEnvironmentVariable = ApiKeyEnvVar,
                 AvailableTools = ["read"]

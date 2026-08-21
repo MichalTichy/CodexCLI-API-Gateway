@@ -160,11 +160,10 @@ public sealed class ContainerCommandBuilderTests
     {
         var storageRoot = Path.GetFullPath(Path.Combine("test-data", "gateway-data"));
         var workspaceRoot = Path.Combine(storageRoot, "runs", "run_stdio");
-        var server = new McpServerDefinition
+        var server = new StdioMcpServerDefinition
         {
             Id = "stdio-mcp",
             Name = "STDIO MCP",
-            Transport = McpTransport.Stdio,
             Command = "/opt/mcp/server",
             Arguments = ["--stdio", "argument with spaces"],
             EnvironmentVariables = ["MCP_STDIO_TOKEN"],
@@ -205,12 +204,11 @@ public sealed class ContainerCommandBuilderTests
     {
         var storageRoot = Path.GetFullPath(Path.Combine("test-data", "gateway-data"));
         var workspaceRoot = Path.Combine(storageRoot, "runs", "run_gateway");
-        var server = new McpServerDefinition
+        var server = new HttpMcpServerDefinition
         {
             Id = "gateway-mcp",
             Name = "Gateway MCP",
             ExecutionMode = McpExecutionMode.Gateway,
-            Transport = McpTransport.Http,
             Url = "https://upstream.example.test/mcp",
             BearerTokenEnvironmentVariable = "UPSTREAM_TOKEN",
             EnvironmentVariables = ["UPSTREAM_EXTRA"],
@@ -255,11 +253,10 @@ public sealed class ContainerCommandBuilderTests
         var storageRoot = Path.GetFullPath(Path.Combine("test-data", "gateway-data"));
         var workspaceRoot = Path.Combine(storageRoot, "runs", "run_discovery");
         var codexHome = Path.Combine(storageRoot, "auth-that-must-not-be-mounted");
-        var server = new McpServerDefinition
+        var server = new HttpMcpServerDefinition
         {
             Id = "metadata-mcp",
             Name = "Metadata MCP",
-            Transport = McpTransport.Http,
             Url = "https://mcp.example.test",
             BearerTokenEnvironmentVariable = "MCP_TOKEN",
             EnvironmentVariables = ["MCP_EXTRA"],
@@ -509,11 +506,10 @@ public sealed class ContainerCommandBuilderTests
 
     private static CodexRunRequest CreateRequest(string workspaceRoot)
     {
-        var server = new McpServerDefinition
+        var server = new HttpMcpServerDefinition
         {
             Id = "test-mcp",
             Name = "Test MCP",
-            Transport = McpTransport.Http,
             Url = "https://mcp.example.test",
             BearerTokenEnvironmentVariable = "MCP_TOKEN",
             EnvironmentVariables = ["MCP_TOKEN"],

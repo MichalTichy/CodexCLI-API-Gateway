@@ -48,25 +48,23 @@ public sealed class ToolsDiscoveryTests : IDisposable
     }
 
     [Fact]
-    public async Task Default_catalog_and_full_alias_return_exact_visible_metadata_and_permissions()
+    public async Task Default_catalog_and_full_alias_return_exact_enabled_metadata()
     {
-        await _factory.UpsertMcpServerAsync(new McpServerDefinition
+        await _factory.UpsertMcpServerAsync(new StdioMcpServerDefinition
         {
             Id = "zeta",
             Name = "Zeta",
             Enabled = true,
-            Transport = McpTransport.Stdio,
             Command = "secret-zeta-command",
             Arguments = ["--secret-zeta-argument"],
             EnvironmentVariables = ["TOOLS_DISCOVERY_STDIO_SECRET"],
             AvailableTools = ["mutate", "lookup"]
         });
-        await _factory.UpsertMcpServerAsync(new McpServerDefinition
+        await _factory.UpsertMcpServerAsync(new HttpMcpServerDefinition
         {
             Id = "alpha",
             Name = "Alpha",
             Enabled = true,
-            Transport = McpTransport.Http,
             Url = "https://config-secret.example.test/mcp?token=secret-query-value",
             BearerTokenEnvironmentVariable = "TOOLS_DISCOVERY_HTTP_SECRET",
             AvailableTools = ["write", "delete", "read"]
@@ -75,14 +73,11 @@ public sealed class ToolsDiscoveryTests : IDisposable
             "discover-tools",
             Access(
                 "default",
-                Grant("zeta", enabledTools: ["lookup"], visibleTools: ["lookup"]),
-                OptionalGrant("alpha", enabledTools: ["read"], visibleTools: ["write", "read"])),
+                Grant("zeta", "lookup"),
+                OptionalGrant("alpha", "read")),
             Access(
                 "secondary",
-                Grant(
-                    "alpha",
-                    enabledTools: ["write", "delete"],
-                    visibleTools: ["read", "write", "delete"])));
+                Grant("alpha", "write", "delete")));
 
         using var defaultPathResponse = await SendAsync("/p/discover-tools/v1/tools", DefaultKey);
         using var defaultHeaderResponse = await SendAsync("/v1/tools", DefaultKey, "discover-tools");
@@ -229,9 +224,8 @@ public sealed class ToolsDiscoveryTests : IDisposable
             alpha.GetProperty("icons"));
 
         var alphaTools = alpha.GetProperty("tools").EnumerateArray().ToArray();
-        Assert.Equal(new[] { "read", "write" }, alphaTools.Select(ToolName).ToArray());
-        AssertReadTool(alphaTools[0], canInvoke: true);
-        AssertWriteTool(alphaTools[1], canInvoke: false);
+        var read = Assert.Single(alphaTools);
+        AssertReadTool(read);
 
         var zeta = servers[1];
         AssertServer(zeta, "zeta", "Zeta", "9.8.7", required: true, hasOptionalMetadata: false);
@@ -239,9 +233,8 @@ public sealed class ToolsDiscoveryTests : IDisposable
         var zetaTools = zeta.GetProperty("tools").EnumerateArray().ToArray();
         var lookup = Assert.Single(zetaTools);
         Assert.Equal("lookup", ToolName(lookup));
-        AssertPropertyNames(lookup, "id", "name", "description", "input_schema", "annotations", "can_invoke");
+        AssertPropertyNames(lookup, "id", "name", "description", "input_schema", "annotations");
         Assert.Equal("zeta/lookup", lookup.GetProperty("id").GetString());
-        Assert.True(lookup.GetProperty("can_invoke").GetBoolean());
         Assert.Equal("Looks up a value.", lookup.GetProperty("description").GetString());
         AssertJsonEquals(
             """
@@ -263,15 +256,14 @@ public sealed class ToolsDiscoveryTests : IDisposable
         var alpha = Assert.Single(payload.GetProperty("data").EnumerateArray());
         AssertServer(alpha, "alpha", "Alpha", "1.2.3", required: true, hasOptionalMetadata: true);
         var tools = alpha.GetProperty("tools").EnumerateArray().ToArray();
-        Assert.Equal(new[] { "delete", "read", "write" }, tools.Select(ToolName).ToArray());
+        Assert.Equal(new[] { "delete", "write" }, tools.Select(ToolName).ToArray());
 
         var delete = tools[0];
         Assert.Equal("delete", ToolName(delete));
-        AssertPropertyNames(delete, "id", "name", "title", "description", "input_schema", "can_invoke");
+        AssertPropertyNames(delete, "id", "name", "title", "description", "input_schema");
         Assert.Equal("alpha/delete", delete.GetProperty("id").GetString());
         Assert.Equal("Delete record", delete.GetProperty("title").GetString());
         Assert.Equal("Deletes one record.", delete.GetProperty("description").GetString());
-        Assert.True(delete.GetProperty("can_invoke").GetBoolean());
         AssertJsonEquals(
             """
             {
@@ -282,8 +274,7 @@ public sealed class ToolsDiscoveryTests : IDisposable
             """,
             delete.GetProperty("input_schema"));
 
-        AssertReadTool(tools[1], canInvoke: false);
-        AssertWriteTool(tools[2], canInvoke: true);
+        AssertWriteTool(tools[1]);
     }
 
     private static void AssertServer(
@@ -306,12 +297,11 @@ public sealed class ToolsDiscoveryTests : IDisposable
         Assert.Equal(JsonValueKind.Array, server.GetProperty("tools").ValueKind);
     }
 
-    private static void AssertReadTool(JsonElement tool, bool canInvoke)
+    private static void AssertReadTool(JsonElement tool)
     {
         Assert.Equal("read", ToolName(tool));
-        AssertPropertyNames(tool, "id", "name", "input_schema", "can_invoke");
+        AssertPropertyNames(tool, "id", "name", "input_schema");
         Assert.Equal("alpha/read", tool.GetProperty("id").GetString());
-        Assert.Equal(canInvoke, tool.GetProperty("can_invoke").GetBoolean());
         AssertJsonEquals(
             """
             {
@@ -322,7 +312,7 @@ public sealed class ToolsDiscoveryTests : IDisposable
             tool.GetProperty("input_schema"));
     }
 
-    private static void AssertWriteTool(JsonElement tool, bool canInvoke)
+    private static void AssertWriteTool(JsonElement tool)
     {
         Assert.Equal("write", ToolName(tool));
         AssertPropertyNames(
@@ -335,10 +325,8 @@ public sealed class ToolsDiscoveryTests : IDisposable
             "output_schema",
             "annotations",
             "icons",
-            "_meta",
-            "can_invoke");
+            "_meta");
         Assert.Equal("alpha/write", tool.GetProperty("id").GetString());
-        Assert.Equal(canInvoke, tool.GetProperty("can_invoke").GetBoolean());
         Assert.Equal("Write record", tool.GetProperty("title").GetString());
         Assert.Equal("Writes one record.", tool.GetProperty("description").GetString());
         AssertJsonEquals(
@@ -530,27 +518,19 @@ public sealed class ToolsDiscoveryTests : IDisposable
         McpServers = [.. grants]
     };
 
-    private static ProjectMcpAssignment Grant(
-        string serverId,
-        string[] enabledTools,
-        string[] visibleTools) => new()
-        {
-            ServerId = serverId,
-            Required = true,
-            EnabledTools = [.. enabledTools],
-            VisibleTools = [.. visibleTools]
-        };
+    private static ProjectMcpAssignment Grant(string serverId, params string[] enabledTools) => new()
+    {
+        ServerId = serverId,
+        Required = true,
+        EnabledTools = [.. enabledTools]
+    };
 
-    private static ProjectMcpAssignment OptionalGrant(
-        string serverId,
-        string[] enabledTools,
-        string[] visibleTools) => new()
-        {
-            ServerId = serverId,
-            Required = false,
-            EnabledTools = [.. enabledTools],
-            VisibleTools = [.. visibleTools]
-        };
+    private static ProjectMcpAssignment OptionalGrant(string serverId, params string[] enabledTools) => new()
+    {
+        ServerId = serverId,
+        Required = false,
+        EnabledTools = [.. enabledTools]
+    };
 
     private sealed record Invocation(string Mode, string[] Arguments, int ProcessId);
 }
