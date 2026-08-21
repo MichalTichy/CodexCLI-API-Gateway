@@ -46,24 +46,6 @@ public partial class ProjectEditor : ComponentBase
         }
     }
 
-    private static void SetVisible(ToolGrantEditorModel tool, ChangeEventArgs eventArgs)
-    {
-        tool.Visible = eventArgs.Value is true;
-        if (!tool.Visible)
-        {
-            tool.Enabled = false;
-        }
-    }
-
-    private static void SetEnabled(ToolGrantEditorModel tool, ChangeEventArgs eventArgs)
-    {
-        tool.Enabled = eventArgs.Value is true;
-        if (tool.Enabled)
-        {
-            tool.Visible = true;
-        }
-    }
-
     private async Task SaveAsync()
     {
         if (_busy)

@@ -16,7 +16,7 @@ internal sealed class McpServerEditorModel
 
     public McpExecutionMode ExecutionMode { get; set; } = McpExecutionMode.Gateway;
 
-    public McpTransport Transport { get; set; }
+    public bool IsHttp { get; set; } = true;
 
     public string Url { get; set; } = string.Empty;
 
@@ -24,10 +24,10 @@ internal sealed class McpServerEditorModel
 
     public string Location
     {
-        get => Transport == McpTransport.Http ? Url : Command;
+        get => IsHttp ? Url : Command;
         set
         {
-            if (Transport == McpTransport.Http)
+            if (IsHttp)
             {
                 Url = value;
             }
@@ -46,38 +46,58 @@ internal sealed class McpServerEditorModel
 
     public string AvailableTools { get; set; } = string.Empty;
 
-    public static McpServerEditorModel From(McpServerDefinition server) => new()
+    public static McpServerEditorModel From(McpServerDefinition server)
     {
-        Id = server.Id,
-        Name = server.Name,
-        Enabled = server.Enabled,
-        ExecutionMode = server.ExecutionMode,
-        Transport = server.Transport,
-        Url = server.Url ?? string.Empty,
-        Command = server.Command ?? string.Empty,
-        Arguments = string.Join(Environment.NewLine, server.Arguments ?? []),
-        BearerTokenEnvironmentVariable = server.BearerTokenEnvironmentVariable ?? string.Empty,
-        EnvironmentVariables = string.Join(Environment.NewLine, server.EnvironmentVariables ?? []),
-        AvailableTools = string.Join(Environment.NewLine, server.AvailableTools ?? [])
-    };
+        var model = new McpServerEditorModel
+        {
+            Id = server.Id,
+            Name = server.Name,
+            Enabled = server.Enabled,
+            ExecutionMode = server.ExecutionMode,
+            IsHttp = server is HttpMcpServerDefinition,
+            AvailableTools = string.Join(Environment.NewLine, server.AvailableTools ?? [])
+        };
+        if (server is HttpMcpServerDefinition http)
+        {
+            model.Url = http.Url;
+            model.BearerTokenEnvironmentVariable = http.BearerTokenEnvironmentVariable ?? string.Empty;
+        }
+        else if (server is StdioMcpServerDefinition stdio)
+        {
+            model.Command = stdio.Command;
+            model.Arguments = string.Join(Environment.NewLine, stdio.Arguments ?? []);
+            model.EnvironmentVariables = string.Join(Environment.NewLine, stdio.EnvironmentVariables ?? []);
+        }
+
+        return model;
+    }
 
     public McpServerDefinition ToDefinition()
     {
         var location = Location.Trim();
-        return new McpServerDefinition
+        if (IsHttp)
+        {
+            return new HttpMcpServerDefinition
+            {
+                Id = Id,
+                Name = Name,
+                Enabled = Enabled,
+                ExecutionMode = ExecutionMode,
+                Url = location,
+                BearerTokenEnvironmentVariable = AdminText.NullIfWhiteSpace(BearerTokenEnvironmentVariable),
+                AvailableTools = AdminText.Lines(AvailableTools)
+            };
+        }
+
+        return new StdioMcpServerDefinition
         {
             Id = Id,
             Name = Name,
             Enabled = Enabled,
             ExecutionMode = ExecutionMode,
-            Transport = Transport,
-            Url = Transport == McpTransport.Http ? AdminText.NullIfWhiteSpace(location) : null,
-            Command = Transport == McpTransport.Stdio ? AdminText.NullIfWhiteSpace(location) : null,
-            Arguments = Transport == McpTransport.Stdio ? AdminText.Lines(Arguments) : [],
-            BearerTokenEnvironmentVariable = Transport == McpTransport.Http
-                ? AdminText.NullIfWhiteSpace(BearerTokenEnvironmentVariable)
-                : null,
-            EnvironmentVariables = Transport == McpTransport.Stdio ? AdminText.Lines(EnvironmentVariables) : [],
+            Command = location,
+            Arguments = AdminText.Lines(Arguments),
+            EnvironmentVariables = AdminText.Lines(EnvironmentVariables),
             AvailableTools = AdminText.Lines(AvailableTools)
         };
     }

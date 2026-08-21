@@ -8,7 +8,7 @@
                 <h3>@Server.Name</h3>
                 <div class="badge-row">
                     <span class="badge @(Server.Enabled ? "on" : "off")">@(Server.Enabled ? "Enabled" : "Disabled")</span>
-                    <span class="badge">@Server.Transport.ToString().ToUpperInvariant()</span>
+                    <span class="badge">@(Server is HttpMcpServerDefinition ? "HTTP" : "STDIO")</span>
                     <span class="badge">@Server.ExecutionMode</span>
                 </div>
                 <div class="muted small mono">@Server.Id</div>
@@ -38,9 +38,9 @@
             </div>
             <div class="field narrow">
                 <label for="@($"server-transport-{Server.Id}")">Transport</label>
-                <InputSelect id="@($"server-transport-{Server.Id}")" @bind-Value="_editor.Transport">
-                    <option value="@McpTransport.Http">HTTP</option>
-                    <option value="@McpTransport.Stdio">STDIO</option>
+                <InputSelect id="@($"server-transport-{Server.Id}")" @bind-Value="_editor.IsHttp">
+                    <option value="true">HTTP</option>
+                    <option value="false">STDIO</option>
                 </InputSelect>
             </div>
             <div class="field narrow">
@@ -57,7 +57,7 @@
                 </label>
             </div>
 
-            @if (_editor.Transport == McpTransport.Http)
+            @if (_editor.IsHttp)
             {
                 <div class="field wide">
                     <label for="@($"server-url-{Server.Id}")">HTTP URL</label>
