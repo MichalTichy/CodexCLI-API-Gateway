@@ -180,7 +180,7 @@ public sealed class McpMetadataDiscoveryService(
                 {
                     HttpMcpServerDefinition http => server.Definition.EnvironmentVariables
                         .Cast<string?>()
-                        .Concat(Enumerable.Repeat(http.BearerTokenEnvironmentVariable, 1)),
+                        .Concat(http.EnvironmentHeaders.Values),
                     StdioMcpServerDefinition => server.Definition.EnvironmentVariables,
                     _ => []
                 };
