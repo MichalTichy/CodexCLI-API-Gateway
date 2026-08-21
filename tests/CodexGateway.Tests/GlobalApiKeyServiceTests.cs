@@ -69,6 +69,50 @@ public sealed class GlobalApiKeyServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Http_mcp_environment_headers_are_normalized_and_validated()
+    {
+        var services = CreateServices();
+        var saved = Assert.IsType<HttpMcpServerDefinition>(await services.SaveMcp.Handle(
+            new CreateOrUpdateMcpServerUseCase(new HttpMcpServerDefinition
+            {
+                Id = "header-auth",
+                Name = "Header auth",
+                Url = "https://mcp.example.test",
+                EnvironmentHeaders = new Dictionary<string, string>
+                {
+                    ["X-Api-Key"] = "MCP_API_KEY",
+                    ["Authorization"] = "MCP_AUTHORIZATION"
+                }
+            }),
+            CancellationToken.None));
+
+        Assert.Equal("MCP_API_KEY", saved.EnvironmentHeaders["x-api-key"]);
+        Assert.Equal("MCP_AUTHORIZATION", saved.EnvironmentHeaders["authorization"]);
+
+        var invalidHeader = await Assert.ThrowsAsync<GatewayException>(() => services.SaveMcp.Handle(
+            new CreateOrUpdateMcpServerUseCase(saved with
+            {
+                EnvironmentHeaders = new Dictionary<string, string>
+                {
+                    ["Invalid Header"] = "MCP_API_KEY"
+                }
+            }),
+            CancellationToken.None));
+        Assert.Equal("environment_headers", invalidHeader.Field);
+
+        var reservedVariable = await Assert.ThrowsAsync<GatewayException>(() => services.SaveMcp.Handle(
+            new CreateOrUpdateMcpServerUseCase(saved with
+            {
+                EnvironmentHeaders = new Dictionary<string, string>
+                {
+                    ["Authorization"] = "OPENAI_API_KEY"
+                }
+            }),
+            CancellationToken.None));
+        Assert.Equal("environment_headers", reservedVariable.Field);
+    }
+
+    [Fact]
     public async Task Project_access_is_explicit_per_global_key_and_validated_against_the_catalog()
     {
         var services = CreateServices();

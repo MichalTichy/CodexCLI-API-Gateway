@@ -141,7 +141,10 @@ public sealed class ProjectApiKeyAccessTests : IDisposable
             Name = "Catalog",
             Enabled = true,
             Url = "https://mcp.example.test",
-            BearerTokenEnvironmentVariable = "GW_MCP_TEST_TOKEN",
+            EnvironmentHeaders = new Dictionary<string, string>
+            {
+                ["X-Api-Key"] = "GW_MCP_TEST_TOKEN"
+            },
             AvailableTools = ["read", "write", "delete"]
         });
 
