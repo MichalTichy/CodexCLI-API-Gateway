@@ -165,7 +165,7 @@ public sealed partial class CreateOrUpdateMcpServerUseCaseHandler(
         {
             throw GatewayException.InvalidRequest(
                 $"Environment variable '{variable}' cannot be forwarded to an MCP server.",
-                parameter);
+                parameter: parameter);
         }
     }
 
