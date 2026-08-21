@@ -1,0 +1,60 @@
+using System.Text.RegularExpressions;
+using CodexGateway.Logic.Errors;
+using CodexGateway.Logic.Security;
+using CodexGateway.Logic.Storage;
+using CodexGateway.Models;
+using MediatR;
+
+namespace CodexGateway.Logic.UseCases.ApiKeys;
+
+public sealed partial class CreateApiKeyUseCaseHandler(
+    IGatewayConfigurationRepository repository,
+    GlobalApiKeyService apiKeys)
+    : IRequestHandler<CreateApiKeyUseCase, GatewayApiKeyDefinition>
+{
+    public async Task<GatewayApiKeyDefinition> Handle(
+        CreateApiKeyUseCase request,
+        CancellationToken cancellationToken)
+    {
+        var id = request.Id?.Trim().ToLowerInvariant() ?? string.Empty;
+        var name = request.Name?.Trim() ?? string.Empty;
+        var key = request.Key?.Trim() ?? string.Empty;
+        if (!IdPattern().IsMatch(id))
+        {
+            throw GatewayException.InvalidRequest(
+                "API key IDs must contain 1-64 lowercase letters, numbers, underscores, or hyphens.",
+                parameter: "id");
+        }
+
+        if (name.Length is 0 or > 128)
+        {
+            throw GatewayException.InvalidRequest("API key name is required and limited to 128 characters.", parameter: "name");
+        }
+
+        if (key.Length == 0 || !string.Equals(key, request.Key, StringComparison.Ordinal))
+        {
+            throw GatewayException.InvalidRequest("API key is required and cannot start or end with whitespace.", parameter: "key");
+        }
+
+        var created = new GatewayApiKeyDefinition { Id = id, Name = name, Key = key };
+        var state = await repository.UpdateAsync(current =>
+        {
+            if (current.ApiKeys.Any(existing =>
+                    string.Equals(existing.Id, id, StringComparison.Ordinal) ||
+                    string.Equals(existing.Key, key, StringComparison.Ordinal)))
+            {
+                throw GatewayException.InvalidRequest(
+                    "API key IDs and secrets must be unique.",
+                    "api_key_exists",
+                    "id");
+            }
+
+            return current with { ApiKeys = [.. current.ApiKeys, created] };
+        }, cancellationToken);
+        apiKeys.Replace(state.ApiKeys);
+        return created;
+    }
+
+    [GeneratedRegex("^[a-z0-9][a-z0-9_-]{0,63}$", RegexOptions.CultureInvariant)]
+    private static partial Regex IdPattern();
+}

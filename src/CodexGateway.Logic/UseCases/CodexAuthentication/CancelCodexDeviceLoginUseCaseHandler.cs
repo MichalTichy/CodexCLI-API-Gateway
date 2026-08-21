@@ -1,0 +1,13 @@
+using CodexGateway.Logic.Codex;
+using MediatR;
+
+namespace CodexGateway.Logic.UseCases.CodexAuthentication;
+
+public sealed class CancelCodexDeviceLoginUseCaseHandler(ICodexControlPlane codex)
+    : IRequestHandler<CancelCodexDeviceLoginUseCase>
+{
+    public Task Handle(
+        CancelCodexDeviceLoginUseCase request,
+        CancellationToken cancellationToken) =>
+        codex.CancelDeviceLoginAsync(cancellationToken);
+}
