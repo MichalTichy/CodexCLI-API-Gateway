@@ -9,6 +9,7 @@ using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.McpServers;
 using CodexGateway.Logic.Configuration;
 using CodexGateway.Logic.Storage;
+using CodexGateway.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -338,13 +339,25 @@ public sealed class ContainerRuntime
         IReadOnlyDictionary<string, GatewayMcpRunnerConnection> gatewayConnections) =>
         servers.SelectMany(server =>
         {
+            IEnumerable<string?> names;
             if (server.Definition.ExecutionMode == CodexGateway.Models.McpExecutionMode.Gateway &&
                 gatewayConnections.TryGetValue(server.Definition.Id, out var connection))
             {
-                return new[] { connection.BearerTokenEnvironmentVariable };
+                names = [connection.BearerTokenEnvironmentVariable];
+            }
+            else
+            {
+                names = server.Definition switch
+                {
+                    HttpMcpServerDefinition http => server.Definition.EnvironmentVariables
+                        .Cast<string?>()
+                        .Concat(Enumerable.Repeat(http.BearerTokenEnvironmentVariable, 1)),
+                    StdioMcpServerDefinition => server.Definition.EnvironmentVariables,
+                    _ => []
+                };
             }
 
-            return server.Definition.EnvironmentVariables.Append(server.Definition.BearerTokenEnvironmentVariable);
+            return names;
         })
         .Where(variable => !string.IsNullOrWhiteSpace(variable))
         .Cast<string>()

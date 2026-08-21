@@ -187,10 +187,10 @@ public sealed class ContainerCodexRunner(
         ContainerCommandBuilder.AddConfig(arguments, $"{key}.enabled=true");
         ContainerCommandBuilder.AddConfig(arguments, $"{key}.required={resolved.Required.ToString().ToLowerInvariant()}");
         ContainerCommandBuilder.AddConfig(arguments, $"{key}.default_tools_approval_mode=\"approve\"");
-        if (server.Transport == McpTransport.Http)
+        if (server is HttpMcpServerDefinition http)
         {
-            ContainerCommandBuilder.AddConfig(arguments, $"{key}.url={TomlString(connection?.Url ?? server.Url!)}");
-            var bearerEnv = connection?.BearerTokenEnvironmentVariable ?? server.BearerTokenEnvironmentVariable;
+            ContainerCommandBuilder.AddConfig(arguments, $"{key}.url={TomlString(connection?.Url ?? http.Url)}");
+            var bearerEnv = connection?.BearerTokenEnvironmentVariable ?? http.BearerTokenEnvironmentVariable;
             if (!string.IsNullOrWhiteSpace(bearerEnv))
             {
                 ContainerCommandBuilder.AddConfig(
@@ -198,14 +198,18 @@ public sealed class ContainerCodexRunner(
                     $"{key}.bearer_token_env_var={TomlString(bearerEnv)}");
             }
         }
+        else if (server is StdioMcpServerDefinition stdio)
+        {
+            ContainerCommandBuilder.AddConfig(arguments, $"{key}.command={TomlString(stdio.Command)}");
+            ContainerCommandBuilder.AddConfig(arguments, $"{key}.args={TomlArray(stdio.Arguments)}");
+            if (stdio.EnvironmentVariables.Count > 0)
+            {
+                ContainerCommandBuilder.AddConfig(arguments, $"{key}.env_vars={TomlArray(stdio.EnvironmentVariables)}");
+            }
+        }
         else
         {
-            ContainerCommandBuilder.AddConfig(arguments, $"{key}.command={TomlString(server.Command!)}");
-            ContainerCommandBuilder.AddConfig(arguments, $"{key}.args={TomlArray(server.Arguments)}");
-            if (server.EnvironmentVariables.Count > 0)
-            {
-                ContainerCommandBuilder.AddConfig(arguments, $"{key}.env_vars={TomlArray(server.EnvironmentVariables)}");
-            }
+            throw new InvalidOperationException($"MCP server '{server.Id}' has an unsupported transport.");
         }
 
         ContainerCommandBuilder.AddConfig(arguments, $"{key}.enabled_tools={TomlArray(resolved.EnabledTools)}");
