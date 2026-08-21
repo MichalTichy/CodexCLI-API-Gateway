@@ -88,6 +88,9 @@ public sealed class JsonGatewayConfigurationRepository(StoragePaths paths)
         {
             HttpMcpServerDefinition http => http with
             {
+                EnvironmentHeaders = new Dictionary<string, string>(
+                    http.EnvironmentHeaders ?? [],
+                    StringComparer.OrdinalIgnoreCase),
                 EnvironmentVariables = environmentVariables,
                 AvailableTools = availableTools
             },
