@@ -4,11 +4,9 @@ using CodexGateway.Logic.Tools;
 namespace CodexGateway.Logic.Specifications;
 
 /// <summary>
-/// Projects discovered MCP metadata through the caller's visible and enabled
-/// grants. Visibility controls planning metadata; enabled tools are invocable.
+/// Projects discovered MCP metadata through the caller's enabled tool grants.
 /// </summary>
 public sealed class ToolCatalogProjectionSpecification(
-    IReadOnlyList<ResolvedMcpServer> visibleServers,
     IReadOnlyList<ResolvedMcpServer> enabledServers)
     : ISpecification<IReadOnlyList<DiscoveredMcpServer>, ToolCatalog>
 {
@@ -16,34 +14,29 @@ public sealed class ToolCatalogProjectionSpecification(
     {
         ArgumentNullException.ThrowIfNull(discoveredServers);
 
-        var visibleById = visibleServers.ToDictionary(
-            server => server.Definition.Id,
-            StringComparer.Ordinal);
         var enabledById = enabledServers.ToDictionary(
             server => server.Definition.Id,
-            server => server.EnabledTools.ToHashSet(StringComparer.Ordinal),
             StringComparer.Ordinal);
 
         var servers = discoveredServers
-            .Where(server => server.ServerInfo is not null && visibleById.ContainsKey(server.ServerId))
+            .Where(server => server.ServerInfo is not null && enabledById.ContainsKey(server.ServerId))
             .OrderBy(server => server.ServerId, StringComparer.Ordinal)
             .Select(server =>
             {
-                var visibility = visibleById[server.ServerId];
-                var visibleTools = visibility.EnabledTools.ToHashSet(StringComparer.Ordinal);
-                var invocableTools = enabledById.GetValueOrDefault(server.ServerId) ?? [];
+                var enabled = enabledById[server.ServerId];
+                var enabledTools = enabled.EnabledTools.ToHashSet(StringComparer.Ordinal);
                 var serverInfo = server.ServerInfo!;
                 return new ToolCatalogServer(
                     server.ServerId,
-                    visibility.Definition.Name,
+                    enabled.Definition.Name,
                     serverInfo.Version,
-                    visibility.Required,
+                    enabled.Required,
                     serverInfo.Title,
                     serverInfo.Description,
                     serverInfo.WebsiteUrl,
                     serverInfo.Icons,
                     server.Tools
-                        .Where(tool => visibleTools.Contains(tool.Name))
+                        .Where(tool => enabledTools.Contains(tool.Name))
                         .OrderBy(tool => tool.Name, StringComparer.Ordinal)
                         .Select(tool => new ToolCatalogTool(
                             server.ServerId,
@@ -54,8 +47,7 @@ public sealed class ToolCatalogProjectionSpecification(
                             tool.OutputSchema,
                             tool.Annotations,
                             tool.Icons,
-                            tool.Meta,
-                            invocableTools.Contains(tool.Name)))
+                            tool.Meta))
                         .ToArray());
             })
             .ToArray();

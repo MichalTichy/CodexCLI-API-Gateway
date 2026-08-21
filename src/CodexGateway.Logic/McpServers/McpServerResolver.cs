@@ -15,14 +15,7 @@ public sealed class McpServerResolver(IGatewayConfigurationRepository repository
             new EnabledMcpServersSpecification(access),
             cancellationToken);
 
-    public Task<IReadOnlyList<ResolvedMcpServer>> ResolveVisibleAsync(
-        ProjectApiKeyAccess? access,
-        CancellationToken cancellationToken) =>
-        repository.QueryAsync(
-            new VisibleMcpServersSpecification(access),
-            cancellationToken);
-
-    private abstract class McpServersSpecification(ProjectApiKeyAccess? access)
+    private sealed class EnabledMcpServersSpecification(ProjectApiKeyAccess? access)
         : ISpecification<GatewayState, IReadOnlyList<ResolvedMcpServer>>
     {
         public IReadOnlyList<ResolvedMcpServer> Apply(GatewayState source)
@@ -48,7 +41,7 @@ public sealed class McpServerResolver(IGatewayConfigurationRepository repository
                     continue;
                 }
 
-                var selected = SelectTools(assignment)
+                var selected = (assignment.EnabledTools ?? [])
                     .Where(tool => (definition.AvailableTools ?? []).Contains(tool, StringComparer.Ordinal))
                     .Distinct(StringComparer.Ordinal)
                     .ToArray();
@@ -57,21 +50,5 @@ public sealed class McpServerResolver(IGatewayConfigurationRepository repository
 
             return result;
         }
-
-        protected abstract IEnumerable<string> SelectTools(ProjectMcpAssignment assignment);
-    }
-
-    private sealed class EnabledMcpServersSpecification(ProjectApiKeyAccess? access)
-        : McpServersSpecification(access)
-    {
-        protected override IEnumerable<string> SelectTools(ProjectMcpAssignment assignment) =>
-            assignment.EnabledTools ?? [];
-    }
-
-    private sealed class VisibleMcpServersSpecification(ProjectApiKeyAccess? access)
-        : McpServersSpecification(access)
-    {
-        protected override IEnumerable<string> SelectTools(ProjectMcpAssignment assignment) =>
-            assignment.VisibleTools ?? assignment.EnabledTools ?? [];
     }
 }

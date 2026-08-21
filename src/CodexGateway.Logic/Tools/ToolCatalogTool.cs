@@ -11,8 +11,7 @@ public sealed record ToolCatalogTool(
     JsonElement? OutputSchema,
     JsonElement? Annotations,
     JsonElement? Icons,
-    JsonElement? Meta,
-    bool CanInvoke)
+    JsonElement? Meta)
 {
     public string Id => ServerId + "/" + Name;
 }

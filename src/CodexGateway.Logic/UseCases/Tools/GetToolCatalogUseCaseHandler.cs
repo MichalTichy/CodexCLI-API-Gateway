@@ -33,9 +33,8 @@ public sealed class GetToolCatalogUseCaseHandler(
                     request.Context.ApiKeyId,
                     token) ?? throw new InvalidApiKeyException();
                 var enabled = await mcpServers.ResolveAsync(access.Access, token);
-                var visible = await mcpServers.ResolveVisibleAsync(access.Access, token);
-                var metadata = await discovery.DiscoverAsync(visible, token);
-                return new ToolCatalogProjectionSpecification(visible, enabled).Apply(metadata);
+                var metadata = await discovery.DiscoverAsync(enabled, token);
+                return new ToolCatalogProjectionSpecification(enabled).Apply(metadata);
             },
             cancellationToken);
     }

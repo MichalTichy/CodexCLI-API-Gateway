@@ -136,26 +136,10 @@ public sealed class UpdateProjectUseCaseHandler(
                         parameter: "enabled_tools");
                 }
 
-                var requestedVisibleTools = assignment.VisibleTools ?? assignment.EnabledTools ?? [];
-                var visibleTools = requestedVisibleTools
-                    .Where(tool => !string.IsNullOrWhiteSpace(tool))
-                    .Distinct(StringComparer.Ordinal)
-                    .Order(StringComparer.Ordinal)
-                    .ToList();
-                if (visibleTools.Count != requestedVisibleTools.Count ||
-                    visibleTools.Any(tool => !server.AvailableTools.Contains(tool, StringComparer.Ordinal)) ||
-                    enabledTools.Any(tool => !visibleTools.Contains(tool, StringComparer.Ordinal)))
-                {
-                    throw GatewayException.InvalidRequest(
-                        $"Visible tools for MCP server '{server.Id}' must be unique, available, and include every enabled tool.",
-                        parameter: "visible_tools");
-                }
-
                 assignments.Add(assignment with
                 {
                     ServerId = server.Id,
-                    EnabledTools = enabledTools,
-                    VisibleTools = visibleTools
+                    EnabledTools = enabledTools
                 });
             }
 

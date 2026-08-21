@@ -31,19 +31,34 @@ public sealed partial class CreateOrUpdateMcpServerUseCaseHandler(
         }
 
         Validate(server);
-        var normalized = server with
+        var availableTools = (server.AvailableTools ?? [])
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+        var environmentVariables = (server.EnvironmentVariables ?? [])
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+        McpServerDefinition normalized = server switch
         {
-            Id = id,
-            Name = server.Name.Trim(),
-            Arguments = (server.Arguments ?? []).ToList(),
-            AvailableTools = (server.AvailableTools ?? [])
-                .Distinct(StringComparer.Ordinal)
-                .Order(StringComparer.Ordinal)
-                .ToList(),
-            EnvironmentVariables = (server.EnvironmentVariables ?? [])
-                .Distinct(StringComparer.Ordinal)
-                .Order(StringComparer.Ordinal)
-                .ToList()
+            HttpMcpServerDefinition http => http with
+            {
+                Id = id,
+                Name = server.Name.Trim(),
+                EnvironmentVariables = environmentVariables,
+                AvailableTools = availableTools
+            },
+            StdioMcpServerDefinition stdio => stdio with
+            {
+                Id = id,
+                Name = server.Name.Trim(),
+                Arguments = (stdio.Arguments ?? []).ToList(),
+                EnvironmentVariables = environmentVariables,
+                AvailableTools = availableTools
+            },
+            _ => throw GatewayException.InvalidRequest(
+                "MCP server transport is invalid.",
+                parameter: "transport")
         };
 
         await repository.UpdateAsync(state => state with
@@ -70,36 +85,46 @@ public sealed partial class CreateOrUpdateMcpServerUseCaseHandler(
                 parameter: "execution_mode");
         }
 
-        if (server.Transport == McpTransport.Http &&
-            (!Uri.TryCreate(server.Url, UriKind.Absolute, out var uri) ||
-             uri.Scheme is not ("http" or "https")))
+        switch (server)
         {
-            throw GatewayException.InvalidRequest(
-                "HTTP MCP servers require an absolute URL.",
-                parameter: "url");
-        }
+            case HttpMcpServerDefinition http:
+                if (!Uri.TryCreate(http.Url, UriKind.Absolute, out var uri) ||
+                    uri.Scheme is not ("http" or "https"))
+                {
+                    throw GatewayException.InvalidRequest(
+                        "HTTP MCP servers require an absolute URL.",
+                        parameter: "url");
+                }
 
-        if (server.Transport == McpTransport.Stdio && string.IsNullOrWhiteSpace(server.Command))
-        {
-            throw GatewayException.InvalidRequest(
-                "STDIO MCP servers require a command.",
-                parameter: "command");
-        }
+                if (server.ExecutionMode == McpExecutionMode.Gateway &&
+                    string.IsNullOrWhiteSpace(http.BearerTokenEnvironmentVariable))
+                {
+                    throw GatewayException.InvalidRequest(
+                        "Gateway-hosted HTTP MCP servers require an API-key environment variable.",
+                        parameter: "bearer_token_environment_variable");
+                }
 
-        if (server.ExecutionMode == McpExecutionMode.Gateway &&
-            server.Transport == McpTransport.Http &&
-            string.IsNullOrWhiteSpace(server.BearerTokenEnvironmentVariable))
-        {
-            throw GatewayException.InvalidRequest(
-                "Gateway-hosted HTTP MCP servers require an API-key environment variable.",
-                parameter: "bearer_token_environment_variable");
-        }
+                break;
+            case StdioMcpServerDefinition stdio:
+                if (string.IsNullOrWhiteSpace(stdio.Command))
+                {
+                    throw GatewayException.InvalidRequest(
+                        "STDIO MCP servers require a command.",
+                        parameter: "command");
+                }
 
-        if ((server.Arguments ?? []).Any(argument => argument is null))
-        {
-            throw GatewayException.InvalidRequest(
-                "MCP command arguments cannot be null.",
-                parameter: "arguments");
+                if ((stdio.Arguments ?? []).Any(argument => argument is null))
+                {
+                    throw GatewayException.InvalidRequest(
+                        "MCP command arguments cannot be null.",
+                        parameter: "arguments");
+                }
+
+                break;
+            default:
+                throw GatewayException.InvalidRequest(
+                    "MCP server transport is invalid.",
+                    parameter: "transport");
         }
 
         if ((server.AvailableTools ?? []).Any(string.IsNullOrWhiteSpace))
@@ -109,11 +134,14 @@ public sealed partial class CreateOrUpdateMcpServerUseCaseHandler(
                 parameter: "available_tools");
         }
 
-        var environmentVariables = (server.EnvironmentVariables ?? [])
-            .Append(server.BearerTokenEnvironmentVariable)
+        var configuredEnvironmentVariables = server.EnvironmentVariables
+            .Cast<string?>()
+            .Concat(server is HttpMcpServerDefinition httpServer
+                ? Enumerable.Repeat(httpServer.BearerTokenEnvironmentVariable, 1)
+                : [])
             .Where(name => name is not null)
             .Cast<string>();
-        foreach (var variable in environmentVariables)
+        foreach (var variable in configuredEnvironmentVariables)
         {
             if (!EnvironmentVariablePattern().IsMatch(variable) ||
                 McpCredentialVariablePolicy.IsReserved(variable))
