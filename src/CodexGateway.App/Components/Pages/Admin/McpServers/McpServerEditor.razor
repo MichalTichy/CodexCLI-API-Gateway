@@ -63,9 +63,12 @@
                     <label for="@($"server-url-{Server.Id}")">HTTP URL</label>
                     <InputText id="@($"server-url-{Server.Id}")" type="url" @bind-Value="_editor.Url" placeholder="https://mcp.internal.example" />
                 </div>
-                <div class="field wide">
-                    <label for="@($"server-token-env-{Server.Id}")">Bearer token environment variable</label>
-                    <InputText id="@($"server-token-env-{Server.Id}")" @bind-Value="_editor.BearerTokenEnvironmentVariable" placeholder="MCP_TOKEN" />
+                <div class="field full">
+                    <label for="@($"server-environment-headers-{Server.Id}")">HTTP headers from environment (one per line)</label>
+                    <InputTextArea id="@($"server-environment-headers-{Server.Id}")"
+                                   @bind-Value="_editor.EnvironmentHeaders"
+                                   placeholder="Authorization=MCP_AUTHORIZATION&#10;X-Api-Key=MCP_API_KEY" />
+                    <span class="muted small">Each environment variable contains the complete header value.</span>
                 </div>
             }
             else
