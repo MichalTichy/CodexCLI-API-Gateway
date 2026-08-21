@@ -146,16 +146,16 @@ public sealed class GatewayMcpSessionManager(
         string workspacePath,
         CancellationToken cancellationToken)
     {
-        return definition.Transport switch
+        return definition switch
         {
-            McpTransport.Http => new HttpGatewayMcpUpstream(
+            HttpMcpServerDefinition http => new HttpGatewayMcpUpstream(
                 httpClientFactory.CreateClient(HttpClientName),
-                new Uri(definition.Url!, UriKind.Absolute),
-                GetRequiredEnvironmentValue(definition.BearerTokenEnvironmentVariable, definition.Id)),
-            McpTransport.Stdio => await LocalStdioGatewayMcpUpstream.StartAsync(
-                definition,
+                new Uri(http.Url, UriKind.Absolute),
+                GetRequiredEnvironmentValue(http.BearerTokenEnvironmentVariable, definition.Id)),
+            StdioMcpServerDefinition stdio => await LocalStdioGatewayMcpUpstream.StartAsync(
+                stdio,
                 workspacePath,
-                GetEnvironmentValues(definition.EnvironmentVariables),
+                GetEnvironmentValues(stdio.EnvironmentVariables),
                 logger,
                 cancellationToken),
             _ => throw new InvalidOperationException(

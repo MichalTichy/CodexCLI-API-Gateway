@@ -30,7 +30,7 @@ internal sealed class LocalStdioGatewayMcpUpstream : IGatewayMcpUpstream
     }
 
     public static Task<LocalStdioGatewayMcpUpstream> StartAsync(
-        McpServerDefinition definition,
+        StdioMcpServerDefinition definition,
         string workspacePath,
         IReadOnlyDictionary<string, string> environment,
         ILogger logger,
