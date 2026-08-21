@@ -6,6 +6,7 @@ using CodexGateway.Logic.McpServers;
 using CodexGateway.Logic.Configuration;
 using CodexGateway.Logic.Errors;
 using CodexGateway.Logic.Storage;
+using CodexGateway.Models;
 using Microsoft.Extensions.Options;
 
 namespace CodexGateway.Infrastructure.Codex;
@@ -167,14 +168,25 @@ public sealed class McpMetadataDiscoveryService(
         var comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
         var selectedNames = servers.SelectMany(server =>
         {
+            IEnumerable<string?> names;
             if (server.Definition.ExecutionMode == CodexGateway.Models.McpExecutionMode.Gateway &&
                 gatewayConnections.TryGetValue(server.Definition.Id, out var connection))
             {
-                return new[] { connection.BearerTokenEnvironmentVariable };
+                names = [connection.BearerTokenEnvironmentVariable];
+            }
+            else
+            {
+                names = server.Definition switch
+                {
+                    HttpMcpServerDefinition http => server.Definition.EnvironmentVariables
+                        .Cast<string?>()
+                        .Concat(Enumerable.Repeat(http.BearerTokenEnvironmentVariable, 1)),
+                    StdioMcpServerDefinition => server.Definition.EnvironmentVariables,
+                    _ => []
+                };
             }
 
-            return (server.Definition.EnvironmentVariables ?? [])
-                .Append(server.Definition.BearerTokenEnvironmentVariable);
+            return names;
         })
         .Where(name => !string.IsNullOrWhiteSpace(name))
         .Cast<string>()
