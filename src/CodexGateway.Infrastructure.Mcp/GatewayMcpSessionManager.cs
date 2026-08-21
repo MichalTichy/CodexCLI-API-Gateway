@@ -151,7 +151,7 @@ public sealed class GatewayMcpSessionManager(
             HttpMcpServerDefinition http => new HttpGatewayMcpUpstream(
                 httpClientFactory.CreateClient(HttpClientName),
                 new Uri(http.Url, UriKind.Absolute),
-                GetRequiredEnvironmentValue(http.BearerTokenEnvironmentVariable, definition.Id)),
+                GetEnvironmentHeaders(http.EnvironmentHeaders, definition.Id)),
             StdioMcpServerDefinition stdio => await LocalStdioGatewayMcpUpstream.StartAsync(
                 stdio,
                 workspacePath,
@@ -175,22 +175,24 @@ public sealed class GatewayMcpSessionManager(
         return new Uri(baseUri.ToString().TrimEnd('/') + "/");
     }
 
-    private static string GetRequiredEnvironmentValue(string? name, string serverId)
+    private static IReadOnlyDictionary<string, string> GetEnvironmentHeaders(
+        IReadOnlyDictionary<string, string> headers,
+        string serverId)
     {
-        if (string.IsNullOrWhiteSpace(name))
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (headerName, environmentVariable) in headers)
         {
-            throw new InvalidOperationException(
-                $"Gateway-hosted HTTP MCP server '{serverId}' does not specify an API-key environment variable.");
+            var value = Environment.GetEnvironmentVariable(environmentVariable);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException(
+                    $"Environment variable '{environmentVariable}' for HTTP MCP server '{serverId}' is unavailable.");
+            }
+
+            values.Add(headerName, value);
         }
 
-        var value = Environment.GetEnvironmentVariable(name);
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            throw new InvalidOperationException(
-                $"The API-key environment variable for gateway-hosted MCP server '{serverId}' is unavailable.");
-        }
-
-        return value;
+        return values;
     }
 
     private static IReadOnlyDictionary<string, string> GetEnvironmentValues(

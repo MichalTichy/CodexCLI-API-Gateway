@@ -5,7 +5,7 @@ namespace CodexGateway.Infrastructure.Mcp;
 internal sealed class HttpGatewayMcpUpstream(
     HttpClient client,
     Uri endpoint,
-    string apiKey)
+    IReadOnlyDictionary<string, string> environmentHeaders)
     : IGatewayMcpUpstream
 {
     private static readonly string[] ForwardedHeaders =
@@ -47,7 +47,15 @@ internal sealed class HttpGatewayMcpUpstream(
             }
         }
 
-        upstreamRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        foreach (var (headerName, value) in environmentHeaders)
+        {
+            if (!upstreamRequest.Headers.TryAddWithoutValidation(headerName, value))
+            {
+                throw new InvalidOperationException(
+                    $"HTTP MCP header '{headerName}' cannot be added to the upstream request.");
+            }
+        }
+
         using var upstreamResponse = await client.SendAsync(
             upstreamRequest,
             HttpCompletionOption.ResponseHeadersRead,
