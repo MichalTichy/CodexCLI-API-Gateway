@@ -119,25 +119,16 @@
                                         {
                                             <div class="tool-list">
                                                 <div class="tool-grant-row tool-grant-head" aria-hidden="true">
-                                                    <span>Tool</span><span>Visible</span><span>Enabled</span>
+                                                    <span>Tool</span><span>Enabled</span>
                                                 </div>
                                                 @foreach (var tool in server.Tools)
                                                 {
                                                     <div class="tool-grant-row" @key="tool.Name">
                                                         <span class="mono small">@tool.Name</span>
                                                         <label class="check small">
-                                                            <input type="checkbox"
-                                                                   checked="@tool.Visible"
-                                                                   disabled="@(!toolsAvailable)"
-                                                                   @onchange="eventArgs => SetVisible(tool, eventArgs)" />
-                                                            <span>Plan</span>
-                                                        </label>
-                                                        <label class="check small">
-                                                            <input type="checkbox"
-                                                                   checked="@tool.Enabled"
-                                                                   disabled="@(!toolsAvailable)"
-                                                                   @onchange="eventArgs => SetEnabled(tool, eventArgs)" />
-                                                            <span>Invoke</span>
+                                                            <InputCheckbox @bind-Value="tool.Enabled"
+                                                                           disabled="@(!toolsAvailable)" />
+                                                            <span>Allow</span>
                                                         </label>
                                                     </div>
                                                 }

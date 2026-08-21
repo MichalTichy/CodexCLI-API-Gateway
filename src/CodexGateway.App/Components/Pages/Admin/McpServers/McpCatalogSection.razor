@@ -25,9 +25,9 @@
             </div>
             <div class="field narrow">
                 <label for="new-server-transport">Transport</label>
-                <InputSelect id="new-server-transport" @bind-Value="_create.Transport">
-                    <option value="@McpTransport.Http">HTTP</option>
-                    <option value="@McpTransport.Stdio">STDIO</option>
+                <InputSelect id="new-server-transport" @bind-Value="_create.IsHttp">
+                    <option value="true">HTTP</option>
+                    <option value="false">STDIO</option>
                 </InputSelect>
             </div>
             <div class="field narrow">
@@ -38,13 +38,13 @@
                 </InputSelect>
             </div>
             <div class="field wide">
-                <label for="new-server-location">@(_create.Transport == McpTransport.Http ? "URL" : "Command")</label>
+                <label for="new-server-location">@(_create.IsHttp ? "URL" : "Command")</label>
                 <InputText id="new-server-location"
                            @bind-Value="_create.Location"
-                           placeholder="@(_create.Transport == McpTransport.Http ? "https://mcp.internal.example" : "mcp-server")" />
+                           placeholder="@(_create.IsHttp ? "https://mcp.internal.example" : "mcp-server")" />
                 <ValidationMessage For="() => _create.Location" />
             </div>
-            @if (_create.Transport == McpTransport.Http &&
+            @if (_create.IsHttp &&
                  _create.ExecutionMode == McpExecutionMode.Gateway)
             {
                 <div class="field wide">

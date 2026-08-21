@@ -21,8 +21,6 @@ internal sealed class McpGrantEditorModel
         ProjectMcpAssignment? assignment)
     {
         var enabledTools = (assignment?.EnabledTools ?? []).ToHashSet(StringComparer.Ordinal);
-        var visibleTools = (assignment?.VisibleTools ?? assignment?.EnabledTools ?? [])
-            .ToHashSet(StringComparer.Ordinal);
         return new McpGrantEditorModel
         {
             Id = server.Id,
@@ -34,7 +32,6 @@ internal sealed class McpGrantEditorModel
                 .Select(tool => new ToolGrantEditorModel
                 {
                     Name = tool,
-                    Visible = visibleTools.Contains(tool),
                     Enabled = enabledTools.Contains(tool)
                 })
                 .ToList()
@@ -45,7 +42,6 @@ internal sealed class McpGrantEditorModel
     {
         ServerId = Id,
         Required = Required,
-        VisibleTools = Tools.Where(tool => tool.Visible).Select(tool => tool.Name).ToList(),
         EnabledTools = Tools.Where(tool => tool.Enabled).Select(tool => tool.Name).ToList()
     };
 }
