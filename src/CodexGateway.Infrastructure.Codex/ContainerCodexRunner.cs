@@ -190,12 +190,19 @@ public sealed class ContainerCodexRunner(
         if (server is HttpMcpServerDefinition http)
         {
             ContainerCommandBuilder.AddConfig(arguments, $"{key}.url={TomlString(connection?.Url ?? http.Url)}");
-            var bearerEnv = connection?.BearerTokenEnvironmentVariable ?? http.BearerTokenEnvironmentVariable;
-            if (!string.IsNullOrWhiteSpace(bearerEnv))
+            if (connection is not null)
             {
                 ContainerCommandBuilder.AddConfig(
                     arguments,
-                    $"{key}.bearer_token_env_var={TomlString(bearerEnv)}");
+                    $"{key}.bearer_token_env_var={TomlString(connection.BearerTokenEnvironmentVariable)}");
+            }
+            else if (http.EnvironmentHeaders.Count > 0)
+            {
+                ContainerCommandBuilder.AddConfig(
+                    arguments,
+                    $"{key}.env_http_headers={TomlTable(http.EnvironmentHeaders
+                        .Select(header => (header.Key, header.Value))
+                        .ToArray())}");
             }
         }
         else if (server is StdioMcpServerDefinition stdio)
