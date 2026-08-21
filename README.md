@@ -228,8 +228,7 @@ If `detail` is supplied, `full` is the only accepted value; repeated or differen
               "document_id": { "type": "string" }
             },
             "required": ["document_id"]
-          },
-          "can_invoke": true
+          }
         },
         {
           "id": "accounting-docs/search",
@@ -265,8 +264,7 @@ If `detail` is supplied, `full` is the only accepted value; repeated or differen
           ],
           "_meta": {
             "com.example/render": { "template": "document-results" }
-          },
-          "can_invoke": false
+          }
         }
       ]
     }
@@ -274,16 +272,11 @@ If `detail` is supplied, `full` is the only accepted value; repeated or differen
 }
 ```
 
-In the detailed view, `catalog_version` is an opaque deterministic hash of the normalized detailed catalog, including invocation flags. Persist it with a plan and retrieve the catalog again before execution; a changed value means the plan should be revalidated. Server entries contain catalog `id` and display `name`, the live MCP implementation `version`, the key-specific grant's `required` flag, and any server-provided `title`, `description`, `website_url`, and `icons`. The pinned Codex App Server status surface does not provide [MCP initialization `instructions`](https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle#initialization), so the gateway cannot include that field.
+In the detailed view, `catalog_version` is an opaque deterministic hash of the normalized detailed catalog. Persist it with a plan and retrieve the catalog again before execution; a changed value means the plan should be revalidated. Server entries contain catalog `id` and display `name`, the live MCP implementation `version`, the key-specific grant's `required` flag, and any server-provided `title`, `description`, `website_url`, and `icons`. The pinned Codex App Server status surface does not provide [MCP initialization `instructions`](https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle#initialization), so the gateway cannot include that field.
 
-Each detailed tool has the stable qualified identity `server-id/tool-name` because names can collide across servers. It follows the official [MCP `Tool` definition](https://modelcontextprotocol.io/specification/2025-11-25/server/tools): `id`, `name`, `input_schema`, and `can_invoke` are always present, while `title`, `description`, `output_schema`, `annotations`, `icons`, and `_meta` are included when the server supplies them. The input and output schemas, annotations, icons, and `_meta` values retain their complete JSON structures, including vendor extensions. Optional fields are omitted rather than returned as `null`.
+Each detailed tool has the stable qualified identity `server-id/tool-name` because names can collide across servers. It follows the official [MCP `Tool` definition](https://modelcontextprotocol.io/specification/2025-11-25/server/tools): `id`, `name`, and `input_schema` are always present, while `title`, `description`, `output_schema`, `annotations`, `icons`, and `_meta` are included when the server supplies them. The input and output schemas, annotations, icons, and `_meta` values retain their complete JSON structures, including vendor extensions. Optional fields are omitted rather than returned as `null`.
 
-The two grant sets have deliberately different meanings:
-
-- **Visible tools** appear in the catalog, allowing a planning credential to describe feasible work.
-- **Enabled tools** are injected into Codex and can actually run. They have `can_invoke: true` in the catalog.
-
-Visibility never grants invocation. The catalog contains only exact visible tool names for that API key and project, and tools advertised by a server but absent from the visible grant are filtered out. `can_invoke` is true only when the same tool is also enabled. For existing persisted projects, an absent visible-tool list defaults to the enabled-tool list.
+The catalog contains only the exact tools enabled for that API key and project. Every returned tool can be used by the caller; tools advertised by an MCP server but absent from the grant are filtered out.
 
 `GET /v1/tools` without a project selector returns the same versioned envelope with empty `data` and a deterministic empty `catalog_version`; it does not contact an MCP server.
 

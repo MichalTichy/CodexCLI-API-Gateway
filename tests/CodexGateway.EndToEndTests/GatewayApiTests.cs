@@ -146,22 +146,20 @@ public sealed class GatewayApiTests : IDisposable
     {
         Authorize();
         await CreateProjectAsync("tools", "Tools");
-        await _factory.UpsertMcpServerAsync(new McpServerDefinition
+        await _factory.UpsertMcpServerAsync(new HttpMcpServerDefinition
         {
             Id = "catalog",
             Name = "Catalog",
             Enabled = true,
-            Transport = McpTransport.Http,
             Url = "https://mcp.example.test",
             BearerTokenEnvironmentVariable = "GW_MCP_TEST_TOKEN",
             AvailableTools = ["read", "write", "delete"]
         });
-        await _factory.UpsertMcpServerAsync(new McpServerDefinition
+        await _factory.UpsertMcpServerAsync(new StdioMcpServerDefinition
         {
             Id = "stdio-catalog",
             Name = "STDIO Catalog",
             Enabled = true,
-            Transport = McpTransport.Stdio,
             Command = "/opt/mcp/catalog-server",
             EnvironmentVariables = ["MCP_STDIO_TOKEN"],
             Arguments = ["--stdio", "argument with spaces"],

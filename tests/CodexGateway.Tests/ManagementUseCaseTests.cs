@@ -251,11 +251,10 @@ public sealed class ManagementUseCaseTests
         Name = name
     };
 
-    private static McpServerDefinition Server(string id) => new()
+    private static McpServerDefinition Server(string id) => new HttpMcpServerDefinition
     {
         Id = id,
         Name = id,
-        Transport = McpTransport.Http,
         Url = "https://mcp.example.test"
     };
 

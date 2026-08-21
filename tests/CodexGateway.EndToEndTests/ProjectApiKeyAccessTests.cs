@@ -135,12 +135,11 @@ public sealed class ProjectApiKeyAccessTests : IDisposable
     [Fact]
     public async Task Two_global_keys_receive_only_their_exact_project_mcp_tools_at_the_container_boundary()
     {
-        await _factory.UpsertMcpServerAsync(new McpServerDefinition
+        await _factory.UpsertMcpServerAsync(new HttpMcpServerDefinition
         {
             Id = "catalog",
             Name = "Catalog",
             Enabled = true,
-            Transport = McpTransport.Http,
             Url = "https://mcp.example.test",
             BearerTokenEnvironmentVariable = "GW_MCP_TEST_TOKEN",
             AvailableTools = ["read", "write", "delete"]
