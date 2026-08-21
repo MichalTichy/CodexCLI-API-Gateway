@@ -77,20 +77,35 @@ public sealed class JsonGatewayConfigurationRepository(StoragePaths paths)
                 McpServers = NormalizeAssignments(access.McpServers)
             }).ToList()
         }).ToList(),
-        McpServers = (state.McpServers ?? []).OfType<McpServerDefinition>().Select(server => server with
-        {
-            Arguments = (server.Arguments ?? []).OfType<string>().ToList(),
-            EnvironmentVariables = (server.EnvironmentVariables ?? []).OfType<string>().ToList(),
-            AvailableTools = (server.AvailableTools ?? []).OfType<string>().ToList()
-        }).ToList()
+        McpServers = (state.McpServers ?? []).OfType<McpServerDefinition>().Select(NormalizeServer).ToList()
     };
+
+    private static McpServerDefinition NormalizeServer(McpServerDefinition server)
+    {
+        var availableTools = (server.AvailableTools ?? []).OfType<string>().ToList();
+        var environmentVariables = (server.EnvironmentVariables ?? []).OfType<string>().ToList();
+        return server switch
+        {
+            HttpMcpServerDefinition http => http with
+            {
+                EnvironmentVariables = environmentVariables,
+                AvailableTools = availableTools
+            },
+            StdioMcpServerDefinition stdio => stdio with
+            {
+                Arguments = (stdio.Arguments ?? []).OfType<string>().ToList(),
+                EnvironmentVariables = environmentVariables,
+                AvailableTools = availableTools
+            },
+            _ => throw new JsonException("The MCP server transport is invalid.")
+        };
+    }
 
     private static List<ProjectMcpAssignment> NormalizeAssignments(
         IEnumerable<ProjectMcpAssignment>? assignments) =>
         (assignments ?? []).OfType<ProjectMcpAssignment>().Select(assignment => assignment with
         {
-            EnabledTools = (assignment.EnabledTools ?? []).OfType<string>().ToList(),
-            VisibleTools = assignment.VisibleTools?.OfType<string>().ToList()
+            EnabledTools = (assignment.EnabledTools ?? []).OfType<string>().ToList()
         }).ToList();
 
     private async Task WriteUnsafeAsync(GatewayState state, CancellationToken cancellationToken)
