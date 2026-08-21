@@ -44,14 +44,14 @@
                            placeholder="@(_create.IsHttp ? "https://mcp.internal.example" : "mcp-server")" />
                 <ValidationMessage For="() => _create.Location" />
             </div>
-            @if (_create.IsHttp &&
-                 _create.ExecutionMode == McpExecutionMode.Gateway)
+            @if (_create.IsHttp)
             {
-                <div class="field wide">
-                    <label for="new-server-api-key-env">API-key environment variable</label>
-                    <InputText id="new-server-api-key-env"
-                               @bind-Value="_create.BearerTokenEnvironmentVariable"
-                               placeholder="MCP_API_KEY" />
+                <div class="field full">
+                    <label for="new-server-environment-headers">HTTP headers from environment (one per line)</label>
+                    <InputTextArea id="new-server-environment-headers"
+                                   @bind-Value="_create.EnvironmentHeaders"
+                                   placeholder="Authorization=MCP_AUTHORIZATION&#10;X-Api-Key=MCP_API_KEY" />
+                    <span class="muted small">Each environment variable contains the complete header value.</span>
                 </div>
             }
             <div class="field full">

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using CodexGateway.Logic.Errors;
 using CodexGateway.Models;
 
 namespace CodexGateway.App.Components.Admin;
@@ -40,7 +41,7 @@ internal sealed class McpServerEditorModel
 
     public string Arguments { get; set; } = string.Empty;
 
-    public string BearerTokenEnvironmentVariable { get; set; } = string.Empty;
+    public string EnvironmentHeaders { get; set; } = string.Empty;
 
     public string EnvironmentVariables { get; set; } = string.Empty;
 
@@ -60,7 +61,11 @@ internal sealed class McpServerEditorModel
         if (server is HttpMcpServerDefinition http)
         {
             model.Url = http.Url;
-            model.BearerTokenEnvironmentVariable = http.BearerTokenEnvironmentVariable ?? string.Empty;
+            model.EnvironmentHeaders = string.Join(
+                Environment.NewLine,
+                http.EnvironmentHeaders
+                    .OrderBy(header => header.Key, StringComparer.OrdinalIgnoreCase)
+                    .Select(header => $"{header.Key}={header.Value}"));
         }
         else if (server is StdioMcpServerDefinition stdio)
         {
@@ -84,7 +89,7 @@ internal sealed class McpServerEditorModel
                 Enabled = Enabled,
                 ExecutionMode = ExecutionMode,
                 Url = location,
-                BearerTokenEnvironmentVariable = AdminText.NullIfWhiteSpace(BearerTokenEnvironmentVariable),
+                EnvironmentHeaders = ParseEnvironmentHeaders(EnvironmentHeaders),
                 AvailableTools = AdminText.Lines(AvailableTools)
             };
         }
@@ -100,5 +105,33 @@ internal sealed class McpServerEditorModel
             EnvironmentVariables = AdminText.Lines(EnvironmentVariables),
             AvailableTools = AdminText.Lines(AvailableTools)
         };
+    }
+
+    private static Dictionary<string, string> ParseEnvironmentHeaders(string? value)
+    {
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var line in (value ?? string.Empty).Split(
+                     ['\r', '\n'],
+                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var separator = line.IndexOf('=');
+            if (separator <= 0 || separator == line.Length - 1)
+            {
+                throw GatewayException.InvalidRequest(
+                    "HTTP environment headers must use Header=ENVIRONMENT_VARIABLE format.",
+                    parameter: "environment_headers");
+            }
+
+            var headerName = line[..separator].Trim();
+            var environmentVariable = line[(separator + 1)..].Trim();
+            if (!headers.TryAdd(headerName, environmentVariable))
+            {
+                throw GatewayException.InvalidRequest(
+                    $"HTTP header '{headerName}' is configured more than once.",
+                    parameter: "environment_headers");
+            }
+        }
+
+        return headers;
     }
 }
