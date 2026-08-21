@@ -1,0 +1,29 @@
+{
+  "method": "POST",
+  "path_and_query": "/p/openai-compat/v1/chat/completions",
+  "authorization": "Bearer <redacted>",
+  "content_type": "application/json",
+  "body": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Call the local tool."
+      }
+    ],
+    "model": "gpt-test-sol",
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "description": "A local function that V1 must not silently ignore.",
+          "name": "local_write",
+          "parameters": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": false
+          }
+        }
+      }
+    ]
+  }
+}
