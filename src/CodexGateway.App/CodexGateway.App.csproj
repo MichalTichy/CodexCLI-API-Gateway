@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FastEndpoints" Version="8.2.0" />
+    <PackageReference Include="FastEndpoints.Swagger" Version="8.2.0" />
+    <!-- Keep the exact pre-license-key release; do not float to MediatR 13+. -->
+    <PackageReference Include="MediatR" Version="[12.5.0]" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CodexGateway.Api\CodexGateway.Api.csproj" />
+    <ProjectReference Include="..\CodexGateway.Api.OpenAI\CodexGateway.Api.OpenAI.csproj" />
+    <ProjectReference Include="..\CodexGateway.IoC\CodexGateway.IoC.csproj" />
+    <ProjectReference Include="..\CodexGateway.Models\CodexGateway.Models.csproj" />
+    <ProjectReference Include="..\CodexGateway.Logic\CodexGateway.Logic.csproj" />
+    <ProjectReference Include="..\CodexGateway.Infrastructure.Codex\CodexGateway.Infrastructure.Codex.csproj" />
+    <ProjectReference Include="..\CodexGateway.Infrastructure.Mcp\CodexGateway.Infrastructure.Mcp.csproj" />
+    <ProjectReference Include="..\CodexGateway.Infrastructure.Storage\CodexGateway.Infrastructure.Storage.csproj" />
+    <ProjectReference Include="..\CodexGateway.ServiceDefaults\CodexGateway.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+</Project>
