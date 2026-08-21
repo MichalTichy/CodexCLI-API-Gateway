@@ -27,6 +27,7 @@ bld/
 project.lock.json
 project.fragment.lock.json
 artifacts/
+.artifacts/
 
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt
@@ -55,3 +56,14 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# IDE and gateway-local state
+.vs/
+.idea/
+.vscode/
+data/
+.codex-home/
+.aspire/
+.verify/
+*.user
+*.suo

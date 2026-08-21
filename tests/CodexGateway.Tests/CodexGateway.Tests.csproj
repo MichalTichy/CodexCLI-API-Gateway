@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\test-assets\mcp-smoke-server.mjs"
+             Link="test-assets\mcp-smoke-server.mjs"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CodexGateway.Api\CodexGateway.Api.csproj" />
+    <ProjectReference Include="..\..\src\CodexGateway.Api.OpenAI\CodexGateway.Api.OpenAI.csproj" />
+    <ProjectReference Include="..\..\src\CodexGateway.App\CodexGateway.App.csproj" />
+    <ProjectReference Include="..\..\src\CodexGateway.Infrastructure.Codex\CodexGateway.Infrastructure.Codex.csproj" />
+    <ProjectReference Include="..\..\src\CodexGateway.Infrastructure.Mcp\CodexGateway.Infrastructure.Mcp.csproj" />
+    <ProjectReference Include="..\..\src\CodexGateway.Infrastructure.Storage\CodexGateway.Infrastructure.Storage.csproj" />
+    <ProjectReference Include="..\..\src\CodexGateway.IoC\CodexGateway.IoC.csproj" />
+    <ProjectReference Include="..\..\src\CodexGateway.Logic\CodexGateway.Logic.csproj" />
+    <ProjectReference Include="..\..\src\CodexGateway.Models\CodexGateway.Models.csproj" />
+  </ItemGroup>
+
+</Project>

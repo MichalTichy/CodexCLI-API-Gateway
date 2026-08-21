@@ -1,0 +1,19 @@
+{
+  "method": "POST",
+  "path_and_query": "/p/openai-compat/v1/chat/completions",
+  "authorization": "Bearer <redacted>",
+  "content_type": "application/json",
+  "body": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Stream Unicode safely: žluťoučký \uD83E\uDDED"
+      }
+    ],
+    "model": "gpt-test-sol",
+    "stream": true,
+    "stream_options": {
+      "include_usage": true
+    }
+  }
+}

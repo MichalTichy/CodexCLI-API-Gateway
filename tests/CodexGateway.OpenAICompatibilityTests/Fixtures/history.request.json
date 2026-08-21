@@ -1,0 +1,47 @@
+{
+  "method": "POST",
+  "path_and_query": "/p/openai-compat/v1/chat/completions",
+  "authorization": "Bearer <redacted>",
+  "content_type": "application/json",
+  "body": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "Keep answers concise.",
+        "name": "system_policy"
+      },
+      {
+        "role": "developer",
+        "content": "Use the supplied conversation history.",
+        "name": "samwise"
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "First line\n"
+          },
+          {
+            "type": "text",
+            "text": "Příliš žluťoučký kůň \uD83E\uDDED"
+          }
+        ],
+        "name": "requester_1"
+      },
+      {
+        "role": "assistant",
+        "content": "Earlier assistant answer.",
+        "name": "assistant_1"
+      },
+      {
+        "role": "user",
+        "content": "Continue the conversation."
+      }
+    ],
+    "model": "gpt-test-sol",
+    "reasoning_effort": "high",
+    "tool_choice": "none",
+    "parallel_tool_calls": false
+  }
+}

@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CodexGateway.Api/CodexGateway.Api.csproj" />
+    <Project Path="src/CodexGateway.Api.OpenAI/CodexGateway.Api.OpenAI.csproj" />
+    <Project Path="src/CodexGateway.App/CodexGateway.App.csproj" />
+    <Project Path="src/CodexGateway.AppHost/CodexGateway.AppHost.csproj" />
+    <Project Path="src/CodexGateway.Infrastructure.Codex/CodexGateway.Infrastructure.Codex.csproj" />
+    <Project Path="src/CodexGateway.Infrastructure.Mcp/CodexGateway.Infrastructure.Mcp.csproj" />
+    <Project Path="src/CodexGateway.Infrastructure.Storage/CodexGateway.Infrastructure.Storage.csproj" />
+    <Project Path="src/CodexGateway.IoC/CodexGateway.IoC.csproj" />
+    <Project Path="src/CodexGateway.Logic/CodexGateway.Logic.csproj" />
+    <Project Path="src/CodexGateway.Models/CodexGateway.Models.csproj" />
+    <Project Path="src/CodexGateway.ServiceDefaults/CodexGateway.ServiceDefaults.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CodexGateway.EndToEndTests/CodexGateway.EndToEndTests.csproj" />
+    <Project Path="tests/CodexGateway.FakeCodex/CodexGateway.FakeCodex.csproj" />
+    <Project Path="tests/CodexGateway.OpenAICompatibilityTests/CodexGateway.OpenAICompatibilityTests.csproj" />
+    <Project Path="tests/CodexGateway.Tests/CodexGateway.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,5 @@
+{
+  "status": 200,
+  "content_type": "text/event-stream",
+  "body": "data: {\"id\":\"<chat-completion-id>\",\"object\":\"chat.completion.chunk\",\"created\":0,\"model\":\"gpt-test-sol\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\"}}]}\n\ndata: {\"id\":\"<chat-completion-id>\",\"object\":\"chat.completion.chunk\",\"created\":0,\"model\":\"gpt-test-sol\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Fake Codex response\"}}]}\n\ndata: {\"id\":\"<chat-completion-id>\",\"object\":\"chat.completion.chunk\",\"created\":0,\"model\":\"gpt-test-sol\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: {\"id\":\"<chat-completion-id>\",\"object\":\"chat.completion.chunk\",\"created\":0,\"model\":\"gpt-test-sol\",\"choices\":[],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":3,\"total_tokens\":13,\"prompt_tokens_details\":{\"cached_tokens\":0},\"completion_tokens_details\":{\"reasoning_tokens\":0}}}\n\ndata: [DONE]\n\n"
+}
