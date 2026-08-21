@@ -2,9 +2,13 @@ namespace CodexGateway.Models;
 
 public enum McpExecutionMode
 {
-    // The zero value preserves the behavior of persisted configurations created
-    // before gateway-hosted MCP sessions were introduced.
+    /// <summary>
+    /// Starts the MCP server inside the isolated Codex runner for each request.
+    /// </summary>
     Runner,
 
+    /// <summary>
+    /// Connects the Codex runner to an MCP session managed by the gateway host.
+    /// </summary>
     Gateway
 }
