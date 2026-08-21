@@ -45,6 +45,9 @@ public sealed partial class CreateOrUpdateMcpServerUseCaseHandler(
             {
                 Id = id,
                 Name = server.Name.Trim(),
+                EnvironmentHeaders = new Dictionary<string, string>(
+                    http.EnvironmentHeaders ?? [],
+                    StringComparer.OrdinalIgnoreCase),
                 EnvironmentVariables = environmentVariables,
                 AvailableTools = availableTools
             },
@@ -96,12 +99,26 @@ public sealed partial class CreateOrUpdateMcpServerUseCaseHandler(
                         parameter: "url");
                 }
 
-                if (server.ExecutionMode == McpExecutionMode.Gateway &&
-                    string.IsNullOrWhiteSpace(http.BearerTokenEnvironmentVariable))
+                var environmentHeaders = http.EnvironmentHeaders ?? [];
+                if (environmentHeaders.Keys.Any(header => !HeaderNamePattern().IsMatch(header)))
                 {
                     throw GatewayException.InvalidRequest(
-                        "Gateway-hosted HTTP MCP servers require an API-key environment variable.",
-                        parameter: "bearer_token_environment_variable");
+                        "HTTP MCP header names must be valid HTTP token values.",
+                        parameter: "environment_headers");
+                }
+
+                if (environmentHeaders
+                    .GroupBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
+                    .Any(group => group.Count() > 1))
+                {
+                    throw GatewayException.InvalidRequest(
+                        "HTTP MCP header names must be unique.",
+                        parameter: "environment_headers");
+                }
+
+                foreach (var variable in environmentHeaders.Values)
+                {
+                    ValidateEnvironmentVariable(variable, "environment_headers");
                 }
 
                 break;
@@ -134,22 +151,21 @@ public sealed partial class CreateOrUpdateMcpServerUseCaseHandler(
                 parameter: "available_tools");
         }
 
-        var configuredEnvironmentVariables = server.EnvironmentVariables
-            .Cast<string?>()
-            .Concat(server is HttpMcpServerDefinition httpServer
-                ? Enumerable.Repeat(httpServer.BearerTokenEnvironmentVariable, 1)
-                : [])
-            .Where(name => name is not null)
-            .Cast<string>();
-        foreach (var variable in configuredEnvironmentVariables)
+        foreach (var variable in server.EnvironmentVariables ?? [])
         {
-            if (!EnvironmentVariablePattern().IsMatch(variable) ||
-                McpCredentialVariablePolicy.IsReserved(variable))
-            {
-                throw GatewayException.InvalidRequest(
-                    $"Environment variable '{variable}' cannot be forwarded to an MCP server.",
-                    parameter: "environment_variables");
-            }
+            ValidateEnvironmentVariable(variable, "environment_variables");
+        }
+    }
+
+    private static void ValidateEnvironmentVariable(string? variable, string parameter)
+    {
+        if (string.IsNullOrWhiteSpace(variable) ||
+            !EnvironmentVariablePattern().IsMatch(variable) ||
+            McpCredentialVariablePolicy.IsReserved(variable))
+        {
+            throw GatewayException.InvalidRequest(
+                $"Environment variable '{variable}' cannot be forwarded to an MCP server.",
+                parameter);
         }
     }
 
@@ -158,4 +174,7 @@ public sealed partial class CreateOrUpdateMcpServerUseCaseHandler(
 
     [GeneratedRegex("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.CultureInvariant)]
     private static partial Regex EnvironmentVariablePattern();
+
+    [GeneratedRegex("^[!#$%&'*+.^_`|~0-9A-Za-z-]+$", RegexOptions.CultureInvariant)]
+    private static partial Regex HeaderNamePattern();
 }
