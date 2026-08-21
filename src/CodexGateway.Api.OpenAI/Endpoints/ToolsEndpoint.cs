@@ -74,8 +74,7 @@ public sealed class ToolsEndpoint(ISender sender) : EndpointWithoutRequest
                 output_schema = tool.OutputSchema,
                 annotations = tool.Annotations,
                 icons = tool.Icons,
-                _meta = tool.Meta,
-                can_invoke = tool.CanInvoke
+                _meta = tool.Meta
             })
         })
         .ToArray();
