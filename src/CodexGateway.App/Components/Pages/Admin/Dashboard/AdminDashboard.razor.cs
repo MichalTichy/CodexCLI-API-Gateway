@@ -1,0 +1,210 @@
+using CodexGateway.Logic.Codex;
+using CodexGateway.Logic.Errors;
+using CodexGateway.Logic.Specifications;
+using CodexGateway.Logic.Security;
+using CodexGateway.Logic.Storage;
+using CodexGateway.Logic.UseCases.CodexAuthentication;
+using CodexGateway.Models;
+using MediatR;
+using Microsoft.AspNetCore.Components;
+
+namespace CodexGateway.App.Components.Admin;
+
+public partial class AdminDashboard : AdminComponentBase
+{
+    private IReadOnlyList<ProjectDefinition> _projects = [];
+    private IReadOnlyList<McpServerDefinition> _servers = [];
+    private IReadOnlyList<GlobalApiKeyIdentity> _apiKeys = [];
+    private CodexAccountStatus? _account;
+    private DeviceLogin? _login;
+    private Task? _pollTask;
+    private string? _codexError;
+    private bool _initialized;
+    private bool _loading;
+    private bool _refreshRequested;
+    private bool _showRefreshSuccess;
+    private Task? _refreshTask;
+
+    [Inject]
+    private ISender Sender { get; set; } = null!;
+
+    [Inject]
+    private ILogger<AdminDashboard> Logger { get; set; } = null!;
+
+    [Inject]
+    private IGatewayConfigurationRepository Configuration { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (RendererInfo.IsInteractive)
+        {
+            await RefreshAsync(showSuccess: false);
+        }
+    }
+
+    private Task RefreshAsync() => RefreshAsync(showSuccess: true);
+
+    private Task RefreshAsync(bool showSuccess)
+    {
+        // A save can finish while a refresh is already reading. Request one more pass
+        // so the older read cannot become the final state shown by the dashboard.
+        _refreshRequested = true;
+        _showRefreshSuccess |= showSuccess;
+
+        if (_refreshTask is null || _refreshTask.IsCompleted)
+        {
+            _refreshTask = RunRefreshLoopAsync();
+        }
+
+        return _refreshTask;
+    }
+
+    private async Task RunRefreshLoopAsync()
+    {
+        while (_refreshRequested && !PageCancellationToken.IsCancellationRequested)
+        {
+            _refreshRequested = false;
+            var showSuccess = _showRefreshSuccess;
+            _showRefreshSuccess = false;
+            await RefreshOnceAsync(showSuccess);
+        }
+    }
+
+    private async Task RefreshOnceAsync(bool showSuccess)
+    {
+        _loading = true;
+        if (!_initialized)
+        {
+            SetStatus("Loading gateway configuration…");
+        }
+
+        try
+        {
+            var token = PageCancellationToken;
+            var projectsTask = Configuration.QueryAsync(
+                new ProjectsOrderedByIdSpecification(),
+                token);
+            var serversTask = Configuration.QueryAsync(
+                new McpServersOrderedByIdSpecification(),
+                token);
+            var apiKeysTask = Configuration.QueryAsync(
+                new ApiKeysOrderedByIdSpecification(),
+                token);
+            await Task.WhenAll(projectsTask, serversTask, apiKeysTask);
+            _projects = await projectsTask;
+            _servers = await serversTask;
+            _apiKeys = await apiKeysTask;
+
+            await LoadCodexAsync(token);
+            if (showSuccess && _codexError is null)
+            {
+                SetStatus("Up to date.", AdminStatusKind.Success);
+            }
+            else if (_codexError is not null)
+            {
+                SetStatus("Gateway configuration loaded, but the Codex account status is unavailable.", AdminStatusKind.Warning);
+            }
+            else if (!_initialized)
+            {
+                SetStatus(string.Empty);
+            }
+
+            _initialized = true;
+            StartPollingIfNeeded();
+        }
+        catch (OperationCanceledException) when (PageCancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            if (exception is not GatewayException)
+            {
+                Logger.LogError(exception, "Unexpected failure while loading the gateway configuration.");
+            }
+
+            SetStatus(AdminText.Describe(exception), AdminStatusKind.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task LoadCodexAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var codex = await Sender.Send(
+                new GetCodexAuthenticationStateUseCase(),
+                cancellationToken);
+            _account = codex.Account;
+            _login = codex.Login;
+            _codexError = null;
+        }
+        catch (OperationCanceledException) when (PageCancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (GatewayException exception)
+        {
+            _account = null;
+            _login = null;
+            _codexError = AdminText.Describe(exception);
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unexpected failure while loading the Codex authentication state.");
+            _account = null;
+            _login = null;
+            _codexError = AdminText.Describe(exception);
+        }
+    }
+
+    private async Task HandleChangedAsync(string message)
+    {
+        await RefreshAsync(showSuccess: false);
+        SetStatus(message, AdminStatusKind.Success);
+    }
+
+    private async Task HandleCodexChangedAsync(string message)
+    {
+        await RefreshAsync(showSuccess: false);
+        SetStatus(message, _codexError is null ? AdminStatusKind.Success : AdminStatusKind.Error);
+        StartPollingIfNeeded();
+    }
+
+    private void StartPollingIfNeeded()
+    {
+        if (_login is not { Status: DeviceLoginStatus.Pending } ||
+            _pollTask is { IsCompleted: false })
+        {
+            return;
+        }
+
+        _pollTask = PollDeviceLoginAsync();
+    }
+
+    private async Task PollDeviceLoginAsync()
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
+            while (await timer.WaitForNextTickAsync(PageCancellationToken))
+            {
+                await InvokeAsync(async () =>
+                {
+                    await RefreshAsync(showSuccess: false);
+                    StateHasChanged();
+                });
+                if (_login is not { Status: DeviceLoginStatus.Pending })
+                {
+                    return;
+                }
+            }
+        }
+        catch (OperationCanceledException) when (PageCancellationToken.IsCancellationRequested)
+        {
+        }
+    }
+
+}

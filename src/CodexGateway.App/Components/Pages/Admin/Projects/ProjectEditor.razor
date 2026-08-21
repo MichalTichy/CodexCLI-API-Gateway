@@ -1,0 +1,157 @@
+@namespace CodexGateway.App.Components.Admin
+
+<article class="card" aria-busy="@_busy.ToString().ToLowerInvariant()">
+    <EditForm Model="_editor" OnValidSubmit="SaveAsync" autocomplete="off">
+        <DataAnnotationsValidator />
+        <div class="card-header">
+            <div>
+                <h3>@Project.Name</h3>
+                <span class="badge @(Project.Enabled ? "on" : "off")">@(Project.Enabled ? "Enabled" : "Disabled")</span>
+                <div class="muted small mono">@Project.Id</div>
+            </div>
+            <div class="actions">
+                <button type="submit" disabled="@_busy">@(_busy ? "Saving…" : "Save project")</button>
+                @if (_confirmDelete)
+                {
+                    <span class="confirmation" role="group" aria-label="Confirm project deletion">
+                        <span class="small">Delete project and stored artifacts? This cannot be undone.</span>
+                        <button class="danger" type="button" disabled="@_busy" @onclick="DeleteAsync">Confirm</button>
+                        <button class="secondary" type="button" disabled="@_busy" @onclick="CancelDelete">Cancel</button>
+                    </span>
+                }
+                else
+                {
+                    <button class="danger" type="button" disabled="@_busy" @onclick="ConfirmDelete">Delete project</button>
+                }
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="field wide">
+                <label for="@($"project-name-{Project.Id}")">Project name</label>
+                <InputText id="@($"project-name-{Project.Id}")" @bind-Value="_editor.Name" />
+                <ValidationMessage For="() => _editor.Name" />
+            </div>
+            <div class="field narrow checkbox-field">
+                <label class="check" for="@($"project-enabled-{Project.Id}")">
+                    <InputCheckbox id="@($"project-enabled-{Project.Id}")" @bind-Value="_editor.Enabled" />
+                    <span>Enabled</span>
+                </label>
+            </div>
+            <div class="field wide">
+                <label for="@($"project-runner-image-{Project.Id}")">Runner image</label>
+                <InputText id="@($"project-runner-image-{Project.Id}")"
+                           @bind-Value="_editor.RunnerImage"
+                           placeholder="Use the default runner image" />
+                <div class="muted small">Optional override for this project's runs.</div>
+                <ValidationMessage For="() => _editor.RunnerImage" />
+            </div>
+        </div>
+
+        <div class="divider"></div>
+        <div>
+            <h4>API-key access</h4>
+            <p class="muted small">Only checked servers and tools are granted. New catalog entries remain unavailable until selected.</p>
+        </div>
+
+        @if (_editor.ApiKeys.Count == 0)
+        {
+            <div class="empty">Configure a gateway API key before granting project access.</div>
+        }
+        else
+        {
+            <div class="compact-stack">
+                @foreach (var access in _editor.ApiKeys)
+                {
+                    <div class="access-key @(!access.HasProjectAccess ? "is-disabled" : null)" @key="access.Id">
+                        <div class="access-head">
+                            <div>
+                                <label class="check" for="@($"access-{Project.Id}-{access.Id}")">
+                                    <input id="@($"access-{Project.Id}-{access.Id}")" type="checkbox" @bind="access.HasProjectAccess" />
+                                    <span>@access.Name</span>
+                                </label>
+                                <div class="muted small mono">@access.Id</div>
+                            </div>
+                            <span class="badge @(access.HasProjectAccess ? "on" : "off")">
+                                @(access.HasProjectAccess ? "Project access" : "No access")
+                            </span>
+                        </div>
+
+                        @if (access.Servers.Count == 0)
+                        {
+                            <div class="empty compact-empty">No MCP servers are configured.</div>
+                        }
+                        else
+                        {
+                            <div class="grant-list">
+                                @foreach (var server in access.Servers)
+                                {
+                                    var serverAvailable = access.HasProjectAccess && server.CatalogEnabled;
+                                    var toolsAvailable = serverAvailable && server.Granted;
+                                    <div class="server-grant" @key="server.Id">
+                                        <div class="server-grant-head">
+                                            <label class="check" for="@($"grant-{Project.Id}-{access.Id}-{server.Id}")">
+                                                <input id="@($"grant-{Project.Id}-{access.Id}-{server.Id}")"
+                                                       type="checkbox"
+                                                       @bind="server.Granted"
+                                                       disabled="@(!serverAvailable)" />
+                                                <span>@server.Name</span>
+                                            </label>
+                                            <div class="actions">
+                                                <span class="badge @(server.CatalogEnabled ? "on" : "off")">
+                                                    @(server.CatalogEnabled ? "Catalog enabled" : "Catalog disabled")
+                                                </span>
+                                                <label class="check small" for="@($"required-{Project.Id}-{access.Id}-{server.Id}")">
+                                                    <input id="@($"required-{Project.Id}-{access.Id}-{server.Id}")"
+                                                           type="checkbox"
+                                                           @bind="server.Required"
+                                                           disabled="@(!toolsAvailable)" />
+                                                    <span>Required</span>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        @if (server.Tools.Count == 0)
+                                        {
+                                            <span class="muted small">No catalog tools</span>
+                                        }
+                                        else
+                                        {
+                                            <div class="tool-list">
+                                                <div class="tool-grant-row tool-grant-head" aria-hidden="true">
+                                                    <span>Tool</span><span>Visible</span><span>Enabled</span>
+                                                </div>
+                                                @foreach (var tool in server.Tools)
+                                                {
+                                                    <div class="tool-grant-row" @key="tool.Name">
+                                                        <span class="mono small">@tool.Name</span>
+                                                        <label class="check small">
+                                                            <input type="checkbox"
+                                                                   checked="@tool.Visible"
+                                                                   disabled="@(!toolsAvailable)"
+                                                                   @onchange="eventArgs => SetVisible(tool, eventArgs)" />
+                                                            <span>Plan</span>
+                                                        </label>
+                                                        <label class="check small">
+                                                            <input type="checkbox"
+                                                                   checked="@tool.Enabled"
+                                                                   disabled="@(!toolsAvailable)"
+                                                                   @onchange="eventArgs => SetEnabled(tool, eventArgs)" />
+                                                            <span>Invoke</span>
+                                                        </label>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        <p class="status @_statusKind" role="status" aria-live="polite">@_status</p>
+    </EditForm>
+</article>

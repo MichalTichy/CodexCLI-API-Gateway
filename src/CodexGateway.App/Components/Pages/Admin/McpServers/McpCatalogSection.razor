@@ -1,0 +1,81 @@
+@namespace CodexGateway.App.Components.Admin
+@inherits AdminComponentBase
+
+<section class="section" aria-labelledby="mcp-heading">
+    <div class="section-heading">
+        <div>
+            <h2 id="mcp-heading">Trusted MCP catalog</h2>
+            <p class="muted small">Only catalog servers can be assigned to projects</p>
+        </div>
+    </div>
+
+    <EditForm Model="_create" OnValidSubmit="CreateAsync" class="card" autocomplete="off">
+        <DataAnnotationsValidator />
+        <h3>Add MCP server</h3>
+        <div class="form-grid">
+            <div class="field narrow">
+                <label for="new-server-id">ID</label>
+                <InputText id="new-server-id" @bind-Value="_create.Id" placeholder="docs" />
+                <ValidationMessage For="() => _create.Id" />
+            </div>
+            <div class="field">
+                <label for="new-server-name">Name</label>
+                <InputText id="new-server-name" @bind-Value="_create.Name" placeholder="Documentation" />
+                <ValidationMessage For="() => _create.Name" />
+            </div>
+            <div class="field narrow">
+                <label for="new-server-transport">Transport</label>
+                <InputSelect id="new-server-transport" @bind-Value="_create.Transport">
+                    <option value="@McpTransport.Http">HTTP</option>
+                    <option value="@McpTransport.Stdio">STDIO</option>
+                </InputSelect>
+            </div>
+            <div class="field narrow">
+                <label for="new-server-execution">Execution</label>
+                <InputSelect id="new-server-execution" @bind-Value="_create.ExecutionMode">
+                    <option value="@McpExecutionMode.Gateway">Gateway</option>
+                    <option value="@McpExecutionMode.Runner">Runner (advanced)</option>
+                </InputSelect>
+            </div>
+            <div class="field wide">
+                <label for="new-server-location">@(_create.Transport == McpTransport.Http ? "URL" : "Command")</label>
+                <InputText id="new-server-location"
+                           @bind-Value="_create.Location"
+                           placeholder="@(_create.Transport == McpTransport.Http ? "https://mcp.internal.example" : "mcp-server")" />
+                <ValidationMessage For="() => _create.Location" />
+            </div>
+            @if (_create.Transport == McpTransport.Http &&
+                 _create.ExecutionMode == McpExecutionMode.Gateway)
+            {
+                <div class="field wide">
+                    <label for="new-server-api-key-env">API-key environment variable</label>
+                    <InputText id="new-server-api-key-env"
+                               @bind-Value="_create.BearerTokenEnvironmentVariable"
+                               placeholder="MCP_API_KEY" />
+                </div>
+            }
+            <div class="field full">
+                <label for="new-server-tools">Available tools (one per line)</label>
+                <InputTextArea id="new-server-tools" @bind-Value="_create.AvailableTools" placeholder="search&#10;open" />
+            </div>
+            <div class="field full">
+                <button type="submit" disabled="@IsBusy">@(IsBusy ? "Adding…" : "Add trusted server")</button>
+            </div>
+        </div>
+        <p class="status @StatusKind.ToString().ToLowerInvariant()" role="status" aria-live="polite">@Status</p>
+    </EditForm>
+
+    @if (Servers.Count == 0)
+    {
+        <div class="empty">No trusted MCP servers have been added.</div>
+    }
+    else
+    {
+        <div class="stack">
+            @foreach (var server in Servers)
+            {
+                <McpServerEditor Server="server" OnChanged="OnChanged" @key="server.Id" />
+            }
+        </div>
+    }
+</section>
