@@ -16,10 +16,6 @@ public sealed class StorageInfrastructureInstaller : IHighPriorityInstaller
     {
         services.TryAddSingleton<StoragePaths>();
 
-        services.TryAddSingleton<JsonGatewayConfigurationRepository>();
-        services.TryAddSingleton<IGatewayConfigurationRepository>(provider =>
-            provider.GetRequiredService<JsonGatewayConfigurationRepository>());
-
         services.TryAddSingleton<ProjectStorage>();
         services.TryAddSingleton<IProjectStorage>(provider =>
             provider.GetRequiredService<ProjectStorage>());

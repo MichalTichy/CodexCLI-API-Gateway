@@ -16,8 +16,6 @@ public sealed class StoragePaths
 
     public string Root { get; }
 
-    public string StateFile => Path.Combine(Root, "state.json");
-
     public string Projects => Path.Combine(Root, "projects");
 
     public string TemporaryFiles => Path.Combine(Root, "temporary-files");
