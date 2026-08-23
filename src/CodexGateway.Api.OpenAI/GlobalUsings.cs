@@ -7,7 +7,7 @@ global using CodexGateway.Api.OpenAI.Errors.Models;
 global using CodexGateway.Api.OpenAI.Files.Models;
 global using CodexGateway.Api.OpenAI.Pipeline;
 global using CodexGateway.Api.OpenAI.Serialization;
-global using CodexGateway.IoC.Installers;
+global using Shared.Infrastructure.IoC.Installers;
 global using CodexGateway.Logic.Codex.Models;
 global using CodexGateway.Logic.Errors.Models;
 global using CodexGateway.Logic.Generation.Models;

@@ -1,5 +1,4 @@
 using System.Reflection;
-using CodexGateway.IoC;
 using CodexGateway.Logic.Configuration;
 using FastEndpoints;
 using FastEndpoints.Swagger;

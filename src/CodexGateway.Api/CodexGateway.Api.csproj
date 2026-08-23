@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CodexGateway.IoC\CodexGateway.IoC.csproj" />
+    <ProjectReference Include="..\..\SharedInfrastructure\Shared.Infrastructure.IoC\Shared.Infrastructure.IoC.csproj" />
     <ProjectReference Include="..\CodexGateway.Logic\CodexGateway.Logic.csproj" />
   </ItemGroup>
 

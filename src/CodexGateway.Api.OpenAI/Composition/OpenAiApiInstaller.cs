@@ -1,5 +1,4 @@
 using CodexGateway.Api;
-using CodexGateway.IoC;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

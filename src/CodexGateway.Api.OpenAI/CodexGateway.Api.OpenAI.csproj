@@ -14,7 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CodexGateway.Api\CodexGateway.Api.csproj" />
-    <ProjectReference Include="..\CodexGateway.IoC\CodexGateway.IoC.csproj" />
+    <ProjectReference Include="..\..\SharedInfrastructure\Shared.Infrastructure.IoC\Shared.Infrastructure.IoC.csproj" />
     <ProjectReference Include="..\CodexGateway.Logic\CodexGateway.Logic.csproj" />
     <ProjectReference Include="..\CodexGateway.Models\CodexGateway.Models.csproj" />
   </ItemGroup>
