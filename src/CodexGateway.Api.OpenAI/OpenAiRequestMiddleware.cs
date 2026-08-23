@@ -1,16 +1,16 @@
 using System.Text.Json;
 using CodexGateway.Api.OpenAI.Errors;
 using CodexGateway.Logic.Errors;
-using CodexGateway.Logic.Security;
+using CodexGateway.Logic.UseCases.Security;
+using MediatR;
 
 namespace CodexGateway.Api.OpenAI;
 
 public sealed class OpenAiRequestMiddleware(
     RequestDelegate next,
-    GatewayAccessService access,
     ILogger<OpenAiRequestMiddleware> logger)
 {
-    public async Task InvokeAsync(HttpContext context)
+    public async Task InvokeAsync(HttpContext context, ISender sender)
     {
         if (!IsOpenAiRoute(context.Request.Path))
         {
@@ -22,14 +22,12 @@ public sealed class OpenAiRequestMiddleware(
         {
             SetRequestId(context);
 
-            var apiKey = access.Authenticate(ReadBearerToken(context.Request))
-                ?? throw new InvalidApiKeyException();
             var projectId = ResolveProjectSelector(context.Request);
-
-            var requestContext = await access.ResolveAsync(
-                apiKey,
-                projectId,
-                context.RequestAborted)
+            var requestContext = await sender.Send(
+                    new AuthenticateGatewayRequestUseCase(
+                        ReadBearerToken(context.Request),
+                        projectId),
+                    context.RequestAborted)
                 ?? throw new InvalidApiKeyException();
 
             context.Features.Set(requestContext);
