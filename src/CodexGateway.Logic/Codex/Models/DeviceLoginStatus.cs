@@ -1,4 +1,4 @@
-namespace CodexGateway.Logic.Codex;
+namespace CodexGateway.Logic.Codex.Models;
 
 public enum DeviceLoginStatus
 {

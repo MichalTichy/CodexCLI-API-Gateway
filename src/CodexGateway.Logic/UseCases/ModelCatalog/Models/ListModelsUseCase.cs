@@ -1,9 +1,9 @@
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Errors;
-using CodexGateway.Logic.Models;
+using CodexGateway.Logic.Generation.Models;
 using MediatR;
 
-namespace CodexGateway.Logic.UseCases.Models;
+namespace CodexGateway.Logic.UseCases.ModelCatalog.Models;
 
 public sealed record ListModelsUseCase(
     GatewayRequestContext Context,

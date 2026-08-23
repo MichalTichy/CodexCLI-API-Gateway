@@ -3,7 +3,7 @@ using CodexGateway.Logic.Errors;
 using CodexGateway.Models;
 using Shared.Infrastructure.Persistence.Specifications;
 
-namespace CodexGateway.Logic.Specifications;
+namespace CodexGateway.Logic.Specifications.McpServers;
 
 public sealed class EnabledMcpServersSpecification(ProjectApiKeyAccess? access)
     : ISpecification<GatewayState, IReadOnlyList<ResolvedMcpServer>>

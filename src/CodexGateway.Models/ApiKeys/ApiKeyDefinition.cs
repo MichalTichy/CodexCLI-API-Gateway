@@ -1,4 +1,4 @@
-namespace CodexGateway.Models;
+namespace CodexGateway.Models.ApiKeys;
 
 public sealed record ApiKeyDefinition
 {

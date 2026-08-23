@@ -1,4 +1,4 @@
-namespace CodexGateway.Models;
+namespace CodexGateway.Models.McpServers;
 
 public enum McpExecutionMode
 {

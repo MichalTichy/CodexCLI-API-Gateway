@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.Options;
 
-namespace CodexGateway.Logic.Configuration;
+namespace CodexGateway.Logic.Configuration.Models;
 
 public sealed class GatewayOptions
 {

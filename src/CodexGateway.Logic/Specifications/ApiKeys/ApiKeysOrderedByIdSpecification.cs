@@ -2,7 +2,7 @@ using CodexGateway.Models;
 using CodexGateway.Logic.Security;
 using Shared.Infrastructure.Persistence.Specifications;
 
-namespace CodexGateway.Logic.Specifications;
+namespace CodexGateway.Logic.Specifications.ApiKeys;
 
 public sealed class ApiKeysOrderedByIdSpecification
     : ISpecification<GatewayState, IReadOnlyList<ApiKeyIdentity>>

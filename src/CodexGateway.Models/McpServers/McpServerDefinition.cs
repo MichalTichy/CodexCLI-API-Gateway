@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace CodexGateway.Models;
+namespace CodexGateway.Models.McpServers;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "transport")]
 [JsonDerivedType(typeof(HttpMcpServerDefinition), "http")]

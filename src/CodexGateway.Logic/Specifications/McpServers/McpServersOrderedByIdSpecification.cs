@@ -1,7 +1,7 @@
 using CodexGateway.Models;
 using Shared.Infrastructure.Persistence.Specifications;
 
-namespace CodexGateway.Logic.Specifications;
+namespace CodexGateway.Logic.Specifications.McpServers;
 
 public sealed class McpServersOrderedByIdSpecification
     : ISpecification<GatewayState, IReadOnlyList<McpServerDefinition>>

@@ -1,7 +1,7 @@
 using CodexGateway.Models;
 using MediatR;
 
-namespace CodexGateway.Logic.UseCases.Files;
+namespace CodexGateway.Logic.UseCases.Files.Models;
 
 public sealed record ReadFileUseCase(
     GatewayRequestContext Context,

@@ -6,6 +6,6 @@ using CodexGateway.Logic.Storage;
 using CodexGateway.Models;
 using MediatR;
 
-namespace CodexGateway.Logic.UseCases.Projects;
+namespace CodexGateway.Logic.UseCases.Projects.Models;
 
 public sealed record UpdateProjectUseCase(ProjectDefinition Project) : IRequest<ProjectDefinition>;

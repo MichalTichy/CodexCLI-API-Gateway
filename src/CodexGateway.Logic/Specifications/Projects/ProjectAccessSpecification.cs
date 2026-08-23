@@ -1,7 +1,7 @@
 using CodexGateway.Models;
 using Shared.Infrastructure.Persistence.Specifications;
 
-namespace CodexGateway.Logic.Specifications;
+namespace CodexGateway.Logic.Specifications.Projects;
 
 /// <summary>
 /// Selects one enabled project and its one matching API-key grant. Returning

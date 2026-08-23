@@ -1,4 +1,4 @@
-namespace CodexGateway.Logic;
+namespace CodexGateway.Logic.Security.Models;
 
 /// <summary>
 /// Identifies the authenticated gateway caller and its optional project scope.

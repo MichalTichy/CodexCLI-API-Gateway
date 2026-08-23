@@ -1,9 +1,9 @@
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Generation;
-using CodexGateway.Logic.Models;
+using CodexGateway.Logic.Generation.Models;
 using MediatR;
 
-namespace CodexGateway.Logic.UseCases.Generation;
+namespace CodexGateway.Logic.UseCases.Generation.Models;
 
 public sealed record GenerateAssistantResponseUseCase(
     AssistantResponseInput Input,

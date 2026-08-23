@@ -4,6 +4,6 @@ using CodexGateway.Logic.Specifications;
 using CodexGateway.Logic.Storage;
 using MediatR;
 
-namespace CodexGateway.Logic.UseCases.Projects;
+namespace CodexGateway.Logic.UseCases.Projects.Models;
 
 public sealed record DeleteProjectUseCase(string ProjectId) : IRequest;

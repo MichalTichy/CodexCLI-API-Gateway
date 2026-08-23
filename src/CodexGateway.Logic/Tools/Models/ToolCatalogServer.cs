@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace CodexGateway.Logic.Tools;
+namespace CodexGateway.Logic.Tools.Models;
 
 public sealed record ToolCatalogServer(
     string Id,

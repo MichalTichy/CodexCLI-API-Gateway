@@ -1,7 +1,7 @@
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Errors;
 using CodexGateway.Logic.Generation;
-using CodexGateway.Logic.Models;
+using CodexGateway.Logic.Generation.Models;
 using CodexGateway.Logic.Specifications;
 using CodexGateway.Logic.Storage;
 using CodexGateway.Models;

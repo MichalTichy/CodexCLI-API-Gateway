@@ -1,4 +1,4 @@
-namespace CodexGateway.Logic.Errors;
+namespace CodexGateway.Logic.Errors.Models;
 
 public enum GatewayErrorCategory
 {

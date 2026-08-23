@@ -1,4 +1,4 @@
-namespace CodexGateway.Logic.McpServers;
+namespace CodexGateway.Logic.McpServers.Models;
 
 public sealed class GatewayMcpSessionLease(
     IReadOnlyDictionary<string, GatewayMcpRunnerConnection> connections,

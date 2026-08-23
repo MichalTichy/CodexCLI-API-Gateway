@@ -2,7 +2,7 @@ using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Errors;
 using MediatR;
 
-namespace CodexGateway.Logic.UseCases.Models;
+namespace CodexGateway.Logic.UseCases.ModelCatalog;
 
 public sealed class ListModelsUseCaseHandler(ICodexControlPlane codex)
     : IRequestHandler<ListModelsUseCase, IReadOnlyList<CodexModel>>

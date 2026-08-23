@@ -1,6 +1,9 @@
+using CodexGateway.Models.ApiKeys;
+using CodexGateway.Models.McpServers;
+using CodexGateway.Models.Projects;
 using Shared.Infrastructure.Persistence;
 
-namespace CodexGateway.Models;
+namespace CodexGateway.Models.Gateway;
 
 public sealed class GatewayState : IItemWithId
 {

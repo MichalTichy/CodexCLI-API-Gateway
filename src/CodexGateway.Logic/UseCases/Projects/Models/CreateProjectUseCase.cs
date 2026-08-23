@@ -4,6 +4,6 @@ using CodexGateway.Logic.Storage;
 using CodexGateway.Models;
 using MediatR;
 
-namespace CodexGateway.Logic.UseCases.Projects;
+namespace CodexGateway.Logic.UseCases.Projects.Models;
 
 public sealed record CreateProjectUseCase(string Id, string Name) : IRequest<ProjectDefinition>;

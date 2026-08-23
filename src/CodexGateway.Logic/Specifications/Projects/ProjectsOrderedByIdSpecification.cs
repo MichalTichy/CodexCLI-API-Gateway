@@ -1,7 +1,7 @@
 using CodexGateway.Models;
 using Shared.Infrastructure.Persistence.Specifications;
 
-namespace CodexGateway.Logic.Specifications;
+namespace CodexGateway.Logic.Specifications.Projects;
 
 public sealed class ProjectsOrderedByIdSpecification
     : ISpecification<GatewayState, IReadOnlyList<ProjectDefinition>>
