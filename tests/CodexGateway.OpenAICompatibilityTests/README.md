@@ -1,5 +1,11 @@
 # Official OpenAI .NET compatibility tests
 
+## Main flow and folders
+
+1. `Infrastructure/CompatibilityGatewayFactory.cs` starts an isolated in-memory gateway and `WireCaptureHandler.cs` records the SDK's sanitized HTTP exchange.
+2. `Compatibility/OfficialOpenAiClientCompatibilityTests.cs` calls the gateway through the pinned official OpenAI client.
+3. The tests compare requests and responses with the checked-in JSON under `Fixtures/`.
+
 This project pins `OpenAI` `2.13.0` and exercises its real Chat Completions client against an in-memory Gateway host. The pin is the Gateway compatibility-suite pin, selected as the current stable NuGet release on 2026-08-17.
 
 `D:\Work\Samwise-Assistant` contained scaffolded .NET projects when this suite was created, but none referenced `OpenAI`, `Microsoft.Extensions.AI.OpenAI`, or Microsoft Agent Framework, and it had no central package props or package lock supplying those integration versions. Therefore this version must not be described as Samwise's package pin. Once Samwise checks in its actual integration package versions, align this project to them and review the sanitized fixture diff as a wire-contract change.
