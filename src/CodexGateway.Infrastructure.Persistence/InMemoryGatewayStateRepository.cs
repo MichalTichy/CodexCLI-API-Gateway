@@ -9,6 +9,20 @@ public sealed class InMemoryGatewayStateRepository : IRepository<GatewayState>
     private readonly SemaphoreSlim _gate = new(1, 1);
     private GatewayState? _state;
 
+    public InMemoryGatewayStateRepository()
+    {
+    }
+
+    public InMemoryGatewayStateRepository(GatewayState state)
+    {
+        _state = state;
+    }
+
+    public GatewayState State => _state
+        ?? throw new InvalidOperationException("The gateway state has not been initialized.");
+
+    public int UpdateCount { get; private set; }
+
     public async Task AddAsync(
         ICollection<GatewayState> entities,
         CancellationToken cancellationToken = default,
@@ -34,6 +48,7 @@ public sealed class InMemoryGatewayStateRepository : IRepository<GatewayState>
             }
 
             _state = entity;
+            UpdateCount++;
             return entity;
         }
         finally
@@ -51,6 +66,7 @@ public sealed class InMemoryGatewayStateRepository : IRepository<GatewayState>
         try
         {
             _state = entity;
+            UpdateCount++;
         }
         finally
         {
@@ -70,7 +86,9 @@ public sealed class InMemoryGatewayStateRepository : IRepository<GatewayState>
             var state = _state is { } current && current.Id == id
                 ? current
                 : throw new InvalidOperationException($"Document with id {id} was not found.");
-            return await updateMethod(state);
+            var result = await updateMethod(state);
+            UpdateCount++;
+            return result;
         }
         finally
         {
