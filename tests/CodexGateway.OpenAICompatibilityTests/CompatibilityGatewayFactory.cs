@@ -58,7 +58,7 @@ public sealed class CompatibilityGatewayFactory : WebApplicationFactory<Program>
                 ["Gateway:ApiKeys:0:Key"] = "e2e-api-key",
                 ["Gateway:Limits:MaxConcurrent"] = "2",
                 ["Gateway:Limits:MaxQueued"] = "2",
-                ["Gateway:Limits:TimeoutMinutes"] = "1",
+                ["Gateway:Limits:TimeoutSeconds"] = "60",
                 ["Codex:ExecutablePath"] = "dotnet",
                 ["Codex:ArgumentPrefix:0"] = fakeAssembly,
                 ["Codex:ArgumentPrefix:1"] = "--scenario",
