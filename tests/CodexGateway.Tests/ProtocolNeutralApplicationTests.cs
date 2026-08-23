@@ -81,7 +81,7 @@ public sealed class ProtocolNeutralApplicationTests
         };
         var repository = new InMemoryGatewayStateRepository(new GatewayState
         {
-            ApiKeys = [new GatewayApiKeyDefinition { Id = "default", Name = "Default", Key = "test-secret" }],
+            ApiKeys = [new ApiKeyDefinition { Id = "default", Name = "Default", Key = "test-secret" }],
             Projects = [project]
         });
         var access = new AuthenticateGatewayRequestUseCaseHandler(repository);
@@ -377,7 +377,6 @@ public sealed class ProtocolNeutralApplicationTests
 
     private static IOptions<GatewayOptions> TestOptions() => Options.Create(new GatewayOptions
     {
-        ApiKeys = [new GlobalApiKeyOptions { Id = "default", Name = "Default", Key = "test-secret" }],
         Limits = new RunLimitOptions
         {
             MaxConcurrent = 2,

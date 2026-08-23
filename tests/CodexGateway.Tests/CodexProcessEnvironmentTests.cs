@@ -11,9 +11,8 @@ public sealed class CodexProcessEnvironmentTests
         {
             ["PATH"] = "/safe/bin",
             ["HTTPS_PROXY"] = "http://proxy.test",
-            ["Gateway__ApiKeys__0__Key"] = "gateway-secret",
             ["AdminUi__Password"] = "admin-secret",
-            ["ConnectionStrings__State"] = "database-secret",
+            ["ConnectionStrings__Gateway"] = "database-secret",
             ["OPENAI_API_KEY"] = "provider-secret",
             ["CODEX_API_KEY"] = "codex-secret",
             ["PROJECT_MCP_TOKEN"] = "mcp-secret",
@@ -31,9 +30,8 @@ public sealed class CodexProcessEnvironmentTests
         Assert.Equal("mcp-secret", environment["PROJECT_MCP_TOKEN"]);
         Assert.Equal(Path.GetFullPath("/gateway/codex-home"), environment["CODEX_HOME"]);
         Assert.Equal(Path.GetFullPath("/gateway/run/tmp"), environment["TMPDIR"]);
-        Assert.DoesNotContain("Gateway__ApiKeys__0__Key", environment.Keys, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("AdminUi__Password", environment.Keys, StringComparer.OrdinalIgnoreCase);
-        Assert.DoesNotContain("ConnectionStrings__State", environment.Keys, StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ConnectionStrings__Gateway", environment.Keys, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("OPENAI_API_KEY", environment.Keys, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("UNRELATED_SECRET", environment.Keys, StringComparer.OrdinalIgnoreCase);
     }

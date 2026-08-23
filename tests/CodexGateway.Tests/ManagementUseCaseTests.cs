@@ -22,8 +22,8 @@ public sealed class ManagementUseCaseTests
         {
             ApiKeys =
             [
-                new GatewayApiKeyDefinition { Id = "default", Name = "Default", Key = "default-secret" },
-                new GatewayApiKeyDefinition { Id = "secondary", Name = "Secondary", Key = "secondary-secret" }
+                new ApiKeyDefinition { Id = "default", Name = "Default", Key = "default-secret" },
+                new ApiKeyDefinition { Id = "secondary", Name = "Secondary", Key = "secondary-secret" }
             ],
             Projects =
             [
@@ -49,7 +49,7 @@ public sealed class ManagementUseCaseTests
         Assert.Equal(["a-project", "z-project"], projects!.Select(project => project.Id));
         Assert.Equal(["a-server", "z-server"], servers!.Select(server => server.Id));
         Assert.Equal(["default", "secondary"], identities!.Select(identity => identity.Id));
-        Assert.Null(typeof(GlobalApiKeyIdentity).GetProperty("Key"));
+        Assert.Null(typeof(ApiKeyIdentity).GetProperty("Key"));
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public sealed class ManagementUseCaseTests
     {
         var repository = new InMemoryGatewayStateRepository(new GatewayState
         {
-            ApiKeys = [new GatewayApiKeyDefinition { Id = "default", Name = "Default", Key = "test-secret" }]
+            ApiKeys = [new ApiKeyDefinition { Id = "default", Name = "Default", Key = "test-secret" }]
         });
         var storage = new RecordingProjectStorage();
         var options = TestOptions();
@@ -255,7 +255,6 @@ public sealed class ManagementUseCaseTests
 
     private static IOptions<GatewayOptions> TestOptions() => Options.Create(new GatewayOptions
     {
-        ApiKeys = [new GlobalApiKeyOptions { Id = "default", Name = "Default", Key = "test-secret" }],
         Limits = new RunLimitOptions
         {
             MaxConcurrent = 2,

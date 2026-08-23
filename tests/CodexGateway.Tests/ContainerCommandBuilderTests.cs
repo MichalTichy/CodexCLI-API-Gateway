@@ -29,7 +29,7 @@ public sealed class ContainerCommandBuilderTests
         {
             ["PATH"] = "/safe/bin",
             ["MCP_TOKEN"] = "mcp-secret-value",
-            ["Gateway__ApiKeys__0__Key"] = "gateway-secret-value",
+            ["ConnectionStrings__Gateway"] = "gateway-secret-value",
             ["OPENAI_API_KEY"] = "provider-secret-value",
             ["UNRELATED_SECRET"] = "unrelated-secret-value"
         };
@@ -84,7 +84,7 @@ public sealed class ContainerCommandBuilderTests
         Assert.DoesNotContain(arguments, argument => argument.Contains("provider-secret-value", StringComparison.Ordinal));
         Assert.DoesNotContain(arguments, argument => argument.Contains(request.Prompt, StringComparison.Ordinal));
         Assert.Equal("mcp-secret-value", startInfo.Environment["MCP_TOKEN"]);
-        Assert.False(startInfo.Environment.ContainsKey("Gateway__ApiKeys__0__Key"));
+        Assert.False(startInfo.Environment.ContainsKey("ConnectionStrings__Gateway"));
         Assert.False(startInfo.Environment.ContainsKey("OPENAI_API_KEY"));
         Assert.False(startInfo.Environment.ContainsKey("UNRELATED_SECRET"));
     }
@@ -274,7 +274,7 @@ public sealed class ContainerCommandBuilderTests
             ["MCP_TOKEN"] = "header-secret",
             ["MCP_EXTRA"] = "extra-secret",
             ["OPENAI_API_KEY"] = "provider-secret",
-            ["Gateway__ApiKeys__0__Key"] = "gateway-secret"
+            ["ConnectionStrings__Gateway"] = "gateway-secret"
         };
 
         var startInfo = ContainerCommandBuilder.CreateMcpDiscoveryStartInfo(
@@ -323,7 +323,7 @@ public sealed class ContainerCommandBuilderTests
         Assert.Equal("header-secret", startInfo.Environment["MCP_TOKEN"]);
         Assert.Equal("extra-secret", startInfo.Environment["MCP_EXTRA"]);
         Assert.False(startInfo.Environment.ContainsKey("OPENAI_API_KEY"));
-        Assert.False(startInfo.Environment.ContainsKey("Gateway__ApiKeys__0__Key"));
+        Assert.False(startInfo.Environment.ContainsKey("ConnectionStrings__Gateway"));
         Assert.DoesNotContain(
             arguments,
             argument => argument.Contains("header-secret", StringComparison.Ordinal) ||
@@ -417,7 +417,7 @@ public sealed class ContainerCommandBuilderTests
             ["DOCKER_HOST"] = "unix:///run/user/1000/docker.sock",
             ["DOCKER_CONTEXT"] = "rootless",
             ["MCP_TOKEN"] = "mcp-secret",
-            ["Gateway__ApiKeys__0__Key"] = "gateway-secret",
+            ["ConnectionStrings__Gateway"] = "gateway-secret",
             ["OPENAI_API_KEY"] = "provider-secret",
             ["OTHER_TOKEN"] = "other-secret"
         };
@@ -428,7 +428,7 @@ public sealed class ContainerCommandBuilderTests
         Assert.Equal("unix:///run/user/1000/docker.sock", environment["DOCKER_HOST"]);
         Assert.Equal("rootless", environment["DOCKER_CONTEXT"]);
         Assert.Equal("mcp-secret", environment["MCP_TOKEN"]);
-        Assert.DoesNotContain("Gateway__ApiKeys__0__Key", environment.Keys, StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ConnectionStrings__Gateway", environment.Keys, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("OPENAI_API_KEY", environment.Keys, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("OTHER_TOKEN", environment.Keys, StringComparer.OrdinalIgnoreCase);
     }

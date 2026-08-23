@@ -458,16 +458,7 @@ All settings can be supplied through `appsettings.json` or normal ASP.NET Core e
 
 The admin browser cookie is a non-persistent session cookie and expires when the browser session ends. Each login also receives an in-memory server session: logout invalidates copied cookies and prevents further events on existing Blazor circuits, while an operation that already started is allowed to finish. A gateway restart invalidates outstanding admin cookies. There are no roles or multiple gateway users. OpenAI API authentication and admin UI authentication are intentionally separate. The Blazor UI executes management operations directly on the server through its authenticated circuit; there is no separate management JSON API. The only admin transport routes are the antiforgery-protected form posts used to issue and revoke the UI cookie. Known placeholder credentials are rejected outside Development.
 
-Global keys in appsettings seed a new database; later management happens through the UI. Their secrets are never rendered by the admin UI. For example:
-
-```json
-"ApiKeys": [
-  { "Id": "ci", "Name": "CI automation", "Key": "another-long-secret" },
-  { "Id": "developers", "Name": "Developers", "Key": "a-different-long-secret" }
-]
-```
-
-The management UI refers to these entries by ID and name when assigning project access and tools.
+API keys are stored only in PostgreSQL and managed through the administration UI. A new gateway starts without API keys: sign in to the UI and create the first key before calling the OpenAI-compatible API. API-key secrets are never rendered by the UI after creation. The management UI refers to keys by ID and name when assigning project access and tools.
 
 ## Error contract
 
