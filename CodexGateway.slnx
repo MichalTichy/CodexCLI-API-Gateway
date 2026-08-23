@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/SharedInfrastructure/">
     <Project Path="SharedInfrastructure/Shared.Infrastructure.CurrentTenancyProvider/Shared.Infrastructure.CurrentTenancyProvider.csproj" />
+    <Project Path="SharedInfrastructure/Shared.Infrastructure.IoC/Shared.Infrastructure.IoC.csproj" />
     <Project Path="SharedInfrastructure/Shared.Infrastructure.Persistence/Shared.Infrastructure.Persistence.csproj" />
     <Project Path="SharedInfrastructure/Shared.Infrastructure.Persistence.Marten/Shared.Infrastructure.Persistence.Marten.csproj" />
   </Folder>
@@ -13,7 +14,6 @@
     <Project Path="src/CodexGateway.Infrastructure.Mcp/CodexGateway.Infrastructure.Mcp.csproj" />
     <Project Path="src/CodexGateway.Infrastructure.Persistence/CodexGateway.Infrastructure.Persistence.csproj" />
     <Project Path="src/CodexGateway.Infrastructure.Storage/CodexGateway.Infrastructure.Storage.csproj" />
-    <Project Path="src/CodexGateway.IoC/CodexGateway.IoC.csproj" />
     <Project Path="src/CodexGateway.Logic/CodexGateway.Logic.csproj" />
     <Project Path="src/CodexGateway.Models/CodexGateway.Models.csproj" />
     <Project Path="src/CodexGateway.ServiceDefaults/CodexGateway.ServiceDefaults.csproj" />

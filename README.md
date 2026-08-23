@@ -514,7 +514,7 @@ src/CodexGateway.Infrastructure.Persistence/ Gateway Marten installer, state ini
 src/CodexGateway.Infrastructure.Storage/ Filesystem workspaces, artifacts, quotas, and cleanup
 src/CodexGateway.Infrastructure.Codex/   Codex App Server, process/container runtime, and MCP discovery
 src/CodexGateway.Infrastructure.Mcp/     Gateway-hosted HTTP and local STDIO MCP sessions
-src/CodexGateway.IoC/             Installer contracts and deterministic module discovery
+SharedInfrastructure/Shared.Infrastructure.IoC/  Installer contracts and deterministic module discovery
 src/CodexGateway.Api/             Schema-neutral FastEndpoints bootstrap and request context access
 src/CodexGateway.Api.OpenAI/      OpenAI wire contracts, endpoints, validation, and mapping
 src/CodexGateway.App/             Composition root, authentication, and Blazor UI

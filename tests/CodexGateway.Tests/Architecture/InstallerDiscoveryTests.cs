@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Reflection.Emit;
-using CodexGateway.IoC;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
@@ -196,7 +195,7 @@ public sealed class InstallerDiscoveryTests
     {
         public string EnvironmentName { get; set; } = Environments.Development;
 
-        public string ApplicationName { get; set; } = "CodexGateway.IoC.Tests";
+        public string ApplicationName { get; set; } = "Shared.Infrastructure.IoC.Tests";
 
         public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
 

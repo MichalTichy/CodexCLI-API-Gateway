@@ -47,7 +47,7 @@ public sealed class SourceFileArchitectureTests
     [Fact]
     public void Source_namespaces_match_project_folders()
     {
-        var sourceFiles = new[] { "src", "tests" }
+        var sourceFiles = new[] { "SharedInfrastructure", "src", "tests" }
             .SelectMany(directory => Directory.EnumerateFiles(
                 Path.Combine(RepositoryRoot, directory),
                 "*.cs",
