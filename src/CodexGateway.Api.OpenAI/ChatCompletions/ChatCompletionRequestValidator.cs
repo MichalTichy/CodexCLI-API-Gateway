@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using CodexGateway.Logic.Errors;
 
-namespace CodexGateway.Api.OpenAI;
+namespace CodexGateway.Api.OpenAI.ChatCompletions;
 
 public static partial class ChatCompletionRequestValidator
 {

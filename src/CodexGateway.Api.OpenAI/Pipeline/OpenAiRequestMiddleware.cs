@@ -4,7 +4,7 @@ using CodexGateway.Logic.Errors;
 using CodexGateway.Logic.UseCases.Security;
 using MediatR;
 
-namespace CodexGateway.Api.OpenAI;
+namespace CodexGateway.Api.OpenAI.Pipeline;
 
 public sealed class OpenAiRequestMiddleware(
     RequestDelegate next,

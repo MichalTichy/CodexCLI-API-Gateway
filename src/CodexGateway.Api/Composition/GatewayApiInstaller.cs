@@ -9,7 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace CodexGateway.Api;
+namespace CodexGateway.Api.Composition;
 
 public sealed class GatewayApiInstaller : ILowPriorityInstaller
 {

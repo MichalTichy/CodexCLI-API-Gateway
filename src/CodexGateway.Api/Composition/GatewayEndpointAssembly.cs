@@ -9,6 +9,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace CodexGateway.Api;
+namespace CodexGateway.Api.Composition;
 
 public sealed record GatewayEndpointAssembly(Assembly Assembly);

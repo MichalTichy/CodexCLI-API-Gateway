@@ -4,7 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace CodexGateway.Api.OpenAI;
+namespace CodexGateway.Api.OpenAI.Composition;
 
 public sealed class OpenAiApiInstaller : IInstaller
 {

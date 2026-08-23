@@ -1,9 +1,9 @@
 using CodexGateway.Api;
-using CodexGateway.Logic.UseCases.Models;
+using CodexGateway.Logic.UseCases.ModelCatalog.Models;
 using FastEndpoints;
 using MediatR;
 
-namespace CodexGateway.Api.OpenAI.Endpoints;
+namespace CodexGateway.Api.OpenAI.ModelCatalog.Endpoints;
 
 public sealed class ModelsEndpoint(ISender sender) : EndpointWithoutRequest
 {

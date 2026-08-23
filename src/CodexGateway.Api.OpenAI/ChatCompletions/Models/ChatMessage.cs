@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace CodexGateway.Api.OpenAI;
+namespace CodexGateway.Api.OpenAI.ChatCompletions.Models;
 
 public sealed class ChatMessage
 {

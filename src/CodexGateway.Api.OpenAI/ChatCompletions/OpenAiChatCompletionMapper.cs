@@ -3,7 +3,7 @@ using CodexGateway.Logic;
 using CodexGateway.Logic.Errors;
 using CodexGateway.Logic.Generation;
 
-namespace CodexGateway.Api.OpenAI;
+namespace CodexGateway.Api.OpenAI.ChatCompletions;
 
 public sealed class OpenAiChatCompletionMapper
 {

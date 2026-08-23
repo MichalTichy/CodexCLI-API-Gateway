@@ -4,7 +4,7 @@ using CodexGateway.Logic.UseCases.Files;
 using FastEndpoints;
 using MediatR;
 
-namespace CodexGateway.Api.OpenAI.Endpoints;
+namespace CodexGateway.Api.OpenAI.Files.Endpoints;
 
 public sealed class DownloadFileEndpoint(ISender sender) : EndpointWithoutRequest
 {

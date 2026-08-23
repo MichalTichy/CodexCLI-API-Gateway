@@ -1,7 +1,7 @@
 using CodexGateway.Logic;
 using Microsoft.AspNetCore.Http;
 
-namespace CodexGateway.Api;
+namespace CodexGateway.Api.Security;
 
 public static class GatewayRequestContextExtensions
 {

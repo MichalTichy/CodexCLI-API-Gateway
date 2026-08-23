@@ -1,6 +1,6 @@
 using CodexGateway.Models;
 
-namespace CodexGateway.Api.OpenAI;
+namespace CodexGateway.Api.OpenAI.Files.Models;
 
 public sealed record OpenAiFileResponse
 {

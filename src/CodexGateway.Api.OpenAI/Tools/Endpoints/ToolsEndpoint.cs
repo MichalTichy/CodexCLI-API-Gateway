@@ -7,7 +7,7 @@ using CodexGateway.Logic.UseCases.Tools;
 using FastEndpoints;
 using MediatR;
 
-namespace CodexGateway.Api.OpenAI.Endpoints;
+namespace CodexGateway.Api.OpenAI.Tools.Endpoints;
 
 public sealed class ToolsEndpoint(ISender sender) : EndpointWithoutRequest
 {

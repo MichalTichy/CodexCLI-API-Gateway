@@ -7,7 +7,7 @@ using CodexGateway.Logic.UseCases.Generation;
 using FastEndpoints;
 using MediatR;
 
-namespace CodexGateway.Api.OpenAI.Endpoints;
+namespace CodexGateway.Api.OpenAI.ChatCompletions.Endpoints;
 
 public sealed class ChatCompletionsEndpoint(
     ISender sender,

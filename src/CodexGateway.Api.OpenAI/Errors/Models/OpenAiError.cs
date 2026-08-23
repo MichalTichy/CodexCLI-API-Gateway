@@ -1,6 +1,6 @@
 using CodexGateway.Logic.Errors;
 
-namespace CodexGateway.Api.OpenAI.Errors;
+namespace CodexGateway.Api.OpenAI.Errors.Models;
 
 public sealed record OpenAiError(
     string Message,
