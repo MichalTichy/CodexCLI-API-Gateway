@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Xml.Linq;
-using CodexGateway.IoC;
 
 namespace CodexGateway.Tests.Architecture;
 
@@ -103,11 +102,11 @@ public sealed class ArchitectureDependencyTests
     {
         var codexReferences = ReadProjectReferences(ProjectPath("CodexGateway.Infrastructure.Codex"));
         Assert.Contains("CodexGateway.Infrastructure.Storage", codexReferences);
-        Assert.Contains("CodexGateway.IoC", codexReferences);
+        Assert.Contains("Shared.Infrastructure.IoC", codexReferences);
 
         var storageReferences = ReadProjectReferences(ProjectPath("CodexGateway.Infrastructure.Storage"));
         Assert.DoesNotContain("CodexGateway.Infrastructure.Codex", storageReferences);
-        Assert.Contains("CodexGateway.IoC", storageReferences);
+        Assert.Contains("Shared.Infrastructure.IoC", storageReferences);
 
         Assert.False(File.Exists(ProjectPath("CodexGateway.Infrastructure")));
     }
