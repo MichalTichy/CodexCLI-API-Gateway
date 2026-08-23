@@ -1,10 +1,16 @@
+using Shared.Infrastructure.Persistence;
+
 namespace CodexGateway.Models;
 
-public sealed record GatewayState
+public sealed class GatewayState : IItemWithId
 {
-    public List<GatewayApiKeyDefinition> ApiKeys { get; init; } = [];
+    public const string DocumentId = "gateway";
 
-    public List<ProjectDefinition> Projects { get; init; } = [];
+    public string Id { get; init; } = DocumentId;
 
-    public List<McpServerDefinition> McpServers { get; init; } = [];
+    public List<GatewayApiKeyDefinition> ApiKeys { get; set; } = [];
+
+    public List<ProjectDefinition> Projects { get; set; } = [];
+
+    public List<McpServerDefinition> McpServers { get; set; } = [];
 }

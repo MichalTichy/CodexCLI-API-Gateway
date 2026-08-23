@@ -1,14 +1,14 @@
 using System.Text.RegularExpressions;
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Errors;
-using CodexGateway.Logic.Storage;
 using CodexGateway.Models;
 using MediatR;
+using Shared.Infrastructure.Persistence.Repositories;
 
 namespace CodexGateway.Logic.UseCases.McpServers;
 
 public sealed partial class CreateOrUpdateMcpServerUseCaseHandler(
-    IGatewayConfigurationRepository repository)
+    IRepository<GatewayState> repository)
     : IRequestHandler<CreateOrUpdateMcpServerUseCase, McpServerDefinition>
 {
     public async Task<McpServerDefinition> Handle(
@@ -64,12 +64,12 @@ public sealed partial class CreateOrUpdateMcpServerUseCaseHandler(
                 parameter: "transport")
         };
 
-        await repository.UpdateAsync(state => state with
+        await repository.GetAndUpdateAsync(GatewayState.DocumentId, state =>
         {
-            McpServers = [
+            state.McpServers = [
                 .. state.McpServers.Where(existing => existing.Id != id),
                 normalized
-            ]
+            ];
         }, cancellationToken);
         return normalized;
     }

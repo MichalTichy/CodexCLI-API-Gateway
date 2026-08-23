@@ -1,15 +1,13 @@
 using System.Text.RegularExpressions;
 using CodexGateway.Logic.Errors;
-using CodexGateway.Logic.Security;
-using CodexGateway.Logic.Storage;
 using CodexGateway.Models;
 using MediatR;
+using Shared.Infrastructure.Persistence.Repositories;
 
 namespace CodexGateway.Logic.UseCases.ApiKeys;
 
 public sealed partial class CreateApiKeyUseCaseHandler(
-    IGatewayConfigurationRepository repository,
-    GlobalApiKeyService apiKeys)
+    IRepository<GatewayState> repository)
     : IRequestHandler<CreateApiKeyUseCase, GatewayApiKeyDefinition>
 {
     public async Task<GatewayApiKeyDefinition> Handle(
@@ -37,7 +35,7 @@ public sealed partial class CreateApiKeyUseCaseHandler(
         }
 
         var created = new GatewayApiKeyDefinition { Id = id, Name = name, Key = key };
-        var state = await repository.UpdateAsync(current =>
+        await repository.GetAndUpdateAsync(GatewayState.DocumentId, current =>
         {
             if (current.ApiKeys.Any(existing =>
                     string.Equals(existing.Id, id, StringComparison.Ordinal) ||
@@ -49,9 +47,8 @@ public sealed partial class CreateApiKeyUseCaseHandler(
                     "id");
             }
 
-            return current with { ApiKeys = [.. current.ApiKeys, created] };
+            current.ApiKeys.Add(created);
         }, cancellationToken);
-        apiKeys.Replace(state.ApiKeys);
         return created;
     }
 

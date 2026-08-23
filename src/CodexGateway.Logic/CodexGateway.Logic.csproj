@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CodexGateway.IoC\CodexGateway.IoC.csproj" />
     <ProjectReference Include="..\CodexGateway.Models\CodexGateway.Models.csproj" />
+    <ProjectReference Include="..\..\SharedInfrastructure\Shared.Infrastructure.Persistence\Shared.Infrastructure.Persistence.csproj" />
   </ItemGroup>
 
 </Project>

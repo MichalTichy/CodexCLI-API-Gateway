@@ -1,4 +1,3 @@
-using CodexGateway.Logic.Files;
 using MediatR;
 
 namespace CodexGateway.Logic.UseCases.Files;

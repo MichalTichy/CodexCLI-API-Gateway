@@ -1,16 +1,13 @@
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Errors;
-using CodexGateway.Logic.Security;
-using CodexGateway.Logic.Specifications;
-using CodexGateway.Logic.Storage;
 using CodexGateway.Models;
 using MediatR;
+using Shared.Infrastructure.Persistence.Repositories;
 
 namespace CodexGateway.Logic.UseCases.Projects;
 
 public sealed class UpdateProjectUseCaseHandler(
-    IGatewayConfigurationRepository repository,
-    GlobalApiKeyService apiKeys,
+    IRepository<GatewayState> repository,
     RunCoordinator runs)
     : IRequestHandler<UpdateProjectUseCase, ProjectDefinition>
 {
@@ -35,14 +32,16 @@ public sealed class UpdateProjectUseCaseHandler(
         CancellationToken cancellationToken)
     {
         ProjectDefinition? updated = null;
-        await repository.UpdateAsync(state =>
+        await repository.GetAndUpdateAsync(GatewayState.DocumentId, state =>
         {
-            var current = new ProjectDefinitionByIdSpecification(replacement.Id).Apply(state)
+            var current = state.Projects.SingleOrDefault(candidate =>
+                    string.Equals(candidate.Id, replacement.Id, StringComparison.OrdinalIgnoreCase))
                 ?? throw GatewayException.NotFound(
                     $"Project '{replacement.Id}' was not found.",
                     "project_not_found");
             var access = NormalizeApiKeyAccess(
                 replacement.ApiKeyAccess,
+                state.ApiKeys,
                 state.McpServers);
             updated = replacement with
             {
@@ -52,14 +51,11 @@ public sealed class UpdateProjectUseCaseHandler(
                 CreatedAt = current.CreatedAt,
                 ApiKeyAccess = access
             };
-            return state with
-            {
-                Projects = state.Projects
-                    .Select(project => string.Equals(project.Id, current.Id, StringComparison.Ordinal)
-                        ? updated
-                        : project)
-                    .ToList()
-            };
+            state.Projects = state.Projects
+                .Select(project => string.Equals(project.Id, current.Id, StringComparison.Ordinal)
+                    ? updated
+                    : project)
+                .ToList();
         }, cancellationToken);
         return updated!;
     }
@@ -82,8 +78,9 @@ public sealed class UpdateProjectUseCaseHandler(
         return normalized;
     }
 
-    private List<ProjectApiKeyAccess> NormalizeApiKeyAccess(
+    private static List<ProjectApiKeyAccess> NormalizeApiKeyAccess(
         IReadOnlyCollection<ProjectApiKeyAccess>? requestedAccess,
+        IReadOnlyCollection<GatewayApiKeyDefinition> apiKeys,
         IReadOnlyCollection<McpServerDefinition> catalog)
     {
         var normalized = new List<ProjectApiKeyAccess>();
@@ -92,7 +89,7 @@ public sealed class UpdateProjectUseCaseHandler(
         {
             if (access is null ||
                 string.IsNullOrWhiteSpace(access.ApiKeyId) ||
-                apiKeys.FindById(access.ApiKeyId) is null ||
+                !apiKeys.Any(key => string.Equals(key.Id, access.ApiKeyId, StringComparison.Ordinal)) ||
                 !keyIds.Add(access.ApiKeyId))
             {
                 throw GatewayException.InvalidRequest(

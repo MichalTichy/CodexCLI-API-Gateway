@@ -1,13 +1,14 @@
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Errors;
-using CodexGateway.Logic.Specifications;
 using CodexGateway.Logic.Storage;
+using CodexGateway.Models;
 using MediatR;
+using Shared.Infrastructure.Persistence.Repositories;
 
 namespace CodexGateway.Logic.UseCases.Projects;
 
 public sealed class DeleteProjectUseCaseHandler(
-    IGatewayConfigurationRepository repository,
+    IRepository<GatewayState> repository,
     IProjectStorage projectStorage,
     RunCoordinator runs)
     : IRequestHandler<DeleteProjectUseCase>
@@ -30,22 +31,20 @@ public sealed class DeleteProjectUseCaseHandler(
             async token =>
             {
                 string? canonicalId = null;
-                await repository.UpdateAsync(state =>
+                await repository.GetAndUpdateAsync(GatewayState.DocumentId, state =>
                 {
-                    var project = new ProjectDefinitionByIdSpecification(request.ProjectId).Apply(state)
+                    var project = state.Projects.SingleOrDefault(candidate =>
+                            string.Equals(candidate.Id, request.ProjectId, StringComparison.OrdinalIgnoreCase))
                         ?? throw GatewayException.NotFound(
                             $"Project '{request.ProjectId}' was not found.",
                             "project_not_found");
                     canonicalId = project.Id;
-                    return state with
-                    {
-                        Projects = state.Projects
-                            .Where(candidate => !string.Equals(
-                                candidate.Id,
-                                project.Id,
-                                StringComparison.Ordinal))
-                            .ToList()
-                    };
+                    state.Projects = state.Projects
+                        .Where(candidate => !string.Equals(
+                            candidate.Id,
+                            project.Id,
+                            StringComparison.Ordinal))
+                        .ToList();
                 }, token);
 
                 projectStorage.Delete(canonicalId!);

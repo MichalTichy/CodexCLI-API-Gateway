@@ -1,14 +1,18 @@
 using CodexGateway.Models;
+using Shared.Infrastructure.Persistence.Specifications;
 
 namespace CodexGateway.Logic.Specifications;
 
 public sealed class ProjectDefinitionByIdSpecification(string projectId)
     : ISpecification<GatewayState, ProjectDefinition?>
 {
-    public ProjectDefinition? Apply(GatewayState source)
+    public Task<ProjectDefinition?> ApplyAsync(
+        IQueryable<GatewayState> queryable,
+        CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(source);
-        return source.Projects.SingleOrDefault(candidate =>
+        cancellationToken.ThrowIfCancellationRequested();
+        var result = queryable.SingleOrDefault()?.Projects.SingleOrDefault(candidate =>
             string.Equals(candidate.Id, projectId, StringComparison.OrdinalIgnoreCase));
+        return Task.FromResult(result);
     }
 }

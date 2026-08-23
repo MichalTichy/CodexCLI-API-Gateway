@@ -1,15 +1,19 @@
 using CodexGateway.Models;
+using Shared.Infrastructure.Persistence.Specifications;
 
 namespace CodexGateway.Logic.Specifications;
 
 public sealed class ProjectsOrderedByIdSpecification
     : ISpecification<GatewayState, IReadOnlyList<ProjectDefinition>>
 {
-    public IReadOnlyList<ProjectDefinition> Apply(GatewayState source)
+    public Task<IReadOnlyList<ProjectDefinition>?> ApplyAsync(
+        IQueryable<GatewayState> queryable,
+        CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(source);
-        return source.Projects
+        cancellationToken.ThrowIfCancellationRequested();
+        IReadOnlyList<ProjectDefinition> result = (queryable.SingleOrDefault()?.Projects ?? [])
             .OrderBy(project => project.Id, StringComparer.Ordinal)
             .ToArray();
+        return Task.FromResult<IReadOnlyList<ProjectDefinition>?>(result);
     }
 }

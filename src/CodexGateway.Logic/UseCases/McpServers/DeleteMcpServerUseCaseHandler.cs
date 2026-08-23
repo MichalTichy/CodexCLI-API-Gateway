@@ -1,21 +1,22 @@
-using CodexGateway.Logic.Storage;
+using CodexGateway.Models;
 using MediatR;
+using Shared.Infrastructure.Persistence.Repositories;
 
 namespace CodexGateway.Logic.UseCases.McpServers;
 
-public sealed class DeleteMcpServerUseCaseHandler(IGatewayConfigurationRepository repository)
+public sealed class DeleteMcpServerUseCaseHandler(IRepository<GatewayState> repository)
     : IRequestHandler<DeleteMcpServerUseCase>
 {
     public async Task Handle(
         DeleteMcpServerUseCase request,
         CancellationToken cancellationToken)
     {
-        await repository.UpdateAsync(state => state with
+        await repository.GetAndUpdateAsync(GatewayState.DocumentId, state =>
         {
-            McpServers = state.McpServers
+            state.McpServers = state.McpServers
                 .Where(server => server.Id != request.ServerId)
-                .ToList(),
-            Projects = state.Projects.Select(project => project with
+                .ToList();
+            state.Projects = state.Projects.Select(project => project with
             {
                 ApiKeyAccess = project.ApiKeyAccess.Select(access => access with
                 {
@@ -23,7 +24,7 @@ public sealed class DeleteMcpServerUseCaseHandler(IGatewayConfigurationRepositor
                         .Where(assignment => assignment.ServerId != request.ServerId)
                         .ToList()
                 }).ToList()
-            }).ToList()
+            }).ToList();
         }, cancellationToken);
     }
 }

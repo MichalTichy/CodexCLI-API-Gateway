@@ -1,4 +1,3 @@
-using CodexGateway.Logic.Files;
 using CodexGateway.Models;
 using MediatR;
 

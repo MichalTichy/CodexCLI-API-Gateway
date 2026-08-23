@@ -1,11 +1,10 @@
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Errors;
-using CodexGateway.Logic.Models;
 using MediatR;
 
 namespace CodexGateway.Logic.UseCases.Models;
 
-public sealed class ListModelsUseCaseHandler(ModelCatalogService models)
+public sealed class ListModelsUseCaseHandler(ICodexControlPlane codex)
     : IRequestHandler<ListModelsUseCase, IReadOnlyList<CodexModel>>
 {
     public Task<IReadOnlyList<CodexModel>> Handle(
@@ -18,6 +17,6 @@ public sealed class ListModelsUseCaseHandler(ModelCatalogService models)
             throw new InvalidApiKeyException();
         }
 
-        return models.ListAsync(cancellationToken, request.ForceRefresh);
+        return codex.GetModelsAsync(request.ForceRefresh, cancellationToken);
     }
 }

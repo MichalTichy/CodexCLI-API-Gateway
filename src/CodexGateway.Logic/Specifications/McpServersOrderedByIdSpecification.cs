@@ -1,15 +1,19 @@
 using CodexGateway.Models;
+using Shared.Infrastructure.Persistence.Specifications;
 
 namespace CodexGateway.Logic.Specifications;
 
 public sealed class McpServersOrderedByIdSpecification
     : ISpecification<GatewayState, IReadOnlyList<McpServerDefinition>>
 {
-    public IReadOnlyList<McpServerDefinition> Apply(GatewayState source)
+    public Task<IReadOnlyList<McpServerDefinition>?> ApplyAsync(
+        IQueryable<GatewayState> queryable,
+        CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(source);
-        return source.McpServers
+        cancellationToken.ThrowIfCancellationRequested();
+        IReadOnlyList<McpServerDefinition> result = (queryable.SingleOrDefault()?.McpServers ?? [])
             .OrderBy(server => server.Id, StringComparer.Ordinal)
             .ToArray();
+        return Task.FromResult<IReadOnlyList<McpServerDefinition>?>(result);
     }
 }

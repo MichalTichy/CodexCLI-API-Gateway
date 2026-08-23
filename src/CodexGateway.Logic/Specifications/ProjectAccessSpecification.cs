@@ -1,4 +1,5 @@
 using CodexGateway.Models;
+using Shared.Infrastructure.Persistence.Specifications;
 
 namespace CodexGateway.Logic.Specifications;
 
@@ -10,24 +11,32 @@ namespace CodexGateway.Logic.Specifications;
 public sealed class ProjectAccessSpecification(string projectId, string apiKeyId)
     : ISpecification<GatewayState, ResolvedProjectAccess?>
 {
-    public ResolvedProjectAccess? Apply(GatewayState source)
+    public Task<ResolvedProjectAccess?> ApplyAsync(
+        IQueryable<GatewayState> queryable,
+        CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(source);
+        cancellationToken.ThrowIfCancellationRequested();
+        var source = queryable.SingleOrDefault();
+        if (source is null)
+        {
+            return Task.FromResult<ResolvedProjectAccess?>(null);
+        }
 
         var project = source.Projects.SingleOrDefault(candidate =>
             candidate.Enabled &&
             string.Equals(candidate.Id, projectId, StringComparison.OrdinalIgnoreCase));
         if (project is null)
         {
-            return null;
+            return Task.FromResult<ResolvedProjectAccess?>(null);
         }
 
         var matches = (project.ApiKeyAccess ?? [])
             .OfType<ProjectApiKeyAccess>()
             .Where(access => string.Equals(access.ApiKeyId, apiKeyId, StringComparison.Ordinal))
             .ToArray();
-        return matches.Length == 1
+        var result = matches.Length == 1
             ? new ResolvedProjectAccess(project, matches[0])
             : null;
+        return Task.FromResult(result);
     }
 }

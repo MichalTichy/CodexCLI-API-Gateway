@@ -3,11 +3,12 @@ using CodexGateway.Logic.Errors;
 using CodexGateway.Logic.Storage;
 using CodexGateway.Models;
 using MediatR;
+using Shared.Infrastructure.Persistence.Repositories;
 
 namespace CodexGateway.Logic.UseCases.Projects;
 
 public sealed partial class CreateProjectUseCaseHandler(
-    IGatewayConfigurationRepository repository,
+    IRepository<GatewayState> repository,
     IProjectStorage projectStorage)
     : IRequestHandler<CreateProjectUseCase, ProjectDefinition>
 {
@@ -35,7 +36,7 @@ public sealed partial class CreateProjectUseCaseHandler(
 
         var name = request.Name.Trim();
         ProjectDefinition? created = null;
-        await repository.UpdateAsync(state =>
+        await repository.GetAndUpdateAsync(GatewayState.DocumentId, state =>
         {
             if (state.Projects.Any(project =>
                     string.Equals(project.Id, id, StringComparison.OrdinalIgnoreCase)))
@@ -47,7 +48,7 @@ public sealed partial class CreateProjectUseCaseHandler(
             }
 
             created = new ProjectDefinition { Id = id, Name = name };
-            return state with { Projects = [.. state.Projects, created] };
+            state.Projects.Add(created);
         }, cancellationToken);
 
         projectStorage.Create(id);
