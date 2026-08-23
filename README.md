@@ -427,8 +427,7 @@ All settings can be supplied through `appsettings.json` or normal ASP.NET Core e
 | `Gateway:StoragePath` | `data` | Projects, metadata, temporary files, and runs |
 | `Gateway:Limits:MaxConcurrent` | `4` | Concurrent run containers |
 | `Gateway:Limits:MaxQueued` | `32` | Additional admitted requests |
-| `Gateway:Limits:TimeoutMinutes` | `30` | Active execution timeout; queue wait is excluded |
-| `Gateway:Limits:TimeoutSeconds` | unset | Optional seconds override for short operational limits/tests |
+| `Gateway:Limits:TimeoutSeconds` | `1800` | Active execution timeout in seconds; queue wait is excluded |
 | `Gateway:Files:MaxUploadMegabytes` | `25` | Upload limit |
 | `Gateway:Files:ProjectlessTtlHours` | `24` | Temporary-file lifetime |
 | `Gateway:Artifacts:MaxFiles` | `10000` | Maximum files in a project artifact tree or writable run workspace |

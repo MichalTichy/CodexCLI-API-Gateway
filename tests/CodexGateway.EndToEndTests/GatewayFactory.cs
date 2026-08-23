@@ -68,7 +68,7 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>
                 ["Gateway:ApiKeys:1:Key"] = "e2e-secondary-api-key",
                 ["Gateway:Limits:MaxConcurrent"] = _maxConcurrent.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["Gateway:Limits:MaxQueued"] = _maxQueued.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                ["Gateway:Limits:TimeoutMinutes"] = "1",
+                ["Gateway:Limits:TimeoutSeconds"] = "60",
                 ["Codex:ExecutablePath"] = "dotnet",
                 ["Codex:ArgumentPrefix:0"] = fakeAssembly,
                 ["Codex:ArgumentPrefix:1"] = "--scenario",
