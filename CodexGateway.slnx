@@ -1,4 +1,9 @@
 <Solution>
+  <Folder Name="/SharedInfrastructure/">
+    <Project Path="SharedInfrastructure/Shared.Infrastructure.CurrentTenancyProvider/Shared.Infrastructure.CurrentTenancyProvider.csproj" />
+    <Project Path="SharedInfrastructure/Shared.Infrastructure.Persistence/Shared.Infrastructure.Persistence.csproj" />
+    <Project Path="SharedInfrastructure/Shared.Infrastructure.Persistence.Marten/Shared.Infrastructure.Persistence.Marten.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/CodexGateway.Api/CodexGateway.Api.csproj" />
     <Project Path="src/CodexGateway.Api.OpenAI/CodexGateway.Api.OpenAI.csproj" />
@@ -6,6 +11,7 @@
     <Project Path="src/CodexGateway.AppHost/CodexGateway.AppHost.csproj" />
     <Project Path="src/CodexGateway.Infrastructure.Codex/CodexGateway.Infrastructure.Codex.csproj" />
     <Project Path="src/CodexGateway.Infrastructure.Mcp/CodexGateway.Infrastructure.Mcp.csproj" />
+    <Project Path="src/CodexGateway.Infrastructure.Persistence/CodexGateway.Infrastructure.Persistence.csproj" />
     <Project Path="src/CodexGateway.Infrastructure.Storage/CodexGateway.Infrastructure.Storage.csproj" />
     <Project Path="src/CodexGateway.IoC/CodexGateway.IoC.csproj" />
     <Project Path="src/CodexGateway.Logic/CodexGateway.Logic.csproj" />

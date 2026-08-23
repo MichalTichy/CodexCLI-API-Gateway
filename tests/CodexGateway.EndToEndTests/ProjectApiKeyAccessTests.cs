@@ -4,12 +4,11 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using CodexGateway.Infrastructure.Codex;
-using CodexGateway.Logic.Security;
 using CodexGateway.Logic.Specifications;
-using CodexGateway.Logic.Storage;
 using CodexGateway.Models;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Shared.Infrastructure.Persistence.Repositories;
 
 namespace CodexGateway.EndToEndTests;
 
@@ -190,28 +189,22 @@ public sealed class ProjectApiKeyAccessTests : IDisposable
     }
 
     [Fact]
-    public async Task Typed_key_identities_and_persisted_projects_never_expose_api_key_secrets()
+    public async Task Typed_key_identities_and_projects_never_expose_api_key_secrets()
     {
         await CreateProjectAsync("metadata", "Metadata", true, Access("default"), Access("secondary"));
 
-        var keys = _factory.Services.GetRequiredService<GlobalApiKeyService>().List();
+        var repository = _factory.Services.GetRequiredService<IReadOnlyRepository<GatewayState>>();
+        var keys = (await repository.GetBySpecAsync(new ApiKeysOrderedByIdSpecification()))!;
         Assert.Equal(["default", "secondary"], keys.Select(key => key.Id));
         var keyBody = JsonSerializer.Serialize(keys);
         Assert.DoesNotContain(DefaultKey, keyBody, StringComparison.Ordinal);
         Assert.DoesNotContain(SecondaryKey, keyBody, StringComparison.Ordinal);
 
-        var projects = await _factory.Services
-            .GetRequiredService<IGatewayConfigurationRepository>()
-            .QueryAsync(new ProjectsOrderedByIdSpecification());
+        var projects = await repository.GetBySpecAsync(new ProjectsOrderedByIdSpecification());
         var projectsBody = JsonSerializer.Serialize(projects);
         Assert.DoesNotContain(DefaultKey, projectsBody, StringComparison.Ordinal);
         Assert.DoesNotContain(SecondaryKey, projectsBody, StringComparison.Ordinal);
 
-        var persistedState = await File.ReadAllTextAsync(Path.Combine(_factory.StoragePath, "state.json"));
-        Assert.Contains(DefaultKey, persistedState, StringComparison.Ordinal);
-        Assert.Contains(SecondaryKey, persistedState, StringComparison.Ordinal);
-        Assert.Contains("\"apiKeyId\": \"default\"", persistedState, StringComparison.Ordinal);
-        Assert.Contains("\"apiKeyId\": \"secondary\"", persistedState, StringComparison.Ordinal);
     }
 
     [Fact]

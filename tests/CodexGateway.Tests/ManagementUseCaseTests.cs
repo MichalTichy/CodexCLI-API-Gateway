@@ -1,3 +1,4 @@
+using CodexGateway.Infrastructure.Persistence;
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Configuration;
 using CodexGateway.Logic.Errors;
@@ -17,8 +18,13 @@ public sealed class ManagementUseCaseTests
     [Fact]
     public async Task Read_specifications_apply_ordering_and_key_identities_exclude_secrets()
     {
-        var repository = new InMemoryConfigurationRepository(new GatewayState
+        var repository = new InMemoryGatewayStateRepository(new GatewayState
         {
+            ApiKeys =
+            [
+                new GatewayApiKeyDefinition { Id = "default", Name = "Default", Key = "default-secret" },
+                new GatewayApiKeyDefinition { Id = "secondary", Name = "Secondary", Key = "secondary-secret" }
+            ],
             Projects =
             [
                 Project("z-project", "Z"),
@@ -30,49 +36,34 @@ public sealed class ManagementUseCaseTests
                 Server("a-server")
             ]
         });
-        var keys = new GlobalApiKeyService(Options.Create(new GatewayOptions
-        {
-            ApiKeys =
-            [
-                new GlobalApiKeyOptions
-                {
-                    Id = "default",
-                    Name = "Default",
-                    Key = "default-secret"
-                },
-                new GlobalApiKeyOptions
-                {
-                    Id = "secondary",
-                    Name = "Secondary",
-                    Key = "secondary-secret"
-                }
-            ]
-        }));
-
-        var projects = await repository.QueryAsync(
+        var projects = await repository.GetBySpecAsync(
             new ProjectsOrderedByIdSpecification(),
             CancellationToken.None);
-        var servers = await repository.QueryAsync(
+        var servers = await repository.GetBySpecAsync(
             new McpServersOrderedByIdSpecification(),
             CancellationToken.None);
-        var identities = keys.List();
+        var identities = await repository.GetBySpecAsync(
+            new ApiKeysOrderedByIdSpecification(),
+            CancellationToken.None);
 
-        Assert.Equal(["a-project", "z-project"], projects.Select(project => project.Id));
-        Assert.Equal(["a-server", "z-server"], servers.Select(server => server.Id));
-        Assert.Equal(["default", "secondary"], identities.Select(identity => identity.Id));
+        Assert.Equal(["a-project", "z-project"], projects!.Select(project => project.Id));
+        Assert.Equal(["a-server", "z-server"], servers!.Select(server => server.Id));
+        Assert.Equal(["default", "secondary"], identities!.Select(identity => identity.Id));
         Assert.Null(typeof(GlobalApiKeyIdentity).GetProperty("Key"));
     }
 
     [Fact]
     public async Task Project_use_cases_preserve_created_at_and_manage_project_storage()
     {
-        var repository = new InMemoryConfigurationRepository(new GatewayState());
+        var repository = new InMemoryGatewayStateRepository(new GatewayState
+        {
+            ApiKeys = [new GatewayApiKeyDefinition { Id = "default", Name = "Default", Key = "test-secret" }]
+        });
         var storage = new RecordingProjectStorage();
         var options = TestOptions();
-        var keys = new GlobalApiKeyService(options);
         var runs = new RunCoordinator(options);
         var create = new CreateProjectUseCaseHandler(repository, storage);
-        var update = new UpdateProjectUseCaseHandler(repository, keys, runs);
+        var update = new UpdateProjectUseCaseHandler(repository, runs);
         var delete = new DeleteProjectUseCaseHandler(repository, storage, runs);
 
         var created = await create.Handle(
@@ -102,13 +93,12 @@ public sealed class ManagementUseCaseTests
     [Fact]
     public async Task Updating_project_rejects_a_runner_image_that_looks_like_an_engine_option()
     {
-        var repository = new InMemoryConfigurationRepository(new GatewayState
+        var repository = new InMemoryGatewayStateRepository(new GatewayState
         {
             Projects = [Project("project-one", "Project One")]
         });
         var handler = new UpdateProjectUseCaseHandler(
             repository,
-            new GlobalApiKeyService(TestOptions()),
             new RunCoordinator(TestOptions()));
 
         var exception = await Assert.ThrowsAsync<GatewayException>(() => handler.Handle(
@@ -129,7 +119,7 @@ public sealed class ManagementUseCaseTests
     {
         var options = TestOptions();
         var runs = new RunCoordinator(options);
-        var repository = new InMemoryConfigurationRepository(new GatewayState
+        var repository = new InMemoryGatewayStateRepository(new GatewayState
         {
             Projects = [Project("busy-project", "Busy")]
         });
@@ -170,7 +160,7 @@ public sealed class ManagementUseCaseTests
     {
         var target = Server("target");
         var retained = Server("retained");
-        var repository = new InMemoryConfigurationRepository(new GatewayState
+        var repository = new InMemoryGatewayStateRepository(new GatewayState
         {
             McpServers = [target, retained],
             Projects =
@@ -273,32 +263,6 @@ public sealed class ManagementUseCaseTests
             TimeoutSeconds = 30
         }
     });
-
-    private sealed class InMemoryConfigurationRepository(GatewayState state)
-        : IGatewayConfigurationRepository
-    {
-        public GatewayState State { get; private set; } = state;
-
-        public int UpdateCount { get; private set; }
-
-        public Task<TResult> QueryAsync<TResult>(
-            ISpecification<GatewayState, TResult> specification,
-            CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult(specification.Apply(State));
-        }
-
-        public Task<GatewayState> UpdateAsync(
-            Func<GatewayState, GatewayState> update,
-            CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            State = update(State);
-            UpdateCount++;
-            return Task.FromResult(State);
-        }
-    }
 
     private sealed class RecordingProjectStorage : IProjectStorage
     {

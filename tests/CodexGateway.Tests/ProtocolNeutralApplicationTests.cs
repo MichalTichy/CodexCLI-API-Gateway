@@ -1,24 +1,22 @@
 using System.Text;
 using System.Text.Json;
+using CodexGateway.Infrastructure.Persistence;
 using CodexGateway.Logic;
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Configuration;
 using CodexGateway.Logic.Errors;
-using CodexGateway.Logic.Files;
 using CodexGateway.Logic.Generation;
-using CodexGateway.Logic.Models;
-using CodexGateway.Logic.McpServers;
-using CodexGateway.Logic.Projects;
-using CodexGateway.Logic.Security;
 using CodexGateway.Logic.Specifications;
 using CodexGateway.Logic.Storage;
 using CodexGateway.Logic.Tools;
 using CodexGateway.Logic.UseCases.Files;
 using CodexGateway.Logic.UseCases.Generation;
 using CodexGateway.Logic.UseCases.Models;
+using CodexGateway.Logic.UseCases.Security;
 using CodexGateway.Logic.UseCases.Tools;
 using CodexGateway.Models;
 using Microsoft.Extensions.Options;
+using Shared.Infrastructure.Persistence.Specifications;
 
 namespace CodexGateway.Tests;
 
@@ -59,33 +57,21 @@ public sealed class ProtocolNeutralApplicationTests
     }
 
     [Fact]
-    public async Task Model_catalog_resolves_default_reasoning_and_reports_neutral_errors()
+    public async Task List_models_use_case_returns_the_control_plane_catalog()
     {
         var controlPlane = new StubControlPlane
         {
             Models = [new CodexModel("gpt-test", "Test", ["low", "high"], "high")]
         };
-        var catalog = new ModelCatalogService(controlPlane);
-
-        var listed = await new ListModelsUseCaseHandler(catalog).Handle(
+        var listed = await new ListModelsUseCaseHandler(controlPlane).Handle(
             new ListModelsUseCase(new GatewayRequestContext("default", null)),
             CancellationToken.None);
 
-        var resolved = await catalog.ResolveForGenerationAsync("gpt-test", null, CancellationToken.None);
-
         Assert.Equal("gpt-test", Assert.Single(listed).Id);
-        Assert.Equal("gpt-test", resolved.Model.Id);
-        Assert.Equal("high", resolved.ReasoningEffort);
-
-        var exception = await Assert.ThrowsAsync<GatewayException>(() =>
-            catalog.ResolveForGenerationAsync("gpt-test", "unsupported", CancellationToken.None));
-        Assert.Equal(GatewayErrorCategory.InvalidInput, exception.Category);
-        Assert.Equal("unsupported_reasoning_effort", exception.Code);
-        Assert.Equal("reasoning_effort", exception.Field);
     }
 
     [Fact]
-    public async Task Gateway_access_service_is_the_single_context_factory()
+    public async Task Authentication_use_case_is_the_single_context_factory()
     {
         var project = new ProjectDefinition
         {
@@ -93,25 +79,32 @@ public sealed class ProtocolNeutralApplicationTests
             Name = "Project One",
             ApiKeyAccess = [new ProjectApiKeyAccess { ApiKeyId = "default" }]
         };
-        var options = TestOptions();
-        var apiKeys = new GlobalApiKeyService(options);
-        var projects = new ProjectAccessResolver(
-            new StubStateStore(new GatewayState { Projects = [project] }),
-            apiKeys);
-        var access = new GatewayAccessService(apiKeys, projects);
+        var repository = new InMemoryGatewayStateRepository(new GatewayState
+        {
+            ApiKeys = [new GatewayApiKeyDefinition { Id = "default", Name = "Default", Key = "test-secret" }],
+            Projects = [project]
+        });
+        var access = new AuthenticateGatewayRequestUseCaseHandler(repository);
 
-        Assert.Null(access.Authenticate("wrong-secret"));
-        var authenticated = Assert.IsType<GlobalApiKeyIdentity>(access.Authenticate("test-secret"));
-        var projectless = await access.ResolveAsync(authenticated, null, CancellationToken.None);
-        var projectContext = await access.ResolveAsync(authenticated, project.Id, CancellationToken.None);
+        Assert.Null(await access.Handle(
+            new AuthenticateGatewayRequestUseCase("wrong-secret", null),
+            CancellationToken.None));
+        var projectless = await access.Handle(
+            new AuthenticateGatewayRequestUseCase("test-secret", null),
+            CancellationToken.None);
+        var projectContext = await access.Handle(
+            new AuthenticateGatewayRequestUseCase("test-secret", project.Id),
+            CancellationToken.None);
 
         Assert.Equal(new GatewayRequestContext("default", null), projectless);
         Assert.Equal(new GatewayRequestContext("default", project.Id), projectContext);
-        Assert.Null(await access.ResolveAsync(authenticated, "missing-project", CancellationToken.None));
+        Assert.Null(await access.Handle(
+            new AuthenticateGatewayRequestUseCase("test-secret", "missing-project"),
+            CancellationToken.None));
     }
 
     [Fact]
-    public void Project_access_specification_requires_one_enabled_matching_grant()
+    public async Task Project_access_specification_requires_one_enabled_matching_grant()
     {
         var enabled = new ProjectDefinition
         {
@@ -122,15 +115,16 @@ public sealed class ProtocolNeutralApplicationTests
         ISpecification<GatewayState, ResolvedProjectAccess?> specification =
             new ProjectAccessSpecification("PROJECT-ONE", "default");
 
-        var resolved = specification.Apply(new GatewayState { Projects = [enabled] });
+        var resolved = await specification.ApplyAsync(
+            new[] { new GatewayState { Projects = [enabled] } }.AsQueryable());
 
         Assert.Equal(enabled, resolved?.Project);
-        Assert.Null(specification.Apply(new GatewayState
+        Assert.Null(await specification.ApplyAsync(new[]
         {
-            Projects = [enabled with { Enabled = false }]
-        }));
-        Assert.Null(specification.Apply(
-            new GatewayState
+            new GatewayState { Projects = [enabled with { Enabled = false }] }
+        }.AsQueryable()));
+        Assert.Null(await specification.ApplyAsync(
+            new[] { new GatewayState
             {
                 Projects =
                 [
@@ -143,30 +137,25 @@ public sealed class ProtocolNeutralApplicationTests
                         ]
                     }
                 ]
-            }));
+            }}.AsQueryable()));
     }
 
     [Fact]
     public async Task Generate_assistant_response_use_case_runs_codex_and_exposes_transport_neutral_events()
     {
-        var state = new StubStateStore(new GatewayState());
+        var state = new InMemoryGatewayStateRepository(new GatewayState());
         var options = TestOptions();
-        var projects = new ProjectAccessResolver(state, new GlobalApiKeyService(options));
         var workspaces = new StubWorkspaceManager();
         var runner = new StubCodexRunner();
-        var execution = new CodexExecutionService(
-            runner,
-            projects,
-            new McpServerResolver(state),
-            workspaces,
-            new RunCoordinator(options));
-        var models = new ModelCatalogService(new StubControlPlane
-        {
-            Models = [new CodexModel("gpt-test", "Test", ["medium"], "medium")]
-        });
         var handler = new GenerateAssistantResponseUseCaseHandler(
-            models,
-            execution,
+            new StubControlPlane
+            {
+                Models = [new CodexModel("gpt-test", "Test", ["medium"], "medium")]
+            },
+            state,
+            runner,
+            workspaces,
+            new RunCoordinator(options),
             new PromptComposer(new StubFileStore()));
         var observer = new RecordingGenerationObserver();
 
@@ -199,17 +188,16 @@ public sealed class ProtocolNeutralApplicationTests
             Name = "Project One",
             ApiKeyAccess = [new ProjectApiKeyAccess { ApiKeyId = "default" }]
         };
-        var state = new StubStateStore(new GatewayState { Projects = [project] });
+        var state = new InMemoryGatewayStateRepository(new GatewayState { Projects = [project] });
         var options = TestOptions();
-        var projects = new ProjectAccessResolver(state, new GlobalApiKeyService(options));
         var files = new StubFileStore
         {
             Record = File("file-one", "notes.txt", "stored-notes.txt"),
             Content = new TrackingMemoryStream(Encoding.UTF8.GetBytes("content"))
         };
-        var operations = new GatewayFileService(files, projects, new RunCoordinator(options));
-        var readHandler = new ReadFileUseCaseHandler(operations);
-        var deleteHandler = new DeleteFileUseCaseHandler(operations);
+        var coordinator = new RunCoordinator(options);
+        var readHandler = new ReadFileUseCaseHandler(files, state, coordinator);
+        var deleteHandler = new DeleteFileUseCaseHandler(files, state, coordinator);
         var callbackEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var releaseCallback = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var context = new GatewayRequestContext("default", project.Id);
@@ -249,15 +237,12 @@ public sealed class ProtocolNeutralApplicationTests
             Name = "Project One",
             ApiKeyAccess = [new ProjectApiKeyAccess { ApiKeyId = "default" }]
         };
-        var state = new StubStateStore(new GatewayState { Projects = [project] });
+        var state = new InMemoryGatewayStateRepository(new GatewayState { Projects = [project] });
         var options = TestOptions();
         var files = new StubFileStore { BlockSave = true };
-        var operations = new GatewayFileService(
-            files,
-            new ProjectAccessResolver(state, new GlobalApiKeyService(options)),
-            new RunCoordinator(options));
-        var saveHandler = new SaveFileUseCaseHandler(operations);
-        var deleteHandler = new DeleteFileUseCaseHandler(operations);
+        var coordinator = new RunCoordinator(options);
+        var saveHandler = new SaveFileUseCaseHandler(files, state, coordinator);
+        var deleteHandler = new DeleteFileUseCaseHandler(files, state, coordinator);
         var context = new GatewayRequestContext("default", project.Id);
 
         var save = saveHandler.Handle(
@@ -290,24 +275,21 @@ public sealed class ProtocolNeutralApplicationTests
             Name = "Project One",
             ApiKeyAccess = [new ProjectApiKeyAccess { ApiKeyId = "default" }]
         };
-        var state = new StubStateStore(new GatewayState { Projects = [project] });
+        var state = new InMemoryGatewayStateRepository(new GatewayState { Projects = [project] });
         var options = TestOptions();
         var files = new StubFileStore();
-        var operations = new GatewayFileService(
-            files,
-            new ProjectAccessResolver(state, new GlobalApiKeyService(options)),
-            new RunCoordinator(options));
-        var handler = new GetFileUseCaseHandler(operations);
+        var handler = new GetFileUseCaseHandler(files, state, new RunCoordinator(options));
         var previouslyAuthenticatedContext = new GatewayRequestContext("default", project.Id);
-        await state.UpdateAsync(current => current with
+        await state.GetAndUpdateAsync(GatewayState.DocumentId, current =>
         {
-            Projects =
+            current.Projects =
             [
                 project with
                 {
                     ApiKeyAccess = []
                 }
-            ]
+            ];
+            return Task.FromResult(true);
         });
 
         var exception = await Assert.ThrowsAsync<InvalidApiKeyException>(() =>
@@ -323,13 +305,9 @@ public sealed class ProtocolNeutralApplicationTests
     public async Task Projectless_file_operations_remain_private_to_the_api_key_without_project_locking()
     {
         var options = TestOptions();
-        var state = new StubStateStore(new GatewayState());
+        var state = new InMemoryGatewayStateRepository(new GatewayState());
         var files = new StubFileStore();
-        var operations = new GatewayFileService(
-            files,
-            new ProjectAccessResolver(state, new GlobalApiKeyService(options)),
-            new RunCoordinator(options));
-        var handler = new SaveFileUseCaseHandler(operations);
+        var handler = new SaveFileUseCaseHandler(files, state, new RunCoordinator(options));
 
         await handler.Handle(
             new SaveFileUseCase(
@@ -376,16 +354,14 @@ public sealed class ProtocolNeutralApplicationTests
                 }
             ]
         };
-        var state = new StubStateStore(new GatewayState
+        var state = new InMemoryGatewayStateRepository(new GatewayState
         {
             Projects = [project],
             McpServers = [server]
         });
         var options = TestOptions();
-        var projects = new ProjectAccessResolver(state, new GlobalApiKeyService(options));
         var handler = new GetToolCatalogUseCaseHandler(
-            projects,
-            new McpServerResolver(state),
+            state,
             new StubMcpDiscovery(),
             new RunCoordinator(options));
 
@@ -511,27 +487,6 @@ public sealed class ProtocolNeutralApplicationTests
         }
 
         public void Delete(RunWorkspace workspace) => Deleted = true;
-    }
-
-    private sealed class StubStateStore(GatewayState state) : IGatewayConfigurationRepository
-    {
-        private GatewayState _state = state;
-
-        public Task<TResult> QueryAsync<TResult>(
-            ISpecification<GatewayState, TResult> specification,
-            CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult(specification.Apply(_state));
-        }
-
-        public Task<GatewayState> UpdateAsync(
-            Func<GatewayState, GatewayState> update,
-            CancellationToken cancellationToken = default)
-        {
-            _state = update(_state);
-            return Task.FromResult(_state);
-        }
     }
 
     private sealed class StubProjectStorage : IProjectStorage

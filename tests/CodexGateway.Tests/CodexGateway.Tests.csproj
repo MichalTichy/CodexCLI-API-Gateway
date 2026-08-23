@@ -30,6 +30,7 @@
     <ProjectReference Include="..\..\src\CodexGateway.App\CodexGateway.App.csproj" />
     <ProjectReference Include="..\..\src\CodexGateway.Infrastructure.Codex\CodexGateway.Infrastructure.Codex.csproj" />
     <ProjectReference Include="..\..\src\CodexGateway.Infrastructure.Mcp\CodexGateway.Infrastructure.Mcp.csproj" />
+    <ProjectReference Include="..\..\src\CodexGateway.Infrastructure.Persistence\CodexGateway.Infrastructure.Persistence.csproj" />
     <ProjectReference Include="..\..\src\CodexGateway.Infrastructure.Storage\CodexGateway.Infrastructure.Storage.csproj" />
     <ProjectReference Include="..\..\src\CodexGateway.IoC\CodexGateway.IoC.csproj" />
     <ProjectReference Include="..\..\src\CodexGateway.Logic\CodexGateway.Logic.csproj" />

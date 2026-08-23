@@ -9,12 +9,16 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0.301-noble AS build
 WORKDIR /source
 
 COPY Directory.Build.props global.json CodexGateway.slnx ./
+COPY SharedInfrastructure/Shared.Infrastructure.CurrentTenancyProvider/Shared.Infrastructure.CurrentTenancyProvider.csproj SharedInfrastructure/Shared.Infrastructure.CurrentTenancyProvider/
+COPY SharedInfrastructure/Shared.Infrastructure.Persistence/Shared.Infrastructure.Persistence.csproj SharedInfrastructure/Shared.Infrastructure.Persistence/
+COPY SharedInfrastructure/Shared.Infrastructure.Persistence.Marten/Shared.Infrastructure.Persistence.Marten.csproj SharedInfrastructure/Shared.Infrastructure.Persistence.Marten/
 COPY src/CodexGateway.Api/CodexGateway.Api.csproj src/CodexGateway.Api/
 COPY src/CodexGateway.Api.OpenAI/CodexGateway.Api.OpenAI.csproj src/CodexGateway.Api.OpenAI/
 COPY src/CodexGateway.App/CodexGateway.App.csproj src/CodexGateway.App/
 COPY src/CodexGateway.IoC/CodexGateway.IoC.csproj src/CodexGateway.IoC/
 COPY src/CodexGateway.Infrastructure.Codex/CodexGateway.Infrastructure.Codex.csproj src/CodexGateway.Infrastructure.Codex/
 COPY src/CodexGateway.Infrastructure.Mcp/CodexGateway.Infrastructure.Mcp.csproj src/CodexGateway.Infrastructure.Mcp/
+COPY src/CodexGateway.Infrastructure.Persistence/CodexGateway.Infrastructure.Persistence.csproj src/CodexGateway.Infrastructure.Persistence/
 COPY src/CodexGateway.Infrastructure.Storage/CodexGateway.Infrastructure.Storage.csproj src/CodexGateway.Infrastructure.Storage/
 COPY src/CodexGateway.Logic/CodexGateway.Logic.csproj src/CodexGateway.Logic/
 COPY src/CodexGateway.Models/CodexGateway.Models.csproj src/CodexGateway.Models/
@@ -22,11 +26,13 @@ COPY src/CodexGateway.ServiceDefaults/CodexGateway.ServiceDefaults.csproj src/Co
 RUN dotnet restore src/CodexGateway.App/CodexGateway.App.csproj
 
 COPY src/CodexGateway.Api/ src/CodexGateway.Api/
+COPY SharedInfrastructure/ SharedInfrastructure/
 COPY src/CodexGateway.Api.OpenAI/ src/CodexGateway.Api.OpenAI/
 COPY src/CodexGateway.App/ src/CodexGateway.App/
 COPY src/CodexGateway.IoC/ src/CodexGateway.IoC/
 COPY src/CodexGateway.Infrastructure.Codex/ src/CodexGateway.Infrastructure.Codex/
 COPY src/CodexGateway.Infrastructure.Mcp/ src/CodexGateway.Infrastructure.Mcp/
+COPY src/CodexGateway.Infrastructure.Persistence/ src/CodexGateway.Infrastructure.Persistence/
 COPY src/CodexGateway.Infrastructure.Storage/ src/CodexGateway.Infrastructure.Storage/
 COPY src/CodexGateway.Logic/ src/CodexGateway.Logic/
 COPY src/CodexGateway.Models/ src/CodexGateway.Models/

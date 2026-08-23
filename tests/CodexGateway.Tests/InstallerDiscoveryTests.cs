@@ -131,7 +131,7 @@ public sealed class InstallerDiscoveryTests
         InstallerDiscovery.RunInstallersFromReferencedAssemblies(
             services,
             new ConfigurationBuilder().Build(),
-            new TestHostEnvironment(),
+            new TestHostEnvironment { EnvironmentName = "Testing" },
             typeof(Program).Assembly);
 
         Assert.Contains(
@@ -141,7 +141,12 @@ public sealed class InstallerDiscoveryTests
         Assert.Contains(
             services,
             descriptor => descriptor.ServiceType.FullName ==
-                          "CodexGateway.Logic.Models.ModelCatalogService");
+                          "CodexGateway.Logic.Codex.RunCoordinator");
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType.IsGenericType
+                          && descriptor.ServiceType.GetGenericTypeDefinition() ==
+                          typeof(Shared.Infrastructure.Persistence.Repositories.IRepository<>));
         Assert.Contains(
             services,
             descriptor => descriptor.ServiceType.FullName ==
