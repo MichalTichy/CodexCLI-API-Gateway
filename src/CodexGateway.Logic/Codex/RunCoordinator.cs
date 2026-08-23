@@ -22,9 +22,7 @@ public sealed class RunCoordinator
         var limits = options.Value.Limits;
         _global = new SemaphoreSlim(limits.MaxConcurrent, limits.MaxConcurrent);
         _capacity = new SemaphoreSlim(limits.MaxConcurrent + limits.MaxQueued, limits.MaxConcurrent + limits.MaxQueued);
-        _timeout = limits.TimeoutSeconds is { } seconds
-            ? TimeSpan.FromSeconds(seconds)
-            : TimeSpan.FromMinutes(limits.TimeoutMinutes);
+        _timeout = TimeSpan.FromSeconds(limits.TimeoutSeconds);
     }
 
     public int ActiveRuns => Volatile.Read(ref _activeRuns);
