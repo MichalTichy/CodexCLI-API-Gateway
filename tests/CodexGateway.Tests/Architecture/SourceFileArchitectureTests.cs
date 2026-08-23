@@ -35,11 +35,12 @@ public sealed class SourceFileArchitectureTests
         Assert.NotEmpty(sourceFiles);
         foreach (var sourceFile in sourceFiles)
         {
-            var declarationCount = CountTopLevelTypeDeclarations(File.ReadAllText(sourceFile));
+            var source = File.ReadAllText(sourceFile);
+            var declarationCount = CountTopLevelTypeDeclarations(source);
             Assert.True(
-                declarationCount <= 1,
+                declarationCount <= 1 || IsUseCaseAndHandlerPair(sourceFile, source, declarationCount),
                 $"Production source '{Path.GetRelativePath(RepositoryRoot, sourceFile)}' declares " +
-                $"{declarationCount} top-level types; expected at most one.");
+                $"{declarationCount} top-level types; expected at most one, except for a use case and its handler.");
         }
     }
 
@@ -104,6 +105,18 @@ public sealed class SourceFileArchitectureTests
         }
 
         throw new InvalidOperationException($"No project file found for '{sourceFile}'.");
+    }
+
+    private static bool IsUseCaseAndHandlerPair(string sourceFile, string source, int declarationCount)
+    {
+        var useCasesDirectory = Path.Combine(RepositoryRoot, "src", "CodexGateway.Logic", "UseCases") +
+            Path.DirectorySeparatorChar;
+        var useCaseName = Path.GetFileNameWithoutExtension(sourceFile);
+        return declarationCount == 2 &&
+            sourceFile.StartsWith(useCasesDirectory, StringComparison.OrdinalIgnoreCase) &&
+            useCaseName.EndsWith("UseCase", StringComparison.Ordinal) &&
+            Regex.IsMatch(source, $@"\brecord\s+{Regex.Escape(useCaseName)}\b") &&
+            Regex.IsMatch(source, $@"\bclass\s+{Regex.Escape(useCaseName)}Handler\b");
     }
 
     private static int CountTopLevelTypeDeclarations(string source)

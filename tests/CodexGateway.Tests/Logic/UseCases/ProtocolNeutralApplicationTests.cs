@@ -11,7 +11,7 @@ using CodexGateway.Logic.Storage;
 using CodexGateway.Logic.Tools;
 using CodexGateway.Logic.UseCases.Files;
 using CodexGateway.Logic.UseCases.Generation;
-using CodexGateway.Logic.UseCases.ModelCatalog.Models;
+using CodexGateway.Logic.UseCases.ModelCatalog;
 using CodexGateway.Logic.UseCases.Security;
 using CodexGateway.Logic.UseCases.Tools;
 using CodexGateway.Models;
