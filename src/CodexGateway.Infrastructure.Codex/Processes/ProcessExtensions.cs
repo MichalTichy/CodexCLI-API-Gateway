@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace CodexGateway.Infrastructure.Codex;
+namespace CodexGateway.Infrastructure.Codex.Processes;
 
 internal static class ProcessExtensions
 {

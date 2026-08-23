@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
-namespace CodexGateway.Infrastructure.Codex;
+namespace CodexGateway.Infrastructure.Codex.Composition;
 
 public sealed class CodexInfrastructureInstaller : IHighPriorityInstaller
 {

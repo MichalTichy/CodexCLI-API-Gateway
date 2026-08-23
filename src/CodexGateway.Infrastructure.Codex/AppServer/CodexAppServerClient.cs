@@ -8,7 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace CodexGateway.Infrastructure.Codex;
+namespace CodexGateway.Infrastructure.Codex.AppServer;
 
 public sealed class CodexAppServerClient : ICodexControlPlane, IDisposable, IAsyncDisposable
 {

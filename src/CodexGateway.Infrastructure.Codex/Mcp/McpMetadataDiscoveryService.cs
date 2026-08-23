@@ -9,7 +9,7 @@ using CodexGateway.Logic.Storage;
 using CodexGateway.Models;
 using Microsoft.Extensions.Options;
 
-namespace CodexGateway.Infrastructure.Codex;
+namespace CodexGateway.Infrastructure.Codex.Mcp;
 
 public sealed class McpMetadataDiscoveryService(
     ContainerRuntime runtime,
@@ -169,7 +169,7 @@ public sealed class McpMetadataDiscoveryService(
         var selectedNames = servers.SelectMany(server =>
         {
             IEnumerable<string?> names;
-            if (server.Definition.ExecutionMode == CodexGateway.Models.McpExecutionMode.Gateway &&
+            if (server.Definition.ExecutionMode == McpExecutionMode.Gateway &&
                 gatewayConnections.TryGetValue(server.Definition.Id, out var connection))
             {
                 names = [connection.BearerTokenEnvironmentVariable];
