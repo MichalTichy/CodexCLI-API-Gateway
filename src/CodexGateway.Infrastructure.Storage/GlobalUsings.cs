@@ -4,7 +4,7 @@ global using CodexGateway.Infrastructure.Storage.Configuration;
 global using CodexGateway.Infrastructure.Storage.Files;
 global using CodexGateway.Infrastructure.Storage.Projects;
 global using CodexGateway.Infrastructure.Storage.Workspaces;
-global using CodexGateway.IoC.Installers;
+global using Shared.Infrastructure.IoC.Installers;
 global using CodexGateway.Logic.Configuration.Models;
 global using CodexGateway.Logic.Storage;
 global using CodexGateway.Logic.Storage.Models;

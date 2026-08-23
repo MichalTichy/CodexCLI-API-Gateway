@@ -1,4 +1,3 @@
-using CodexGateway.IoC;
 using CodexGateway.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

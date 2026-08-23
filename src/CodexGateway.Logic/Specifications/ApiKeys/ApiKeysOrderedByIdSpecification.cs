@@ -1,6 +1,5 @@
 using CodexGateway.Models;
 using CodexGateway.Logic.Security;
-using Marten;
 using Shared.Infrastructure.Persistence.Specifications;
 
 namespace CodexGateway.Logic.Specifications.ApiKeys;
