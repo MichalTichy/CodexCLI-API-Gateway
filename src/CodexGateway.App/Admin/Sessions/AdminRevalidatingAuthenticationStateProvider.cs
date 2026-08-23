@@ -2,7 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 
-namespace CodexGateway.App.Security;
+namespace CodexGateway.App.Admin.Sessions;
 
 public sealed class AdminRevalidatingAuthenticationStateProvider(
     ILoggerFactory loggerFactory,

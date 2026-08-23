@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 
-namespace CodexGateway.App.Security;
+namespace CodexGateway.App.Admin.Sessions;
 
 /// <summary>
 /// Rejects browser events for a revoked session before component event handlers run.

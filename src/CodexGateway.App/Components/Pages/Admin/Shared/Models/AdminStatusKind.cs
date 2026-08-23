@@ -1,4 +1,4 @@
-namespace CodexGateway.App.Components.Admin;
+namespace CodexGateway.App.Components.Pages.Admin.Shared.Models;
 
 public enum AdminStatusKind
 {

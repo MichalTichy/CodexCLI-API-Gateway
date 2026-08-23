@@ -3,7 +3,7 @@ using CodexGateway.Logic.UseCases.CodexAuthentication;
 using MediatR;
 using Microsoft.AspNetCore.Components;
 
-namespace CodexGateway.App.Components.Admin;
+namespace CodexGateway.App.Components.Pages.Admin.Codex;
 
 public partial class CodexAccountCard : AdminComponentBase
 {

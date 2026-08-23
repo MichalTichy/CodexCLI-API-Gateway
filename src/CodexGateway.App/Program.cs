@@ -2,7 +2,6 @@ using System.Text.Json.Serialization;
 using CodexGateway.Api.OpenAI;
 using CodexGateway.App.Admin;
 using CodexGateway.App.Components;
-using CodexGateway.App.Configuration;
 using CodexGateway.App.Mcp;
 using CodexGateway.IoC;
 using FastEndpoints;

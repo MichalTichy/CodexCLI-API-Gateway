@@ -1,8 +1,7 @@
-using CodexGateway.App.Configuration;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Options;
 
-namespace CodexGateway.App.Components.Pages;
+namespace CodexGateway.App.Components.Pages.Admin;
 
 public partial class AdminPage : ComponentBase
 {

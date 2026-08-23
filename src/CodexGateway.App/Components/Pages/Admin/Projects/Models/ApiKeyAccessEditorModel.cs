@@ -1,7 +1,7 @@
 using CodexGateway.Logic.Security;
 using CodexGateway.Models;
 
-namespace CodexGateway.App.Components.Admin;
+namespace CodexGateway.App.Components.Pages.Admin.Projects.Models;
 
 internal sealed class ApiKeyAccessEditorModel
 {

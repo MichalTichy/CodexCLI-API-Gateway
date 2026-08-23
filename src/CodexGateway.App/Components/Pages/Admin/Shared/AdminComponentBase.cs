@@ -1,7 +1,7 @@
 using CodexGateway.Logic.Errors;
 using Microsoft.AspNetCore.Components;
 
-namespace CodexGateway.App.Components.Admin;
+namespace CodexGateway.App.Components.Pages.Admin.Shared;
 
 public abstract class AdminComponentBase : ComponentBase, IAsyncDisposable
 {

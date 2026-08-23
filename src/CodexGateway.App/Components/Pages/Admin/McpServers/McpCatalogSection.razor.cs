@@ -3,7 +3,7 @@ using CodexGateway.Models;
 using MediatR;
 using Microsoft.AspNetCore.Components;
 
-namespace CodexGateway.App.Components.Admin;
+namespace CodexGateway.App.Components.Pages.Admin.McpServers;
 
 public partial class McpCatalogSection : AdminComponentBase
 {

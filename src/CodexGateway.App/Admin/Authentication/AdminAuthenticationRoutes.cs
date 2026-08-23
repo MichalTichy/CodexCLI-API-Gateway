@@ -1,14 +1,12 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using CodexGateway.App.Configuration;
-using CodexGateway.App.Security;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.Options;
 
-namespace CodexGateway.App.Admin;
+namespace CodexGateway.App.Admin.Authentication;
 
 public static class AdminAuthenticationRoutes
 {
