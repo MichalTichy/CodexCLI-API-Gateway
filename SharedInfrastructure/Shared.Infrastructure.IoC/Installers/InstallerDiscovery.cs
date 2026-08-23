@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyModel;
 using Microsoft.Extensions.Hosting;
 
-namespace CodexGateway.IoC.Installers;
+namespace Shared.Infrastructure.IoC.Installers;
 
 public static class InstallerDiscovery
 {
