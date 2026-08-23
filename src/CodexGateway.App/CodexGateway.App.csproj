@@ -21,6 +21,7 @@
     <ProjectReference Include="..\CodexGateway.Logic\CodexGateway.Logic.csproj" />
     <ProjectReference Include="..\CodexGateway.Infrastructure.Codex\CodexGateway.Infrastructure.Codex.csproj" />
     <ProjectReference Include="..\CodexGateway.Infrastructure.Mcp\CodexGateway.Infrastructure.Mcp.csproj" />
+    <ProjectReference Include="..\CodexGateway.Infrastructure.Persistence\CodexGateway.Infrastructure.Persistence.csproj" />
     <ProjectReference Include="..\CodexGateway.Infrastructure.Storage\CodexGateway.Infrastructure.Storage.csproj" />
     <ProjectReference Include="..\CodexGateway.ServiceDefaults\CodexGateway.ServiceDefaults.csproj" />
   </ItemGroup>
