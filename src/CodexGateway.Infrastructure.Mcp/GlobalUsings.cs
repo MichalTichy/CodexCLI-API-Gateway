@@ -3,7 +3,7 @@ global using CodexGateway.Infrastructure.Mcp.Errors;
 global using CodexGateway.Infrastructure.Mcp.Sessions;
 global using CodexGateway.Infrastructure.Mcp.Transport;
 global using CodexGateway.Infrastructure.Mcp.Transport.Models;
-global using CodexGateway.IoC.Installers;
+global using Shared.Infrastructure.IoC.Installers;
 global using CodexGateway.Logic.Codex.Models;
 global using CodexGateway.Logic.McpServers;
 global using CodexGateway.Logic.McpServers.Models;
