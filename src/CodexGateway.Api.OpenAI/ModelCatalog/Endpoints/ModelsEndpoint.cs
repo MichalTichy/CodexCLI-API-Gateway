@@ -1,5 +1,5 @@
 using CodexGateway.Api;
-using CodexGateway.Logic.UseCases.ModelCatalog.Models;
+using CodexGateway.Logic.UseCases.ModelCatalog;
 using FastEndpoints;
 using MediatR;
 
