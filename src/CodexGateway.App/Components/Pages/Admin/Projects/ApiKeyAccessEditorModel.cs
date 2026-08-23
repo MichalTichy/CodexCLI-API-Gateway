@@ -14,7 +14,7 @@ internal sealed class ApiKeyAccessEditorModel
     public List<McpGrantEditorModel> Servers { get; init; } = [];
 
     public static ApiKeyAccessEditorModel From(
-        GlobalApiKeyIdentity key,
+        ApiKeyIdentity key,
         ProjectApiKeyAccess? access,
         IReadOnlyList<McpServerDefinition> servers)
     {

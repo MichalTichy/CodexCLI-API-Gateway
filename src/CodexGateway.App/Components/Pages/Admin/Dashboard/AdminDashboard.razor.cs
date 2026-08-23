@@ -14,7 +14,7 @@ public partial class AdminDashboard : AdminComponentBase
 {
     private IReadOnlyList<ProjectDefinition> _projects = [];
     private IReadOnlyList<McpServerDefinition> _servers = [];
-    private IReadOnlyList<GlobalApiKeyIdentity> _apiKeys = [];
+    private IReadOnlyList<ApiKeyIdentity> _apiKeys = [];
     private CodexAccountStatus? _account;
     private DeviceLogin? _login;
     private Task? _pollTask;

@@ -17,7 +17,7 @@ public partial class ApiKeyList : AdminComponentBase
     private ILogger<ApiKeyList> Logger { get; set; } = null!;
 
     [Parameter, EditorRequired]
-    public IReadOnlyList<GlobalApiKeyIdentity> ApiKeys { get; set; } = [];
+    public IReadOnlyList<ApiKeyIdentity> ApiKeys { get; set; } = [];
 
     [Parameter, EditorRequired]
     public EventCallback<string> OnChanged { get; set; }

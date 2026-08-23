@@ -21,7 +21,7 @@ internal sealed class ProjectEditorModel
 
     public static ProjectEditorModel From(
         ProjectDefinition project,
-        IReadOnlyList<GlobalApiKeyIdentity> apiKeys,
+        IReadOnlyList<ApiKeyIdentity> apiKeys,
         IReadOnlyList<McpServerDefinition> servers)
     {
         var configuredAccess = (project.ApiKeyAccess ?? [])

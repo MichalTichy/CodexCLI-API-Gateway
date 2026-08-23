@@ -24,7 +24,7 @@ public partial class ProjectsSection : ComponentBase
     public IReadOnlyList<ProjectDefinition> Projects { get; set; } = [];
 
     [Parameter, EditorRequired]
-    public IReadOnlyList<GlobalApiKeyIdentity> ApiKeys { get; set; } = [];
+    public IReadOnlyList<ApiKeyIdentity> ApiKeys { get; set; } = [];
 
     [Parameter, EditorRequired]
     public IReadOnlyList<McpServerDefinition> Servers { get; set; } = [];
