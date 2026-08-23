@@ -1,11 +1,14 @@
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Errors;
+using CodexGateway.Logic.Specifications;
 using CodexGateway.Logic.Storage;
 using CodexGateway.Models;
 using MediatR;
 using Shared.Infrastructure.Persistence.Repositories;
 
 namespace CodexGateway.Logic.UseCases.Projects;
+
+public sealed record DeleteProjectUseCase(string ProjectId) : IRequest;
 
 public sealed class DeleteProjectUseCaseHandler(
     IRepository<GatewayState> repository,

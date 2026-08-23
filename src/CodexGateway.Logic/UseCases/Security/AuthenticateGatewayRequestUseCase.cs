@@ -1,11 +1,15 @@
-using System.Security.Cryptography;
-using System.Text;
 using CodexGateway.Logic.Specifications;
 using CodexGateway.Models;
 using MediatR;
 using Shared.Infrastructure.Persistence.Repositories;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace CodexGateway.Logic.UseCases.Security;
+
+public sealed record AuthenticateGatewayRequestUseCase(
+    string? ApiKey,
+    string? ProjectId) : IRequest<GatewayRequestContext?>;
 
 public sealed class AuthenticateGatewayRequestUseCaseHandler(
     IReadOnlyRepository<GatewayState> repository)

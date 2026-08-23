@@ -8,6 +8,8 @@ using Shared.Infrastructure.Persistence.Repositories;
 
 namespace CodexGateway.Logic.UseCases.Tools;
 
+public sealed record GetToolCatalogUseCase(GatewayRequestContext Context) : IRequest<ToolCatalog>;
+
 public sealed class GetToolCatalogUseCaseHandler(
     IReadOnlyRepository<GatewayState> repository,
     IMcpMetadataDiscoveryService discovery,

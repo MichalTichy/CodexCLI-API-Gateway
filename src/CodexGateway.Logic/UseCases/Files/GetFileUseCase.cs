@@ -8,17 +8,19 @@ using Shared.Infrastructure.Persistence.Repositories;
 
 namespace CodexGateway.Logic.UseCases.Files;
 
-public sealed class DeleteFileUseCaseHandler(
+public sealed record GetFileUseCase(GatewayRequestContext Context, string FileId) : IRequest<FileRecord>;
+
+public sealed class GetFileUseCaseHandler(
     IFileStore files,
     IReadOnlyRepository<GatewayState> repository,
-    RunCoordinator coordinator) : IRequestHandler<DeleteFileUseCase>
+    RunCoordinator coordinator) : IRequestHandler<GetFileUseCase, FileRecord>
 {
-    public Task Handle(DeleteFileUseCase request, CancellationToken cancellationToken)
+    public Task<FileRecord> Handle(GetFileUseCase request, CancellationToken cancellationToken)
     {
         Validate(request.Context);
         if (request.Context.ProjectId is null)
         {
-            return files.DeleteAsync(null, request.Context.ApiKeyId, request.FileId, cancellationToken);
+            return files.GetRequiredAsync(null, request.Context.ApiKeyId, request.FileId, cancellationToken);
         }
 
         return coordinator.ExecuteProjectOperationAsync(
@@ -31,8 +33,11 @@ public sealed class DeleteFileUseCaseHandler(
                             request.Context.ApiKeyId),
                         token)
                     ?? throw new InvalidApiKeyException();
-                await files.DeleteAsync(access.Project.Id, request.Context.ApiKeyId, request.FileId, token);
-                return true;
+                return await files.GetRequiredAsync(
+                    access.Project.Id,
+                    request.Context.ApiKeyId,
+                    request.FileId,
+                    token);
             },
             cancellationToken);
     }

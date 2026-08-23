@@ -1,10 +1,13 @@
-using System.Text.RegularExpressions;
 using CodexGateway.Logic.Errors;
 using CodexGateway.Models;
 using MediatR;
 using Shared.Infrastructure.Persistence.Repositories;
+using System.Text.RegularExpressions;
 
 namespace CodexGateway.Logic.UseCases.ApiKeys;
+
+public sealed record CreateApiKeyUseCase(string Id, string Name, string Key)
+    : IRequest<ApiKeyDefinition>;
 
 public sealed partial class CreateApiKeyUseCaseHandler(
     IRepository<GatewayState> repository)

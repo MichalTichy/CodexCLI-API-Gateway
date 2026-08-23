@@ -8,6 +8,9 @@ using Shared.Infrastructure.Persistence.Repositories;
 
 namespace CodexGateway.Logic.UseCases.Files;
 
+public sealed record ListFilesUseCase(GatewayRequestContext Context)
+    : IRequest<IReadOnlyList<FileRecord>>;
+
 public sealed class ListFilesUseCaseHandler(
     IFileStore files,
     IReadOnlyRepository<GatewayState> repository,

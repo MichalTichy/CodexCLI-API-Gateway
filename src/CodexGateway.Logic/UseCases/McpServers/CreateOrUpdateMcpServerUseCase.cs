@@ -1,11 +1,15 @@
-using System.Text.RegularExpressions;
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Errors;
+using CodexGateway.Logic.Storage;
 using CodexGateway.Models;
 using MediatR;
 using Shared.Infrastructure.Persistence.Repositories;
+using System.Text.RegularExpressions;
 
 namespace CodexGateway.Logic.UseCases.McpServers;
+
+public sealed record CreateOrUpdateMcpServerUseCase(McpServerDefinition Server)
+    : IRequest<McpServerDefinition>;
 
 public sealed partial class CreateOrUpdateMcpServerUseCaseHandler(
     IRepository<GatewayState> repository)

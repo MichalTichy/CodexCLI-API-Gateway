@@ -5,6 +5,8 @@ using Shared.Infrastructure.Persistence.Repositories;
 
 namespace CodexGateway.Logic.UseCases.ApiKeys;
 
+public sealed record DeleteApiKeyUseCase(string Id) : IRequest;
+
 public sealed class DeleteApiKeyUseCaseHandler(
     IRepository<GatewayState> repository)
     : IRequestHandler<DeleteApiKeyUseCase>

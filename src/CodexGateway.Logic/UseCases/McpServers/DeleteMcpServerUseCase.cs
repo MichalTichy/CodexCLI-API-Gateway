@@ -1,8 +1,11 @@
+using CodexGateway.Logic.Storage;
 using CodexGateway.Models;
 using MediatR;
 using Shared.Infrastructure.Persistence.Repositories;
 
 namespace CodexGateway.Logic.UseCases.McpServers;
+
+public sealed record DeleteMcpServerUseCase(string ServerId) : IRequest;
 
 public sealed class DeleteMcpServerUseCaseHandler(IRepository<GatewayState> repository)
     : IRequestHandler<DeleteMcpServerUseCase>

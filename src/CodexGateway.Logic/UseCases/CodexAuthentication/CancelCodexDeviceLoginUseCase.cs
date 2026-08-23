@@ -3,6 +3,8 @@ using MediatR;
 
 namespace CodexGateway.Logic.UseCases.CodexAuthentication;
 
+public sealed record CancelCodexDeviceLoginUseCase : IRequest;
+
 public sealed class CancelCodexDeviceLoginUseCaseHandler(ICodexControlPlane codex)
     : IRequestHandler<CancelCodexDeviceLoginUseCase>
 {

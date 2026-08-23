@@ -3,6 +3,9 @@ using MediatR;
 
 namespace CodexGateway.Logic.UseCases.CodexAuthentication;
 
+public sealed record GetCodexAuthenticationStateUseCase
+    : IRequest<CodexAuthenticationState>;
+
 public sealed class GetCodexAuthenticationStateUseCaseHandler(ICodexControlPlane codex)
     : IRequestHandler<GetCodexAuthenticationStateUseCase, CodexAuthenticationState>
 {
