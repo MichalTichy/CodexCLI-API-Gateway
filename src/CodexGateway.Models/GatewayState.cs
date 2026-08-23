@@ -8,7 +8,7 @@ public sealed class GatewayState : IItemWithId
 
     public string Id { get; init; } = DocumentId;
 
-    public List<GatewayApiKeyDefinition> ApiKeys { get; set; } = [];
+    public List<ApiKeyDefinition> ApiKeys { get; set; } = [];
 
     public List<ProjectDefinition> Projects { get; set; } = [];
 

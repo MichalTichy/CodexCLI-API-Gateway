@@ -4,14 +4,14 @@ using Shared.Infrastructure.Persistence.Specifications;
 namespace CodexGateway.Logic.Specifications;
 
 public sealed class ApiKeyDefinitionsSpecification
-    : ISpecification<GatewayState, IReadOnlyList<GatewayApiKeyDefinition>>
+    : ISpecification<GatewayState, IReadOnlyList<ApiKeyDefinition>>
 {
-    public Task<IReadOnlyList<GatewayApiKeyDefinition>?> ApplyAsync(
+    public Task<IReadOnlyList<ApiKeyDefinition>?> ApplyAsync(
         IQueryable<GatewayState> queryable,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyList<GatewayApiKeyDefinition> result = queryable.SingleOrDefault()?.ApiKeys ?? [];
-        return Task.FromResult<IReadOnlyList<GatewayApiKeyDefinition>?>(result);
+        IReadOnlyList<ApiKeyDefinition> result = queryable.SingleOrDefault()?.ApiKeys ?? [];
+        return Task.FromResult<IReadOnlyList<ApiKeyDefinition>?>(result);
     }
 }

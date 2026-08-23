@@ -8,9 +8,9 @@ namespace CodexGateway.Logic.UseCases.ApiKeys;
 
 public sealed partial class CreateApiKeyUseCaseHandler(
     IRepository<GatewayState> repository)
-    : IRequestHandler<CreateApiKeyUseCase, GatewayApiKeyDefinition>
+    : IRequestHandler<CreateApiKeyUseCase, ApiKeyDefinition>
 {
-    public async Task<GatewayApiKeyDefinition> Handle(
+    public async Task<ApiKeyDefinition> Handle(
         CreateApiKeyUseCase request,
         CancellationToken cancellationToken)
     {
@@ -34,7 +34,7 @@ public sealed partial class CreateApiKeyUseCaseHandler(
             throw GatewayException.InvalidRequest("API key is required and cannot start or end with whitespace.", parameter: "key");
         }
 
-        var created = new GatewayApiKeyDefinition { Id = id, Name = name, Key = key };
+        var created = new ApiKeyDefinition { Id = id, Name = name, Key = key };
         await repository.GetAndUpdateAsync(GatewayState.DocumentId, current =>
         {
             if (current.ApiKeys.Any(existing =>

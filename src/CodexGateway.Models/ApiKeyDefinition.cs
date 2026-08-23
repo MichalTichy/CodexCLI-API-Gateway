@@ -1,6 +1,6 @@
 namespace CodexGateway.Models;
 
-public sealed record GatewayApiKeyDefinition
+public sealed record ApiKeyDefinition
 {
     public required string Id { get; init; }
 

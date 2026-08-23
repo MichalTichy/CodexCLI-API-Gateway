@@ -80,7 +80,7 @@ public sealed class UpdateProjectUseCaseHandler(
 
     private static List<ProjectApiKeyAccess> NormalizeApiKeyAccess(
         IReadOnlyCollection<ProjectApiKeyAccess>? requestedAccess,
-        IReadOnlyCollection<GatewayApiKeyDefinition> apiKeys,
+        IReadOnlyCollection<ApiKeyDefinition> apiKeys,
         IReadOnlyCollection<McpServerDefinition> catalog)
     {
         var normalized = new List<ProjectApiKeyAccess>();

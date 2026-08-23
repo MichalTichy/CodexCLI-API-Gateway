@@ -9,12 +9,6 @@ public sealed class GatewayOptions
     public const string SectionName = "Gateway";
 
     /// <summary>
-    /// API keys imported into gateway state when it is initialized for the first time.
-    /// Changing this list does not replace keys already stored in the database.
-    /// </summary>
-    public GlobalApiKeyOptions[] ApiKeys { get; set; } = [];
-
-    /// <summary>
     /// Root directory for project artifacts, temporary uploads, and per-run workspaces.
     /// Relative paths are resolved from the application content root.
     /// </summary>

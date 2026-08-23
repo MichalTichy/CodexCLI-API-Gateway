@@ -44,7 +44,7 @@ public sealed class AuthenticateGatewayRequestUseCaseHandler(
     }
 
     private static string? FindApiKeyId(
-        IEnumerable<GatewayApiKeyDefinition> definitions,
+        IEnumerable<ApiKeyDefinition> definitions,
         string suppliedKey)
     {
         var suppliedHash = SHA256.HashData(Encoding.UTF8.GetBytes(suppliedKey));
