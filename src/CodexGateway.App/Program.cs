@@ -3,7 +3,6 @@ using CodexGateway.Api.OpenAI;
 using CodexGateway.App.Admin;
 using CodexGateway.App.Components;
 using CodexGateway.App.Mcp;
-using CodexGateway.IoC;
 using FastEndpoints;
 using FastEndpoints.Swagger;
 using Microsoft.Extensions.Options;

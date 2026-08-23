@@ -10,7 +10,7 @@ global using CodexGateway.App.Components.Pages.Admin.Shared.Models;
 global using CodexGateway.App.Mcp.Endpoints;
 global using CodexGateway.Infrastructure.Codex.AppServer;
 global using CodexGateway.Infrastructure.Mcp.Transport;
-global using CodexGateway.IoC.Installers;
+global using Shared.Infrastructure.IoC.Installers;
 global using CodexGateway.Logic.Codex.Models;
 global using CodexGateway.Logic.Security.Models;
 global using CodexGateway.Logic.Specifications.ApiKeys;
