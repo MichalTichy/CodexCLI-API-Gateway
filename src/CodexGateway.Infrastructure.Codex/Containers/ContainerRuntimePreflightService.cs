@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Hosting;
 
-namespace CodexGateway.Infrastructure.Codex;
+namespace CodexGateway.Infrastructure.Codex.Containers;
 
 public sealed class ContainerRuntimePreflightService(ContainerRuntime runtime) : IHostedService
 {

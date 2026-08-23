@@ -7,7 +7,7 @@ using CodexGateway.Logic.McpServers;
 using CodexGateway.Logic.Configuration;
 using CodexGateway.Logic.Storage;
 
-namespace CodexGateway.Infrastructure.Codex;
+namespace CodexGateway.Infrastructure.Codex.Containers;
 
 internal static class ContainerCommandBuilder
 {

@@ -2,7 +2,7 @@ using System.Collections;
 using System.Diagnostics;
 using CodexGateway.Logic.Codex;
 
-namespace CodexGateway.Infrastructure.Codex;
+namespace CodexGateway.Infrastructure.Codex.Containers;
 
 internal static class CodexProcessEnvironment
 {

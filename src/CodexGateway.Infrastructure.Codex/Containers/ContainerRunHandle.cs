@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace CodexGateway.Infrastructure.Codex;
+namespace CodexGateway.Infrastructure.Codex.Containers;
 
 internal sealed class ContainerRunHandle(
     ContainerRuntime runtime,

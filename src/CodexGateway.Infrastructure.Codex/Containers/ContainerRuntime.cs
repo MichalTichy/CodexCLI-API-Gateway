@@ -14,7 +14,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace CodexGateway.Infrastructure.Codex;
+namespace CodexGateway.Infrastructure.Codex.Containers;
 
 public sealed class ContainerRuntime
 {
@@ -340,7 +340,7 @@ public sealed class ContainerRuntime
         servers.SelectMany(server =>
         {
             IEnumerable<string?> names;
-            if (server.Definition.ExecutionMode == CodexGateway.Models.McpExecutionMode.Gateway &&
+            if (server.Definition.ExecutionMode == McpExecutionMode.Gateway &&
                 gatewayConnections.TryGetValue(server.Definition.Id, out var connection))
             {
                 names = [connection.BearerTokenEnvironmentVariable];

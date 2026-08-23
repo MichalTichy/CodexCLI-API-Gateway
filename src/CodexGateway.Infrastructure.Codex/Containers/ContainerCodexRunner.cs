@@ -7,7 +7,7 @@ using CodexGateway.Logic.McpServers;
 using CodexGateway.Logic.Errors;
 using CodexGateway.Models;
 
-namespace CodexGateway.Infrastructure.Codex;
+namespace CodexGateway.Infrastructure.Codex.Containers;
 
 public sealed class ContainerCodexRunner(
     ContainerRuntime runtime,

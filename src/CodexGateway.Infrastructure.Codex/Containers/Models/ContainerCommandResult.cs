@@ -1,4 +1,4 @@
-namespace CodexGateway.Infrastructure.Codex;
+namespace CodexGateway.Infrastructure.Codex.Containers.Models;
 
 internal sealed record ContainerCommandResult(int ExitCode, string StandardOutput, string StandardError)
 {
