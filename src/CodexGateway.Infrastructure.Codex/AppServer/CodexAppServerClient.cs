@@ -647,9 +647,7 @@ public sealed class CodexAppServerClient : ICodexControlPlane, IDisposable, IAsy
     {
         try
         {
-            var duration = _options.DeviceLoginTimeoutSeconds is { } seconds
-                ? TimeSpan.FromSeconds(seconds)
-                : TimeSpan.FromMinutes(_options.DeviceLoginTimeoutMinutes);
+            var duration = TimeSpan.FromSeconds(_options.DeviceLoginTimeoutSeconds);
             await Task.Delay(duration, timeout.Token);
         }
         catch (OperationCanceledException) when (timeout.IsCancellationRequested)

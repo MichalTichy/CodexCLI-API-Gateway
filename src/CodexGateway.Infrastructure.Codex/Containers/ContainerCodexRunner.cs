@@ -194,7 +194,7 @@ public sealed class ContainerCodexRunner(
             {
                 ContainerCommandBuilder.AddConfig(
                     arguments,
-                    $"{key}.bearer_token_env_var={TomlString(connection.BearerTokenEnvironmentVariable)}");
+                    $"{key}.bearer_token_env_var={TomlString(connection.SessionTokenEnvironmentVariable)}");
             }
             else if (http.EnvironmentHeaders.Count > 0)
             {

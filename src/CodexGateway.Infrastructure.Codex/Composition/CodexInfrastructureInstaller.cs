@@ -1,4 +1,3 @@
-using CodexGateway.IoC;
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Configuration;
 using Microsoft.Extensions.Configuration;

@@ -172,7 +172,7 @@ public sealed class McpMetadataDiscoveryService(
             if (server.Definition.ExecutionMode == McpExecutionMode.Gateway &&
                 gatewayConnections.TryGetValue(server.Definition.Id, out var connection))
             {
-                names = [connection.BearerTokenEnvironmentVariable];
+                names = [connection.SessionTokenEnvironmentVariable];
             }
             else
             {
@@ -284,6 +284,20 @@ public sealed class McpMetadataDiscoveryService(
                 break;
         }
     }
+
+    private static void EnsureSafe(
+        McpToolAnnotations? annotations,
+        IReadOnlyList<SecretMatcher> matchers) =>
+        EnsureSafe(
+            annotations is null ? null : JsonSerializer.SerializeToElement(annotations, JsonOptions),
+            matchers);
+
+    private static void EnsureSafe(
+        IReadOnlyList<McpIcon>? icons,
+        IReadOnlyList<SecretMatcher> matchers) =>
+        EnsureSafe(
+            icons is null ? null : JsonSerializer.SerializeToElement(icons, JsonOptions),
+            matchers);
 
     private static CodexUnavailableException UnsafeMetadata() =>
         new("MCP metadata discovery could not be completed safely.");
@@ -437,7 +451,7 @@ public sealed class McpMetadataDiscoveryService(
             OptionalString(serverInfo, "title"),
             OptionalString(serverInfo, "description"),
             OptionalString(serverInfo, "websiteUrl"),
-            OptionalJson(serverInfo, "icons"));
+            OptionalIcons(serverInfo));
     }
 
     private static IReadOnlyList<McpToolMetadata> ParseTools(JsonElement status)
@@ -470,8 +484,8 @@ public sealed class McpMetadataDiscoveryService(
                 OptionalString(tool, "description"),
                 inputSchema.Clone(),
                 OptionalJson(tool, "outputSchema"),
-                OptionalJson(tool, "annotations"),
-                OptionalJson(tool, "icons"),
+                OptionalAnnotations(tool),
+                OptionalIcons(tool),
                 OptionalJson(tool, "_meta")));
         }
 
@@ -591,6 +605,44 @@ public sealed class McpMetadataDiscoveryService(
         }
 
         return value.Clone();
+    }
+
+    private static McpToolAnnotations? OptionalAnnotations(JsonElement element)
+    {
+        if (!element.TryGetProperty("annotations", out var value) ||
+            value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+        {
+            return null;
+        }
+
+        if (value.ValueKind != JsonValueKind.Object)
+        {
+            throw InvalidProtocol();
+        }
+
+        return value.Deserialize<McpToolAnnotations>(JsonOptions) ?? throw InvalidProtocol();
+    }
+
+    private static IReadOnlyList<McpIcon>? OptionalIcons(JsonElement element)
+    {
+        if (!element.TryGetProperty("icons", out var value) ||
+            value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+        {
+            return null;
+        }
+
+        if (value.ValueKind != JsonValueKind.Array)
+        {
+            throw InvalidProtocol();
+        }
+
+        var icons = value.Deserialize<McpIcon[]>(JsonOptions) ?? throw InvalidProtocol();
+        if (icons.Any(icon => string.IsNullOrWhiteSpace(icon.Src)))
+        {
+            throw InvalidProtocol();
+        }
+
+        return icons;
     }
 
     private static string ConfigServerName(string serverId) => serverId.Replace('-', '_');
