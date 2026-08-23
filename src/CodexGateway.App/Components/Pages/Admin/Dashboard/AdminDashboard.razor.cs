@@ -2,11 +2,11 @@ using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Errors;
 using CodexGateway.Logic.Specifications;
 using CodexGateway.Logic.Security;
-using CodexGateway.Logic.Storage;
 using CodexGateway.Logic.UseCases.CodexAuthentication;
 using CodexGateway.Models;
 using MediatR;
 using Microsoft.AspNetCore.Components;
+using Shared.Infrastructure.Persistence.Repositories;
 
 namespace CodexGateway.App.Components.Admin;
 
@@ -32,7 +32,7 @@ public partial class AdminDashboard : AdminComponentBase
     private ILogger<AdminDashboard> Logger { get; set; } = null!;
 
     [Inject]
-    private IGatewayConfigurationRepository Configuration { get; set; } = null!;
+    private IReadOnlyRepository<GatewayState> Configuration { get; set; } = null!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -81,19 +81,19 @@ public partial class AdminDashboard : AdminComponentBase
         try
         {
             var token = PageCancellationToken;
-            var projectsTask = Configuration.QueryAsync(
+            var projectsTask = Configuration.GetBySpecAsync(
                 new ProjectsOrderedByIdSpecification(),
                 token);
-            var serversTask = Configuration.QueryAsync(
+            var serversTask = Configuration.GetBySpecAsync(
                 new McpServersOrderedByIdSpecification(),
                 token);
-            var apiKeysTask = Configuration.QueryAsync(
+            var apiKeysTask = Configuration.GetBySpecAsync(
                 new ApiKeysOrderedByIdSpecification(),
                 token);
             await Task.WhenAll(projectsTask, serversTask, apiKeysTask);
-            _projects = await projectsTask;
-            _servers = await serversTask;
-            _apiKeys = await apiKeysTask;
+            _projects = await projectsTask ?? [];
+            _servers = await serversTask ?? [];
+            _apiKeys = await apiKeysTask ?? [];
 
             await LoadCodexAsync(token);
             if (showSuccess && _codexError is null)
