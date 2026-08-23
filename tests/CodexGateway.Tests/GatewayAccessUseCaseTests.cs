@@ -127,8 +127,8 @@ public sealed class GatewayAccessUseCaseTests
         {
             ApiKeys =
             [
-                new GatewayApiKeyDefinition { Id = "default", Name = "Default", Key = "default-secret" },
-                new GatewayApiKeyDefinition { Id = "secondary", Name = "Secondary", Key = "secondary-secret" }
+                new ApiKeyDefinition { Id = "default", Name = "Default", Key = "default-secret" },
+                new ApiKeyDefinition { Id = "secondary", Name = "Secondary", Key = "secondary-secret" }
             ]
         });
         return repository;

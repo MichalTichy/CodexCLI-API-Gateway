@@ -1,6 +1,9 @@
 using CodexGateway.Infrastructure.Codex;
+using CodexGateway.Infrastructure.Persistence;
+using CodexGateway.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -53,9 +56,6 @@ public sealed class CompatibilityGatewayFactory : WebApplicationFactory<Program>
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Gateway:StoragePath"] = StoragePath,
-                ["Gateway:ApiKeys:0:Id"] = "default",
-                ["Gateway:ApiKeys:0:Name"] = "Default test key",
-                ["Gateway:ApiKeys:0:Key"] = "e2e-api-key",
                 ["Gateway:Limits:MaxConcurrent"] = "2",
                 ["Gateway:Limits:MaxQueued"] = "2",
                 ["Gateway:Limits:TimeoutSeconds"] = "60",
@@ -80,5 +80,13 @@ public sealed class CompatibilityGatewayFactory : WebApplicationFactory<Program>
                 ["AdminUi:Password"] = "test-password"
             });
         });
+        builder.ConfigureTestServices(services =>
+            services.AddSingleton(new InMemoryGatewayStateRepository(new GatewayState
+            {
+                ApiKeys =
+                [
+                    new ApiKeyDefinition { Id = "default", Name = "Default test key", Key = "e2e-api-key" }
+                ]
+            })));
     }
 }

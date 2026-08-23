@@ -1,6 +1,10 @@
+using CodexGateway.Infrastructure.Persistence;
+using CodexGateway.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CodexGateway.EndToEndTests;
 
@@ -60,12 +64,6 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>
             var settings = new Dictionary<string, string?>
             {
                 ["Gateway:StoragePath"] = StoragePath,
-                ["Gateway:ApiKeys:0:Id"] = "default",
-                ["Gateway:ApiKeys:0:Name"] = "Default test key",
-                ["Gateway:ApiKeys:0:Key"] = "e2e-api-key",
-                ["Gateway:ApiKeys:1:Id"] = "secondary",
-                ["Gateway:ApiKeys:1:Name"] = "Secondary test key",
-                ["Gateway:ApiKeys:1:Key"] = "e2e-secondary-api-key",
                 ["Gateway:Limits:MaxConcurrent"] = _maxConcurrent.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["Gateway:Limits:MaxQueued"] = _maxQueued.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["Gateway:Limits:TimeoutSeconds"] = "60",
@@ -117,5 +115,14 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>
 
             configuration.AddInMemoryCollection(settings);
         });
+        builder.ConfigureTestServices(services =>
+            services.AddSingleton(new InMemoryGatewayStateRepository(new GatewayState
+            {
+                ApiKeys =
+                [
+                    new ApiKeyDefinition { Id = "default", Name = "Default test key", Key = "e2e-api-key" },
+                    new ApiKeyDefinition { Id = "secondary", Name = "Secondary test key", Key = "e2e-secondary-api-key" }
+                ]
+            })));
     }
 }
