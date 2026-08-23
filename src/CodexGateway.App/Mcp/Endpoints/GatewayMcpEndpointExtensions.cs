@@ -1,6 +1,6 @@
 using CodexGateway.Infrastructure.Mcp;
 
-namespace CodexGateway.App.Mcp;
+namespace CodexGateway.App.Mcp.Endpoints;
 
 internal static class GatewayMcpEndpointExtensions
 {

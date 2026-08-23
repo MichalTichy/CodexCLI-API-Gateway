@@ -1,7 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using CodexGateway.App.Configuration;
-using CodexGateway.App.Security;
 using CodexGateway.IoC;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -11,7 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace CodexGateway.App;
+namespace CodexGateway.App.Composition;
 
 public sealed class AppInstaller : IHighPriorityInstaller
 {

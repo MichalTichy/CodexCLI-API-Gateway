@@ -1,6 +1,6 @@
 using CodexGateway.Logic.Errors;
 
-namespace CodexGateway.App.Components.Admin;
+namespace CodexGateway.App.Components.Pages.Admin.Shared;
 
 internal static class AdminText
 {

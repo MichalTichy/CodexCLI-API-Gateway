@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace CodexGateway.App.Components.Admin;
+namespace CodexGateway.App.Components.Pages.Admin.Projects.Models;
 
 internal sealed class CreateProjectModel
 {

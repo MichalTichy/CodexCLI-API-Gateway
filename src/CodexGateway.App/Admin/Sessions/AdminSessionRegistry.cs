@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Security.Claims;
 
-namespace CodexGateway.App.Security;
+namespace CodexGateway.App.Admin.Sessions;
 
 /// <summary>
 /// Tracks the server-side lifetime of authenticated administration sessions.

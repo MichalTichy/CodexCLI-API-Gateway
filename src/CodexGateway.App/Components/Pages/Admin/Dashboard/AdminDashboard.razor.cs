@@ -8,7 +8,7 @@ using MediatR;
 using Microsoft.AspNetCore.Components;
 using Shared.Infrastructure.Persistence.Repositories;
 
-namespace CodexGateway.App.Components.Admin;
+namespace CodexGateway.App.Components.Pages.Admin.Dashboard;
 
 public partial class AdminDashboard : AdminComponentBase
 {

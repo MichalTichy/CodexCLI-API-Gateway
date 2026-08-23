@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace CodexGateway.App.Configuration;
+namespace CodexGateway.App.Admin.Authentication.Models;
 
 public sealed class AdminUiOptions
 {

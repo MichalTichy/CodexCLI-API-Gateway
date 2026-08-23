@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using CodexGateway.Logic.Errors;
 using CodexGateway.Models;
 
-namespace CodexGateway.App.Components.Admin;
+namespace CodexGateway.App.Components.Pages.Admin.McpServers.Models;
 
 internal sealed class McpServerEditorModel
 {

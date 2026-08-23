@@ -5,7 +5,7 @@ using CodexGateway.Models;
 using MediatR;
 using Microsoft.AspNetCore.Components;
 
-namespace CodexGateway.App.Components.Admin;
+namespace CodexGateway.App.Components.Pages.Admin.Projects;
 
 public partial class ProjectEditor : ComponentBase
 {

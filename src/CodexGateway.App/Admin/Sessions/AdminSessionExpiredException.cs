@@ -1,6 +1,6 @@
 using CodexGateway.Logic.Errors;
 
-namespace CodexGateway.App.Security;
+namespace CodexGateway.App.Admin.Sessions;
 
 public sealed class AdminSessionExpiredException()
     : GatewayException(
