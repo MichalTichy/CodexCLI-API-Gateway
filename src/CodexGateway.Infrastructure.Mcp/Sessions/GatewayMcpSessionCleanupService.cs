@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Hosting;
 
-namespace CodexGateway.Infrastructure.Mcp;
+namespace CodexGateway.Infrastructure.Mcp.Sessions;
 
 internal sealed class GatewayMcpSessionCleanupService(GatewayMcpSessionManager sessions)
     : BackgroundService

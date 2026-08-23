@@ -7,7 +7,7 @@ using CodexGateway.Models;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 
-namespace CodexGateway.Infrastructure.Mcp;
+namespace CodexGateway.Infrastructure.Mcp.Sessions;
 
 public sealed class GatewayMcpSessionManager(
     IHttpClientFactory httpClientFactory,

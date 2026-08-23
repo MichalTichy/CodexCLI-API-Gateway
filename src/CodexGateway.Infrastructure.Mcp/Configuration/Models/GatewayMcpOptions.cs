@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace CodexGateway.Infrastructure.Mcp;
+namespace CodexGateway.Infrastructure.Mcp.Configuration.Models;
 
 public sealed class GatewayMcpOptions
 {

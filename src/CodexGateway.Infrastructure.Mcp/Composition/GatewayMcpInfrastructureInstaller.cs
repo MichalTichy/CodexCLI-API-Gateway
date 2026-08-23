@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
-namespace CodexGateway.Infrastructure.Mcp;
+namespace CodexGateway.Infrastructure.Mcp.Composition;
 
 public sealed class GatewayMcpInfrastructureInstaller : IHighPriorityInstaller
 {

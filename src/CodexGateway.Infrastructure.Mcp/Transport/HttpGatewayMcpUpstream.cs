@@ -1,6 +1,6 @@
 using System.Net.Http.Headers;
 
-namespace CodexGateway.Infrastructure.Mcp;
+namespace CodexGateway.Infrastructure.Mcp.Transport;
 
 internal sealed class HttpGatewayMcpUpstream(
     HttpClient client,

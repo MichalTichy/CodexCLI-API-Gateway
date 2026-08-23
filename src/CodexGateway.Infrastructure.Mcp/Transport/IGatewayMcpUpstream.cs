@@ -1,4 +1,4 @@
-namespace CodexGateway.Infrastructure.Mcp;
+namespace CodexGateway.Infrastructure.Mcp.Transport;
 
 internal interface IGatewayMcpUpstream : IAsyncDisposable
 {

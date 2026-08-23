@@ -1,2 +1,13 @@
+global using CodexGateway.Infrastructure.Mcp.Configuration.Models;
+global using CodexGateway.Infrastructure.Mcp.Errors;
+global using CodexGateway.Infrastructure.Mcp.Sessions;
+global using CodexGateway.Infrastructure.Mcp.Transport;
+global using CodexGateway.Infrastructure.Mcp.Transport.Models;
+global using CodexGateway.IoC.Installers;
+global using CodexGateway.Logic.Codex.Models;
+global using CodexGateway.Logic.McpServers;
+global using CodexGateway.Logic.McpServers.Models;
+global using CodexGateway.Models.McpServers;
+global using CodexGateway.Models.Projects;
 global using Microsoft.AspNetCore.Http;
 global using Microsoft.Extensions.Logging;

@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using CodexGateway.Models;
 
-namespace CodexGateway.Infrastructure.Mcp;
+namespace CodexGateway.Infrastructure.Mcp.Transport;
 
 internal sealed class LocalStdioGatewayMcpUpstream : IGatewayMcpUpstream
 {

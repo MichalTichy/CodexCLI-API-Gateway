@@ -1,4 +1,4 @@
-namespace CodexGateway.Infrastructure.Mcp;
+namespace CodexGateway.Infrastructure.Mcp.Transport;
 
 public interface IGatewayMcpRequestHandler
 {
