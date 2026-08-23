@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
-namespace CodexGateway.Infrastructure.Storage;
+namespace CodexGateway.Infrastructure.Storage.Composition;
 
 public sealed class StorageInfrastructureInstaller : IHighPriorityInstaller
 {

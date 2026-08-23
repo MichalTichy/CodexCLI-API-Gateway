@@ -2,7 +2,7 @@ using CodexGateway.Logic.Configuration;
 using CodexGateway.Logic.Errors;
 using Microsoft.Extensions.Options;
 
-namespace CodexGateway.Infrastructure.Storage;
+namespace CodexGateway.Infrastructure.Storage.Artifacts;
 
 public sealed class RunArtifactQuotaMonitor
 {

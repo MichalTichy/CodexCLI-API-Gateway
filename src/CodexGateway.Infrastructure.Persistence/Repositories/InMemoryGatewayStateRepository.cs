@@ -2,7 +2,7 @@ using CodexGateway.Models;
 using Shared.Infrastructure.Persistence.Repositories;
 using Shared.Infrastructure.Persistence.Specifications;
 
-namespace CodexGateway.Infrastructure.Persistence;
+namespace CodexGateway.Infrastructure.Persistence.Repositories;
 
 public sealed class InMemoryGatewayStateRepository : IRepository<GatewayState>
 {

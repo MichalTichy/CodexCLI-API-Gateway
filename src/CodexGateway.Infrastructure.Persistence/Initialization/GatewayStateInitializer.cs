@@ -2,7 +2,7 @@ using CodexGateway.Models;
 using Microsoft.Extensions.Hosting;
 using Shared.Infrastructure.Persistence.Repositories;
 
-namespace CodexGateway.Infrastructure.Persistence;
+namespace CodexGateway.Infrastructure.Persistence.Initialization;
 
 public sealed class GatewayStateInitializer(IRepository<GatewayState> repository) : IHostedService
 {

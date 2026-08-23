@@ -1,6 +1,6 @@
 using CodexGateway.Logic.Storage;
 
-namespace CodexGateway.Infrastructure.Storage;
+namespace CodexGateway.Infrastructure.Storage.Projects;
 
 public sealed class ProjectStorage(StoragePaths paths) : IProjectStorage
 {

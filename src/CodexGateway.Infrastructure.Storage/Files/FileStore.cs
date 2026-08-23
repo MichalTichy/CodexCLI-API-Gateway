@@ -9,7 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace CodexGateway.Infrastructure.Storage;
+namespace CodexGateway.Infrastructure.Storage.Files;
 
 public sealed partial class FileStore(StoragePaths paths, IOptions<GatewayOptions> options) : IFileStore
 {

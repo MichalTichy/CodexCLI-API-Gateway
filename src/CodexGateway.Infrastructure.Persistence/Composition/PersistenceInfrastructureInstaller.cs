@@ -6,7 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Shared.Infrastructure.Persistence.Marten.Extensions;
 using Shared.Infrastructure.Persistence.Repositories;
 
-namespace CodexGateway.Infrastructure.Persistence;
+namespace CodexGateway.Infrastructure.Persistence.Composition;
 
 public sealed class PersistenceInfrastructureInstaller : IHighPriorityInstaller
 {

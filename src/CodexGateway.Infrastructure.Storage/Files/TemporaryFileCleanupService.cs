@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace CodexGateway.Infrastructure.Storage;
+namespace CodexGateway.Infrastructure.Storage.Files;
 
 public sealed class TemporaryFileCleanupService(FileStore files, ILogger<TemporaryFileCleanupService> logger) : BackgroundService
 {

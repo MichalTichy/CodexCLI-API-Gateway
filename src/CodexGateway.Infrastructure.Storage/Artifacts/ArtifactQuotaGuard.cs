@@ -2,7 +2,7 @@ using System.ComponentModel;
 using CodexGateway.Logic.Configuration;
 using CodexGateway.Logic.Errors;
 
-namespace CodexGateway.Infrastructure.Storage;
+namespace CodexGateway.Infrastructure.Storage.Artifacts;
 
 internal static class ArtifactQuotaGuard
 {
