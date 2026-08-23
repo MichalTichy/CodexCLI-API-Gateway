@@ -3,8 +3,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System.Text.Json;
-using CodexGateway.Models;
 
 namespace CodexGateway.OpenAICompatibilityTests;
 
@@ -19,15 +17,6 @@ public sealed class CompatibilityGatewayFactory : WebApplicationFactory<Program>
         Directory.CreateDirectory(StoragePath);
         Directory.CreateDirectory(ScenarioPath);
         Directory.CreateDirectory(CodexHomePath);
-        File.WriteAllText(
-            Path.Combine(StoragePath, "state.json"),
-            JsonSerializer.Serialize(new GatewayState
-            {
-                ApiKeys =
-                [
-                    new GatewayApiKeyDefinition { Id = "default", Name = "Default test key", Key = "e2e-api-key" }
-                ]
-            }));
     }
 
     public string RootPath { get; }
@@ -64,6 +53,9 @@ public sealed class CompatibilityGatewayFactory : WebApplicationFactory<Program>
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Gateway:StoragePath"] = StoragePath,
+                ["Gateway:ApiKeys:0:Id"] = "default",
+                ["Gateway:ApiKeys:0:Name"] = "Default test key",
+                ["Gateway:ApiKeys:0:Key"] = "e2e-api-key",
                 ["Gateway:Limits:MaxConcurrent"] = "2",
                 ["Gateway:Limits:MaxQueued"] = "2",
                 ["Gateway:Limits:TimeoutMinutes"] = "1",

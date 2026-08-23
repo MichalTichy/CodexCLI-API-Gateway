@@ -20,7 +20,12 @@ var runnerImage = builder.AddDockerfile(
     .WithImage("codex-gateway-runner", "0.148.0")
     .WithEntrypoint("/bin/true");
 
+var postgres = builder.AddPostgres("postgres")
+    .WithDataVolume();
+var database = postgres.AddDatabase("Gateway", "codex_gateway");
+
 builder.AddProject<Projects.CodexGateway_App>("gateway")
+    .WithReference(database)
     .WithEnvironment("Gateway__StoragePath", dataPath)
     .WithEnvironment("Codex__HomePath", codexHomePath)
     .WithEnvironment("Codex__Container__EngineExecutablePath", "docker")
@@ -28,6 +33,7 @@ builder.AddProject<Projects.CodexGateway_App>("gateway")
     .WithHttpEndpoint(port: 5050, name: "http")
     .WithExternalHttpEndpoints()
     .WithHttpHealthCheck("/health")
+    .WaitFor(database)
     .WaitForCompletion(runnerImage);
 
 builder.Build().Run();

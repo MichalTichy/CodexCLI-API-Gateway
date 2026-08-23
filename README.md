@@ -15,6 +15,7 @@ An internal .NET gateway that exposes a dedicated Codex CLI identity through an 
 - One hardened, labelled container per run; there is no host-process model-execution fallback.
 - Explicit child-process environment filtering, no-follow artifact handling, and live configurable artifact quotas.
 - OpenTelemetry/service discovery defaults and an Aspire AppHost.
+- PostgreSQL document persistence through Marten for API keys, projects, grants, and the trusted MCP catalog.
 - Deterministic end-to-end tests using a fake container engine and fake Codex protocol process; no OpenAI account or network is required for tests.
 
 ## Request flow
@@ -52,7 +53,7 @@ The container receives a small runtime environment allowlist. Gateway-hosted MCP
 
 The gateway persists an identity beside its storage and labels containers with `com.codex-gateway.managed=true`, `com.codex-gateway.instance-id`, and `com.codex-gateway.run-id`. At startup it reconciles only stale containers belonging to that storage identity, then safely removes their abandoned run snapshots. Success, failure, cancellation, timeout, and quota enforcement force-remove the matching run container; an abrupt gateway or host crash is recovered on the next startup.
 
-A storage/auth volume pair supports one live gateway instance. Project serialization and admission locks are in memory, so two gateway processes sharing those volumes are unsupported even though their persisted instance ID is the same. Use separate storage/auth pairs for independent gateway instances; high availability would require distributed coordination and a different orphan-lease design.
+A PostgreSQL database plus storage/auth volume pair supports one live gateway instance. Project serialization and admission locks are in memory, so multiple gateway processes sharing them are unsupported. High availability would require distributed coordination and a different orphan-lease design.
 
 This is strong workspace/process isolation for a trusted internal tool, not a hostile multi-tenant security boundary. Access to the Docker socket is effectively host-administrator access: compromise of the gateway control plane can control the Docker host. Keep the gateway private, use a dedicated Docker host where practical, and never expose the socket to untrusted code. Runner containers do not receive the socket.
 
@@ -60,6 +61,7 @@ This is strong workspace/process isolation for a trusted internal tool, not a ho
 
 - [.NET SDK 10.0.301 or newer 10.0 feature band](https://dotnet.microsoft.com/download)
 - A current Docker Engine and CLI with `--mount volume-subpath` support (named-volume deployments require it)
+- PostgreSQL 18 (started automatically by Aspire or Compose)
 - Codex CLI `0.148.0` on the gateway host only when running through Aspire/directly; it is used for App Server model discovery and device login, never for model execution
 
 The gateway uses one dedicated `CODEX_HOME`; do not point it at a developer's normal Codex directory.
@@ -77,7 +79,7 @@ dotnet restore
 dotnet aspire run --project src/CodexGateway.AppHost/CodexGateway.AppHost.csproj
 ```
 
-Aspire first builds/tags the `runner` Dockerfile target, then runs the gateway project on the host in bind-mount mode. It persists development state under `.aspire/data` and Codex authentication under `.aspire/codex-home`. The Aspire dashboard shows the one-shot image builder, gateway endpoint, and health state.
+Aspire starts PostgreSQL, builds/tags the `runner` Dockerfile target, then runs the gateway project on the host in bind-mount mode. PostgreSQL holds gateway configuration; `.aspire/data` holds files/artifacts and `.aspire/codex-home` holds Codex authentication.
 
 If `codex` is not the runnable standalone executable on your `PATH`, set an absolute path before starting Aspire:
 
@@ -90,6 +92,7 @@ You can also build the mandatory runner and run the API directly:
 
 ```powershell
 docker build --target runner -t codex-gateway-runner:0.148.0 .
+$env:ConnectionStrings__Gateway = 'Host=localhost;Port=5432;Database=codex_gateway;Username=postgres;Password=postgres'
 dotnet run --project src/CodexGateway.App/CodexGateway.App.csproj --urls http://localhost:5050
 ```
 
@@ -102,10 +105,11 @@ Set the required admin credentials and start the gateway:
 ```powershell
 $env:GATEWAY_ADMIN_USERNAME = 'admin'
 $env:GATEWAY_ADMIN_PASSWORD = 'a-different-admin-password'
+$env:GATEWAY_DB_PASSWORD = 'a-different-database-password'
 docker compose up --build
 ```
 
-The API is at `http://localhost:5050`; the UI is at `http://localhost:5050/admin`. Compose builds both Dockerfile targets. Its `runner-image` helper exits immediately after ensuring `codex-gateway-runner:0.148.0` exists; only `gateway` remains running. The fixed `codex-gateway-data` and `codex-gateway-auth` volumes keep data and Codex authentication across replacement and can be mounted into sibling run containers by name. If a reverse proxy is placed in front of the gateway, enable WebSocket forwarding for the Blazor circuit.
+The API is at `http://localhost:5050`; the UI is at `http://localhost:5050/admin`. Compose runs PostgreSQL and the gateway, and builds both Dockerfile targets. Its `runner-image` helper exits after ensuring `codex-gateway-runner:0.148.0` exists. The fixed database, data, and auth volumes survive container replacement. If a reverse proxy is placed in front of the gateway, enable WebSocket forwarding for the Blazor circuit.
 
 The gateway stays non-root and receives the Docker socket through a supplementary group. Docker Desktop commonly uses group `0`; on Linux set `DOCKER_GID` to the socket group before starting Compose:
 
@@ -127,6 +131,7 @@ docker run --rm -p 5050:8080 `
   --security-opt no-new-privileges `
   -e AdminUi__Username=admin `
   -e AdminUi__Password=a-different-admin-password `
+  -e ConnectionStrings__Gateway='Host=database-host;Port=5432;Database=codex_gateway;Username=codex_gateway;Password=database-password' `
   -e   Codex__Container__Image=codex-gateway-runner:0.148.0 `
   -e Codex__Container__WorkspaceVolume=codex-gateway-data `
   -e Codex__Container__AuthVolume=codex-gateway-auth `
@@ -418,6 +423,7 @@ All settings can be supplied through `appsettings.json` or normal ASP.NET Core e
 
 | Setting | Default | Meaning |
 |---|---:|---|
+| `ConnectionStrings:Gateway` | required outside Testing | PostgreSQL connection used by Marten |
 | `Gateway:StoragePath` | `data` | Projects, metadata, temporary files, and runs |
 | `Gateway:Limits:MaxConcurrent` | `4` | Concurrent run containers |
 | `Gateway:Limits:MaxQueued` | `32` | Additional admitted requests |
@@ -453,7 +459,7 @@ All settings can be supplied through `appsettings.json` or normal ASP.NET Core e
 
 The admin browser cookie is a non-persistent session cookie and expires when the browser session ends. Each login also receives an in-memory server session: logout invalidates copied cookies and prevents further events on existing Blazor circuits, while an operation that already started is allowed to finish. A gateway restart invalidates outstanding admin cookies. There are no roles or multiple gateway users. OpenAI API authentication and admin UI authentication are intentionally separate. The Blazor UI executes management operations directly on the server through its authenticated circuit; there is no separate management JSON API. The only admin transport routes are the antiforgery-protected form posts used to issue and revoke the UI cookie. Known placeholder credentials are rejected outside Development.
 
-Additional global keys remain in appsettings and their secrets are never rendered by the admin UI. For example:
+Global keys in appsettings seed a new database; later management happens through the UI. Their secrets are never rendered by the admin UI. For example:
 
 ```json
 "ApiKeys": [
@@ -511,9 +517,11 @@ It deliberately does not make a paid/live model request because a repeatable pac
 ## Repository layout
 
 ```text
+SharedInfrastructure/Shared.Infrastructure.Persistence*/ Vendored Edifio repository, specification, Marten, session, and unit-of-work infrastructure
 src/CodexGateway.Models/          Persisted project, MCP, and file models
 src/CodexGateway.Logic/           Use cases, specifications, orchestration, and infrastructure ports
-src/CodexGateway.Infrastructure.Storage/ JSON/filesystem state, workspaces, artifacts, quotas, and cleanup
+src/CodexGateway.Infrastructure.Persistence/ Gateway Marten installer, state initialization, and test repository
+src/CodexGateway.Infrastructure.Storage/ Filesystem workspaces, artifacts, quotas, and cleanup
 src/CodexGateway.Infrastructure.Codex/   Codex App Server, process/container runtime, and MCP discovery
 src/CodexGateway.Infrastructure.Mcp/     Gateway-hosted HTTP and local STDIO MCP sessions
 src/CodexGateway.IoC/             Installer contracts and deterministic module discovery
@@ -529,9 +537,9 @@ tests/CodexGateway.FakeCodex/     Deterministic test double executable
 scripts/                          Repeatable production-container verification
 ```
 
-Dependencies point inward: `App -> { Api.OpenAI, Api, Infrastructure.Codex, Infrastructure.Mcp, Infrastructure.Storage, Logic, Models, ServiceDefaults }`, `Api.OpenAI -> { Api, Logic, Models }`, `Api -> Logic`, `Infrastructure.Codex -> { Infrastructure.Storage, Logic, Models }`, `Infrastructure.Mcp -> { Logic, Models }`, `Infrastructure.Storage -> { Logic, Models }`, and `Logic -> Models`. DI-bearing modules also reference the leaf `IoC` project. `App` is the composition root. `Logic` owns semantic MediatR use cases, reusable selection/projection specifications, the normalized execution flow, and ports such as `ICodexRunner`; `Infrastructure.Storage` supplies JSON/filesystem state, project and file storage, workspace and artifact safety, quotas, and temporary cleanup; `Infrastructure.Codex` supplies process/container execution, Codex App Server integration, and MCP discovery; `Infrastructure.Mcp` owns scoped internal MCP sessions and their HTTP or local STDIO transport. API adapters remain replaceable edge modules and cannot reference the host, either Infrastructure project, or one another.
+Dependencies point inward: `App` composes the API adapters and separate Codex, MCP, persistence, and filesystem infrastructure modules. `Logic` depends on `Models` and the vendored shared repository/specification contracts; it does not depend on Marten. `Infrastructure.Persistence` adapts those contracts to Marten/PostgreSQL, while `Infrastructure.Storage` owns only project files, workspaces, artifacts, quotas, and cleanup. API adapters remain replaceable edge modules and cannot reference the host or infrastructure projects.
 
-The Blazor admin UI is also an edge adapter. Its components keep only polling, validation display, and view state; every project, MCP, API-key, or Codex-account action is sent directly as a named MediatR use case owned by `Logic`. Configuration queries use explicit specifications through `IGatewayConfigurationRepository`, whose JSON implementation lives in `Infrastructure.Storage`. The repository persists projects and the trusted MCP catalog as one aggregate so catalog changes and their project-grant updates remain atomic. Cookie validation and one circuit-level session check reject new activity after logout; an operation already running at logout is allowed to finish. The dashboard uses one coalescing refresh loop, and there is no catch-all admin operations facade or per-operation session wrapper.
+The Blazor admin UI is also an edge adapter. Every action is a named MediatR use case; dashboard reads use `IReadOnlyRepository<GatewayState>` with explicit specifications. Write handlers use `IRepository<GatewayState>` directly. Marten persists the configuration as one optimistic-concurrency document so catalog changes and related grant updates remain atomic. There is no gateway-specific repository facade or pass-through application-service layer.
 
 The admin route and all of its components are grouped under `Components/Pages/Admin`, with feature folders for `ApiKeys`, `Codex`, `Dashboard`, `McpServers`, `Projects`, and `Shared`. Production C# follows one top-level type per file; private nested implementation details may remain with their owner. An architecture test enforces this convention across `src`.
 
@@ -543,7 +551,7 @@ Create a class library named `CodexGateway.Api.<Schema>` for each additional ext
 
 Keep that schema's routes, wire DTOs, request validation, authentication middleware, error envelope, streaming format, and response mapping inside its adapter project. Give the module a self-contained installer that registers its concrete mappers and contributes a `GatewayEndpointAssembly` instance. Selecting the adapter means adding its project reference to `CodexGateway.App`; installer discovery handles its service registration. The low-priority FastEndpoints bootstrap and authenticated request-context accessor belong in `CodexGateway.Api`; normalized generation, model, file, and tool operations are MediatR use cases in `CodexGateway.Logic` rather than adapter services.
 
-An adapter extracts its credential and project selector, then uses Logic's `GatewayAccessService` to authenticate and resolve the project grant. `GatewayRequestContext` cannot be constructed outside Logic, which prevents an adapter from accidentally bypassing the shared access check before sending generation, file, or tool use cases. Specifications encapsulate reusable project-access and visible-versus-invocable tool projections; filesystem streaming and container execution remain explicit operations rather than artificial query specifications.
+An adapter extracts its credential and project selector, then sends `AuthenticateGatewayRequestUseCase` to authenticate and resolve the project grant. Specifications encapsulate reusable repository reads; filesystem streaming and container execution stay explicit inside their use-case handlers rather than becoming artificial query specifications.
 
 The OpenAI adapter retains the compatibility routes rooted at `/v1`. Give another schema its own base-path prefix, such as `/<schema>/v1/...` and `/p/{projectId}/<schema>/v1/...`. A client that only accepts a base URL can then use `https://gateway.example/<schema>` while continuing to append its native `/v1/...` paths. Each adapter owns its route recognition and project-header convention, so adding one does not extend an OpenAI-specific path switch. Hosting two adapters at the same `/v1` path on different hostnames would additionally require host-aware routing and is not part of the current bootstrap.
 

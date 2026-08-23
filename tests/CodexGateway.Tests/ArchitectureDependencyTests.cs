@@ -238,21 +238,23 @@ public sealed class ArchitectureDependencyTests
     }
 
     [Fact]
-    public void Gateway_configuration_uses_the_specific_repository_contract()
+    public void Gateway_configuration_uses_the_shared_Marten_repository_contract()
     {
         var logicAssembly = typeof(CodexGateway.Logic.LogicInstaller).Assembly;
         var storageAssembly = typeof(CodexGateway.Infrastructure.Storage.StorageInfrastructureInstaller).Assembly;
-        var repositoryContract = logicAssembly.GetType(
-            "CodexGateway.Logic.Storage.IGatewayConfigurationRepository");
-        var repositoryImplementation = storageAssembly.GetType(
-            "CodexGateway.Infrastructure.Storage.JsonGatewayConfigurationRepository");
+        var repositoryContract = typeof(Shared.Infrastructure.Persistence.Repositories.IRepository<>);
+        var repositoryImplementation = typeof(
+            Shared.Infrastructure.Persistence.Marten.Repository.Document.NoTenancyMartenRepository<>);
 
-        Assert.NotNull(repositoryContract);
-        Assert.True(repositoryContract!.IsInterface);
-        Assert.NotNull(repositoryImplementation);
-        Assert.Contains(repositoryContract, repositoryImplementation!.GetInterfaces());
+        Assert.True(repositoryContract.IsInterface);
+        Assert.Contains(
+            repositoryImplementation.GetInterfaces(),
+            type => type.IsGenericType
+                    && type.GetGenericTypeDefinition() == repositoryContract);
         Assert.Null(logicAssembly.GetType("CodexGateway.Logic.Storage.IGatewayStateStore"));
+        Assert.Null(logicAssembly.GetType("CodexGateway.Logic.Storage.IGatewayConfigurationRepository"));
         Assert.Null(storageAssembly.GetType("CodexGateway.Infrastructure.Storage.JsonStateStore"));
+        Assert.Null(storageAssembly.GetType("CodexGateway.Infrastructure.Storage.JsonGatewayConfigurationRepository"));
 
         var productionSources = Directory
             .EnumerateFiles(Path.Combine(RepositoryRoot, "src"), "*.cs", SearchOption.AllDirectories)
@@ -261,6 +263,8 @@ public sealed class ArchitectureDependencyTests
             File.ReadAllText(path).Contains("IGatewayStateStore", StringComparison.Ordinal));
         Assert.DoesNotContain(productionSources, path =>
             File.ReadAllText(path).Contains("JsonStateStore", StringComparison.Ordinal));
+        Assert.DoesNotContain(productionSources, path =>
+            File.ReadAllText(path).Contains("IGatewayConfigurationRepository", StringComparison.Ordinal));
     }
 
     [Fact]
