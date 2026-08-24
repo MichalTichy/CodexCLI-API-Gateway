@@ -1,0 +1,150 @@
+using CodexGateway.Testing;
+using CodexGateway.Models;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Shared.Infrastructure.Persistence.Repositories;
+
+namespace CodexGateway.EndToEndTests.Infrastructure;
+
+public sealed class GatewayFactory : WebApplicationFactory<Program>
+{
+    private readonly int _maxConcurrent;
+    private readonly int _maxQueued;
+    private readonly int? _timeoutSeconds;
+    private readonly int? _authenticationCommandTimeoutSeconds;
+    private readonly int? _deviceLoginTimeoutSeconds;
+    private readonly int? _maxArtifactFileMegabytes;
+    private readonly int? _maxArtifactTotalMegabytes;
+    private readonly bool _adminEnabled;
+    private readonly string _connectionString;
+
+    public GatewayFactory(
+        int maxConcurrent = 2,
+        int maxQueued = 2,
+        int? timeoutSeconds = null,
+        int? authenticationCommandTimeoutSeconds = null,
+        int? deviceLoginTimeoutSeconds = null,
+        int? maxArtifactFileMegabytes = null,
+        int? maxArtifactTotalMegabytes = null,
+        bool adminEnabled = true)
+    {
+        _maxConcurrent = maxConcurrent;
+        _maxQueued = maxQueued;
+        _timeoutSeconds = timeoutSeconds;
+        _authenticationCommandTimeoutSeconds = authenticationCommandTimeoutSeconds;
+        _deviceLoginTimeoutSeconds = deviceLoginTimeoutSeconds;
+        _maxArtifactFileMegabytes = maxArtifactFileMegabytes;
+        _maxArtifactTotalMegabytes = maxArtifactTotalMegabytes;
+        _adminEnabled = adminEnabled;
+        _connectionString = PostgreSqlTestDatabase.CreateConnectionString();
+        RootPath = Path.Combine(Path.GetTempPath(), "codex-gateway-e2e", Guid.NewGuid().ToString("N"));
+        StoragePath = Path.Combine(RootPath, "data");
+        ScenarioPath = Path.Combine(RootPath, "fake");
+        CodexHomePath = Path.Combine(RootPath, "codex-home");
+        Directory.CreateDirectory(StoragePath);
+        Directory.CreateDirectory(ScenarioPath);
+        Directory.CreateDirectory(CodexHomePath);
+        File.WriteAllText(Path.Combine(ScenarioPath, "authenticated"), string.Empty);
+    }
+
+    public string RootPath { get; }
+
+    public string StoragePath { get; }
+
+    public string ScenarioPath { get; }
+
+    public string CodexHomePath { get; }
+
+    protected override IHost CreateHost(IHostBuilder builder)
+    {
+        var host = base.CreateHost(builder);
+        var repository = host.Services.GetRequiredService<IRepository<GatewayState>>();
+        repository.GetAndUpdateAsync(
+                GatewayState.DocumentId,
+                state => state.ApiKeys =
+                [
+                    new ApiKeyDefinition { Id = "default", Name = "Default test key", Key = "e2e-api-key" },
+                    new ApiKeyDefinition { Id = "secondary", Name = "Secondary test key", Key = "e2e-secondary-api-key" }
+                ])
+            .GetAwaiter()
+            .GetResult();
+        return host;
+    }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        var fakeAssembly = typeof(FakeCodexMarker).Assembly.Location;
+        builder.UseSetting("ConnectionStrings:Gateway", _connectionString);
+        builder.UseStaticWebAssets();
+        builder.UseEnvironment("Testing");
+        builder.ConfigureAppConfiguration((_, configuration) =>
+        {
+            var settings = new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:Gateway"] = _connectionString,
+                ["Gateway:StoragePath"] = StoragePath,
+                ["Gateway:Limits:MaxConcurrent"] = _maxConcurrent.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ["Gateway:Limits:MaxQueued"] = _maxQueued.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ["Gateway:Limits:TimeoutSeconds"] = "60",
+                ["Codex:ExecutablePath"] = "dotnet",
+                ["Codex:ArgumentPrefix:0"] = fakeAssembly,
+                ["Codex:ArgumentPrefix:1"] = "--scenario",
+                ["Codex:ArgumentPrefix:2"] = ScenarioPath,
+                ["Codex:Container:EngineExecutablePath"] = "dotnet",
+                ["Codex:Container:EngineArgumentPrefix:0"] = fakeAssembly,
+                ["Codex:Container:EngineArgumentPrefix:1"] = "--scenario",
+                ["Codex:Container:EngineArgumentPrefix:2"] = ScenarioPath,
+                ["Codex:Container:EngineArgumentPrefix:3"] = "--container-engine",
+                ["Codex:Container:Image"] = "codex-gateway-runner:e2e",
+                ["Codex:Container:Network"] = "codex-gateway-e2e",
+                ["Codex:Container:MemoryMegabytes"] = "512",
+                ["Codex:Container:CpuLimit"] = "1",
+                ["Codex:Container:PidsLimit"] = "64",
+                ["Codex:Container:TmpfsMegabytes"] = "64",
+                ["Codex:HomePath"] = CodexHomePath,
+                ["Codex:Models:0:Id"] = "gpt-test-sol",
+                ["Codex:Models:0:Name"] = "GPT Test Sol",
+                ["Codex:Models:0:SupportedReasoningEfforts:0"] = "low",
+                ["Codex:Models:0:SupportedReasoningEfforts:1"] = "medium",
+                ["Codex:Models:0:SupportedReasoningEfforts:2"] = "high",
+                ["Codex:Models:0:DefaultReasoningEffort"] = "medium",
+                ["Codex:Models:1:Id"] = "gpt-test-terra",
+                ["Codex:Models:1:Name"] = "GPT Test Terra",
+                ["Codex:Models:1:SupportedReasoningEfforts:0"] = "high",
+                ["Codex:Models:1:DefaultReasoningEffort"] = "high",
+                ["AdminUi:Enabled"] = _adminEnabled.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ["AdminUi:Username"] = "test-admin",
+                ["AdminUi:Password"] = "test-password"
+            };
+            if (_timeoutSeconds is { } timeoutSeconds)
+            {
+                settings["Gateway:Limits:TimeoutSeconds"] = timeoutSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            if (_authenticationCommandTimeoutSeconds is { } authenticationCommandTimeoutSeconds)
+            {
+                settings["Codex:AuthenticationCommandTimeoutSeconds"] = authenticationCommandTimeoutSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            if (_deviceLoginTimeoutSeconds is { } deviceLoginTimeoutSeconds)
+            {
+                settings["Codex:DeviceLoginTimeoutSeconds"] = deviceLoginTimeoutSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            if (_maxArtifactFileMegabytes is { } maximumArtifactFileMegabytes)
+            {
+                settings["Gateway:Artifacts:MaxFileMegabytes"] = maximumArtifactFileMegabytes.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            if (_maxArtifactTotalMegabytes is { } maximumArtifactTotalMegabytes)
+            {
+                settings["Gateway:Artifacts:MaxTotalMegabytes"] = maximumArtifactTotalMegabytes.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            configuration.AddInMemoryCollection(settings);
+        });
+    }
+}

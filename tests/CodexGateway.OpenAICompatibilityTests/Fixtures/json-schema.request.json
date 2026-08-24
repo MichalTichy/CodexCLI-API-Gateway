@@ -1,0 +1,35 @@
+{
+  "method": "POST",
+  "path_and_query": "/p/openai-compat/v1/chat/completions",
+  "authorization": "Bearer <redacted>",
+  "content_type": "application/json",
+  "body": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Return the structured compatibility result."
+      }
+    ],
+    "model": "gpt-test-sol",
+    "response_format": {
+      "type": "json_schema",
+      "json_schema": {
+        "description": "A deterministic compatibility-test result.",
+        "name": "samwise_result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "result": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "strict": true
+      }
+    }
+  }
+}

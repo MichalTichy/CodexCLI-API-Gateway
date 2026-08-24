@@ -1,0 +1,83 @@
+services:
+  postgres:
+    image: postgres:18.1-alpine
+    environment:
+      POSTGRES_DB: codex_gateway
+      POSTGRES_USER: codex_gateway
+      POSTGRES_PASSWORD: "${GATEWAY_DB_PASSWORD:?Set GATEWAY_DB_PASSWORD}"
+    volumes:
+      - gateway-database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U codex_gateway -d codex_gateway"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - runner
+    restart: unless-stopped
+
+  # This one-shot resource makes `docker compose up --build` create and tag the
+  # exact image that the gateway uses for every request. It does not remain running.
+  runner-image:
+    image: codex-gateway-runner:0.148.0
+    build:
+      context: .
+      target: runner
+      args:
+        CODEX_VERSION: "0.148.0"
+    entrypoint: ["/bin/true"]
+    restart: "no"
+
+  gateway:
+    image: codex-gateway:latest
+    build:
+      context: .
+      target: gateway
+      args:
+        CODEX_VERSION: "0.148.0"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      runner-image:
+        condition: service_completed_successfully
+    ports:
+      - "5050:8080"
+    environment:
+      AdminUi__Username: "${GATEWAY_ADMIN_USERNAME:?Set GATEWAY_ADMIN_USERNAME}"
+      AdminUi__Password: "${GATEWAY_ADMIN_PASSWORD:?Set GATEWAY_ADMIN_PASSWORD}"
+      ConnectionStrings__Gateway: "Host=postgres;Port=5432;Database=codex_gateway;Username=codex_gateway;Password=${GATEWAY_DB_PASSWORD}"
+      Codex__Container__EngineExecutablePath: docker
+      Codex__Container__Image: codex-gateway-runner:0.148.0
+      Codex__Container__WorkspaceVolume: codex-gateway-data
+      Codex__Container__AuthVolume: codex-gateway-auth
+      Codex__Container__Network: "${CODEX_RUNNER_NETWORK:-codex-gateway-runner}"
+      Codex__Container__MemoryMegabytes: "${CODEX_RUNNER_MEMORY_MB:-2048}"
+      Codex__Container__CpuLimit: "${CODEX_RUNNER_CPU_LIMIT:-2}"
+      Codex__Container__PidsLimit: "${CODEX_RUNNER_PIDS_LIMIT:-256}"
+      Codex__Container__TmpfsMegabytes: "${CODEX_RUNNER_TMPFS_MB:-256}"
+      McpGateway__RunnerBaseUrl: "http://gateway:8080"
+    volumes:
+      - gateway-data:/app/data
+      - codex-home:/app/.codex-home
+      - /var/run/docker.sock:/var/run/docker.sock
+    # Docker Desktop commonly exposes the socket with group 0. On Linux set
+    # DOCKER_GID to: stat -c '%g' /var/run/docker.sock
+    group_add:
+      - "${DOCKER_GID:-0}"
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - runner
+    restart: unless-stopped
+
+volumes:
+  gateway-database:
+    name: codex-gateway-database
+  gateway-data:
+    name: codex-gateway-data
+  codex-home:
+    name: codex-gateway-auth
+
+networks:
+  runner:
+    name: codex-gateway-runner
