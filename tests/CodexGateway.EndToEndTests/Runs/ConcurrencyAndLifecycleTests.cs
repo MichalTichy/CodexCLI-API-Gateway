@@ -249,7 +249,6 @@ public sealed class ConcurrencyAndLifecycleTests
         public ValueTask DisposeAsync()
         {
             Client.Dispose();
-            Factory.Services.GetRequiredService<CodexAppServerClient>().Dispose();
             Factory.Dispose();
             for (var attempt = 0; attempt < 20 && Directory.Exists(Factory.RootPath); attempt++)
             {

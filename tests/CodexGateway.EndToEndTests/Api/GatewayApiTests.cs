@@ -438,7 +438,7 @@ public sealed class GatewayApiTests : IDisposable
         Authorize();
         var holdPath = Path.Combine(_factory.ScenarioPath, "hold-device-login");
         await File.WriteAllTextAsync(holdPath, string.Empty);
-        var codex = _factory.GetCodexControlPlane();
+        var codex = _factory.GetCodexAuthenticationManager();
 
         var started = await codex.StartDeviceLoginAsync(CancellationToken.None);
         Assert.Equal(DeviceLoginStatus.Pending, started.Status);
@@ -470,7 +470,6 @@ public sealed class GatewayApiTests : IDisposable
     public void Dispose()
     {
         _client.Dispose();
-        _factory.Services.GetRequiredService<CodexAppServerClient>().Dispose();
         _factory.Dispose();
         for (var attempt = 0; attempt < 20 && Directory.Exists(_factory.RootPath); attempt++)
         {

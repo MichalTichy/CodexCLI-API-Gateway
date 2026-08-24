@@ -274,7 +274,6 @@ public sealed class AdminBlazorUiTests : IDisposable
 
     private static void CleanupFactory(GatewayFactory factory)
     {
-        factory.Services.GetRequiredService<CodexAppServerClient>().Dispose();
         factory.Dispose();
         for (var attempt = 0; attempt < 20 && Directory.Exists(factory.RootPath); attempt++)
         {

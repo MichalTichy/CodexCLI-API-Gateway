@@ -8,6 +8,8 @@ var scenarioRoot = ReadOption(arguments, "--scenario") ?? Path.Combine(Path.GetT
 Directory.CreateDirectory(scenarioRoot);
 var mode = arguments.Contains("--container-engine", StringComparer.Ordinal) ? "container-engine" :
     arguments.Contains("app-server", StringComparer.Ordinal) ? "app-server" :
+    arguments.Contains("login", StringComparer.Ordinal) ? "login" :
+    arguments.Contains("logout", StringComparer.Ordinal) ? "logout" :
     arguments.Contains("exec", StringComparer.Ordinal) ? "exec" : "unknown";
 
 switch (mode)
@@ -18,13 +20,58 @@ switch (mode)
     case "app-server":
         await RunAppServerAsync(ReadConfiguredMcpServers(arguments));
         break;
+    case "login":
+        await RunLoginAsync();
+        break;
+    case "logout":
+        await RunLogoutAsync();
+        break;
     case "exec":
         await RunExecAsync(arguments);
         break;
     default:
-        Console.Error.WriteLine("Fake Codex expected exec or app-server mode.");
+        Console.Error.WriteLine("Fake Codex expected exec, app-server, login, or logout mode.");
         Environment.ExitCode = 2;
         break;
+}
+
+async Task RunLoginAsync()
+{
+    if (arguments.Contains("status", StringComparer.Ordinal))
+    {
+        await RecordInvocationAsync("login-status", string.Empty);
+        Console.WriteLine(File.Exists(Path.Combine(scenarioRoot, "authenticated"))
+            ? "Logged in using ChatGPT"
+            : "Not logged in");
+        return;
+    }
+
+    if (!arguments.Contains("--device-auth", StringComparer.Ordinal))
+    {
+        Console.Error.WriteLine("Fake Codex only supports device authentication.");
+        Environment.ExitCode = 2;
+        return;
+    }
+
+    await RecordInvocationAsync("device-login", string.Empty);
+    Console.WriteLine("Open this URL in your browser:");
+    Console.WriteLine("https://example.test/device");
+    Console.WriteLine("Enter this one-time code:");
+    Console.WriteLine("TEST-CODE");
+    await Console.Out.FlushAsync();
+    if (File.Exists(Path.Combine(scenarioRoot, "hold-device-login")))
+    {
+        await WaitForGateReleaseAsync("device-login");
+    }
+
+    await File.WriteAllTextAsync(Path.Combine(scenarioRoot, "authenticated"), string.Empty);
+}
+
+async Task RunLogoutAsync()
+{
+    await RecordInvocationAsync("logout", string.Empty);
+    TryDelete(Path.Combine(scenarioRoot, "authenticated"));
+    Console.WriteLine("Logged out");
 }
 
 async Task RunContainerEngineAsync()
@@ -266,81 +313,14 @@ async Task RunAppServerAsync(IReadOnlySet<string> configuredMcpServers)
             continue;
         }
 
-        if (method == "initialize" && TryClaimScenario("fail-app-server-initialize-once"))
-        {
-            await WriteAppServerErrorAsync(id.GetInt64(), "Fake initialize failure");
-            continue;
-        }
-
-        if (method == "initialize" && TryClaimScenario("hang-app-server-initialize-once"))
-        {
-            await WaitForGateReleaseAsync("app-server-initialize");
-        }
-
-        if (method == "account/login/start" && File.Exists(Path.Combine(scenarioRoot, "hold-device-login-start-response")))
-        {
-            await WaitForGateReleaseAsync("device-login-start");
-        }
-
-        if (method == "account/login/cancel" && File.Exists(Path.Combine(scenarioRoot, "hold-device-login-cancel-response")))
-        {
-            await WaitForGateReleaseAsync("device-login-cancel");
-        }
-
         object result = method switch
         {
             "initialize" => new { userAgent = "fake-codex" },
-            "model/list" => new
-            {
-                data = new object[]
-                {
-                    new
-                    {
-                        id = "internal-sol",
-                        model = "gpt-test-sol",
-                        displayName = "GPT Test Sol",
-                        defaultReasoningEffort = "medium",
-                        supportedReasoningEfforts = new[]
-                        {
-                            new { reasoningEffort = "low" },
-                            new { reasoningEffort = "medium" },
-                            new { reasoningEffort = "high" }
-                        }
-                    },
-                    new
-                    {
-                        id = "internal-terra",
-                        model = "gpt-test-terra",
-                        displayName = "GPT Test Terra",
-                        defaultReasoningEffort = "high",
-                        supportedReasoningEfforts = new[] { new { reasoningEffort = "high" } }
-                    }
-                },
-                nextCursor = (string?)null
-            },
-            "account/read" => new { account = new { type = "chatgpt", email = "fake@example.test" } },
             "mcpServerStatus/list" => ListMcpServerStatus(root, configuredMcpServers),
-            "account/login/start" => new
-            {
-                type = "chatgptDeviceCode",
-                loginId = "fake-login",
-                verificationUrl = "https://example.test/device",
-                userCode = "TEST-CODE"
-            },
-            "account/login/cancel" or "account/logout" => new { },
             _ => new { }
         };
         Console.WriteLine(JsonSerializer.Serialize(new { id = id.GetInt64(), result }));
         await Console.Out.FlushAsync();
-        if (method == "account/login/start" && !File.Exists(Path.Combine(scenarioRoot, "hold-device-login")))
-        {
-            Console.WriteLine(JsonSerializer.Serialize(new
-            {
-                method = "account/login/completed",
-                @params = new { loginId = "fake-login", success = true, error = (string?)null }
-            }));
-            await Console.Out.FlushAsync();
-        }
     }
 }
 
@@ -584,27 +564,6 @@ async Task WriteAppServerErrorAsync(long id, string message)
         error = new { code = -32000, message }
     }));
     await Console.Out.FlushAsync();
-}
-
-bool TryClaimScenario(string name)
-{
-    if (!File.Exists(Path.Combine(scenarioRoot, name)))
-    {
-        return false;
-    }
-
-    var claimPath = Path.Combine(scenarioRoot, name + ".claimed");
-    try
-    {
-        using var claim = new FileStream(claimPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
-        using var writer = new StreamWriter(claim);
-        writer.Write(Environment.ProcessId);
-        return true;
-    }
-    catch (IOException)
-    {
-        return false;
-    }
 }
 
 async Task RecordInvocationAsync(

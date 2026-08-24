@@ -214,10 +214,10 @@ public sealed class ManagementUseCaseTests
             new LogoutCodexAccountUseCase(),
             CancellationToken.None);
 
-        Assert.Equal(controlPlane.Account, state.Account);
+        Assert.False(state.Account.Authenticated);
         Assert.Equal(login, state.Login);
         Assert.Equal(login, started);
-        Assert.Equal(1, controlPlane.AccountReads);
+        Assert.Equal(0, controlPlane.AccountReads);
         Assert.Equal(1, controlPlane.LoginReads);
         Assert.Equal(1, controlPlane.LoginStarts);
         Assert.Equal(1, controlPlane.LoginCancellations);
@@ -263,7 +263,7 @@ public sealed class ManagementUseCaseTests
         public void Delete(string projectId) => DeletedIds.Add(projectId);
     }
 
-    private sealed class RecordingControlPlane : ICodexControlPlane
+    private sealed class RecordingControlPlane : ICodexAuthenticationManager
     {
         public required CodexAccountStatus Account { get; init; }
 
@@ -278,11 +278,6 @@ public sealed class ManagementUseCaseTests
         public int LoginCancellations { get; private set; }
 
         public int Logouts { get; private set; }
-
-        public Task<IReadOnlyList<CodexModel>> GetModelsAsync(
-            bool forceRefresh,
-            CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
 
         public Task<CodexAccountStatus> GetAccountAsync(CancellationToken cancellationToken)
         {

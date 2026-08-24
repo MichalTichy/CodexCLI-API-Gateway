@@ -7,7 +7,7 @@ An internal .NET gateway that exposes a dedicated Codex CLI identity through an 
 - OpenAI-compatible `chat/completions`, non-streaming JSON-schema output, model listing, versioned MCP tool discovery, files, Bearer authentication, and SSE streaming.
 - Projectless runs with disposable workspaces.
 - Project runs with persistent artifacts and one run at a time per project.
-- Dynamic Codex model and reasoning-effort discovery through Codex App Server.
+- A configuration-backed Codex model and reasoning-effort catalog with no model-discovery process or cache.
 - Gateway-wide API keys stored in PostgreSQL, with per-project access and separate visible/enabled MCP tool grants for each key.
 - A trusted MCP catalog. An administrator assigns each allowed key exact tool visibility and invocation allowlists inside a project.
 - A server-side interactive Blazor administration UI for Codex device authentication, projects, API-key grants, and the trusted MCP catalog.
@@ -73,9 +73,10 @@ flowchart LR
     Run -->|"JSONL events"| Adapter["OpenAI response adapter"]
     Adapter --> Client
     Control["Admin UI"] --> Projects["Projects + API-key grants + trusted MCP catalog"]
-    Control --> AppServer["Codex App Server"]
-    AppServer --> Auth
-    AppServer --> Models["Models + reasoning levels"]
+    Control --> DeviceAuth["codex login --device-auth<br/>host CLI process"]
+    DeviceAuth -->|"writes credentials"| Auth
+    Config["Codex:Models configuration"] --> Models["Models + reasoning levels"]
+    Models --> API
 ```
 
 Every request starts exactly one sibling container from the pinned `codex-gateway-runner:0.148.0` image unless its project selects a trusted runner-image override in the admin UI. A project run first copies persistent artifacts into a private run snapshot. Only that snapshot is mounted at `/workspace`; the live project artifact directory is never mounted. A successful run is checked and atomically committed, while failed, cancelled, and timed-out runs are discarded.
@@ -97,7 +98,7 @@ This is strong workspace/process isolation for a trusted internal tool, not a ho
 - [.NET SDK 10.0.301 or newer 10.0 feature band](https://dotnet.microsoft.com/download)
 - A current Docker Engine and CLI with `--mount volume-subpath` support (named-volume deployments require it)
 - PostgreSQL 18 (started automatically by Aspire or Compose)
-- Codex CLI `0.148.0` on the gateway host only when running through Aspire/directly; it is used for App Server model discovery and device login, never for model execution
+- Codex CLI `0.148.0` on the gateway host; it is used only for UI-triggered device login, login status, and logout, never for model execution
 
 The gateway uses one dedicated `CODEX_HOME`; do not point it at a developer's normal Codex directory.
 Run the gateway as a non-root user so run and auth directories retain the runner UID/GID. The gateway fails startup as root instead of silently creating storage that its non-root runner cannot use. Compose already configures an explicitly non-root gateway user.
@@ -132,6 +133,8 @@ dotnet run --project src/CodexGateway.App/CodexGateway.App.csproj --urls http://
 ```
 
 Open `http://localhost:5050/admin`, sign in with the `AdminUi` credentials, create an API key, copy its generated secret when it is shown, then use **Start device login** to authenticate the dedicated Codex identity. The UI uses Blazor Interactive Server and therefore needs its SignalR/WebSocket connection to remain open.
+
+The gateway starts `codex login --device-auth` with `CODEX_HOME` set to `Codex:HomePath`. The UI displays the verification URL and one-time code produced by that command. After the user completes verification, Codex writes credentials into that directory. Agent containers mount the same directory at `/codex-home`, which is how every isolated execution shares the gateway identity. Login itself runs on the gateway host and does not need another container.
 
 ## Docker
 
@@ -468,9 +471,10 @@ All settings can be supplied through `appsettings.json` or normal ASP.NET Core e
 | `Gateway:Artifacts:MaxFiles` | `10000` | Maximum files in a project artifact tree or writable run workspace |
 | `Gateway:Artifacts:MaxFileMegabytes` | `512` | Maximum file size in project artifacts or the writable run workspace |
 | `Gateway:Artifacts:MaxTotalMegabytes` | `2048` | Maximum total project artifacts or writable run-workspace size; project uploads share this budget |
-| `Codex:ExecutablePath` | `codex` | Host/control-plane Codex CLI used only for App Server auth and model discovery |
-| `Codex:ArgumentPrefix` | empty | Control-plane prefix arguments; primarily used by deterministic tests |
-| `Codex:HomePath` | `.codex-home` | Dedicated persistent Codex identity |
+| `Codex:ExecutablePath` | `codex` | Host Codex CLI used only for device login, status, and logout |
+| `Codex:ArgumentPrefix` | empty | Optional arguments inserted before the authentication command; primarily used by deterministic tests |
+| `Codex:HomePath` | `.codex-home` | Dedicated persistent Codex identity written by host authentication commands and mounted into every run container |
+| `Codex:Models` | see `appsettings.json` | Restart-scoped model IDs, display names, supported reasoning efforts, and defaults exposed by the API |
 | `Codex:Container:EngineExecutablePath` | `docker` | Docker-compatible client used to create/inspect/remove run containers |
 | `Codex:Container:EngineArgumentPrefix` | empty | Optional engine prefix, useful for a remote Docker context |
 | `Codex:Container:Image` | `codex-gateway-runner:0.148.0` | Mandatory runner image; customize this for packaged STDIO MCP binaries |
@@ -481,10 +485,9 @@ All settings can be supplied through `appsettings.json` or normal ASP.NET Core e
 | `Codex:Container:CpuLimit` | `2` | Per-run CPU limit |
 | `Codex:Container:PidsLimit` | `256` | Per-run PID limit |
 | `Codex:Container:TmpfsMegabytes` | `256` | Size of the per-run temporary filesystem |
-| `Codex:ModelCacheSeconds` | `300` | App Server model-catalog cache |
-| `Codex:AppServerRequestTimeoutSeconds` | `30` | Control-plane request timeout |
-| `Codex:DeviceLoginTimeoutMinutes` | `15` | Maximum pending device-login maintenance window |
-| `Codex:DeviceLoginTimeoutSeconds` | unset | Optional seconds override for short operational limits/tests |
+| `Codex:AuthenticationCommandTimeoutSeconds` | `30` | Timeout for short-lived login-status and logout commands |
+| `Codex:McpDiscoveryTimeoutSeconds` | `30` | Timeout for MCP metadata discovery; separate from agent-run execution |
+| `Codex:DeviceLoginTimeoutSeconds` | `900` | Maximum lifetime of the host `codex login --device-auth` process |
 | `McpGateway:RunnerBaseUrl` | `http://host.docker.internal:8080` | Gateway URL reachable from runner containers; Compose configures `http://gateway:8080` on its dedicated bridge network |
 | `McpGateway:SessionLifetimeMinutes` | `120` | Maximum lifetime of a scoped internal MCP session |
 | `AdminUi:Enabled` | `true` | Enables the management page and login |
@@ -520,7 +523,7 @@ Run the complete repeatable suite:
 dotnet test CodexGateway.slnx
 ```
 
-The end-to-end tests host the full ASP.NET Core pipeline and call it through `HttpClient`. They run the production Marten repository against a disposable PostgreSQL 18 Testcontainer. A deterministic fake container engine launches `CodexGateway.FakeCodex` for the run JSONL protocol, while the fake also implements the App Server protocol. The suite covers API-key/project grants, URL and `OpenAI-Project` scope selection, API/admin authentication boundaries, Blazor login/dashboard/logout rendering, framework assets and circuit negotiation, models/reasoning, rich versioned tool discovery, visible-versus-enabled grants, explicit unsupported-feature errors, JSON-schema output staging and validation, non-streaming and SSE responses (including usage chunks), nested file inputs and scope isolation, project persistence and parallel/serialized runs, per-key MCP filtering, device auth, queue overflow, cancellation, timeouts, stderr flooding, live quota termination, aggregate project-upload limits, symlink rejection, container failures, orphan reconciliation, hardened argument construction, and information-leak prevention. Tests require Docker, but no Codex login or remote AI call. The first run may pull the pinned PostgreSQL image.
+The end-to-end tests host the full ASP.NET Core pipeline and call it through `HttpClient`. They run the production Marten repository against a disposable PostgreSQL 18 Testcontainer. A deterministic fake Codex CLI implements host device-auth commands, while a fake container engine launches the same executable for agent JSONL and MCP metadata-discovery protocols. The suite covers API-key/project grants, URL and `OpenAI-Project` scope selection, API/admin authentication boundaries, Blazor login/dashboard/logout rendering, framework assets and circuit negotiation, configured models/reasoning, rich versioned tool discovery, visible-versus-enabled grants, explicit unsupported-feature errors, JSON-schema output staging and validation, non-streaming and SSE responses (including usage chunks), nested file inputs and scope isolation, project persistence and parallel/serialized runs, per-key MCP filtering, device auth, queue overflow, cancellation, timeouts, stderr flooding, live quota termination, aggregate project-upload limits, symlink rejection, container failures, orphan reconciliation, hardened argument construction, and information-leak prevention. Tests require Docker, but no Codex login or remote AI call. The first run may pull the pinned PostgreSQL image.
 
 The separate official-client compatibility suite pins `OpenAI` `2.13.0` as the Gateway's reviewed client version and commits sanitized golden wire fixtures for plain/history chat, SSE with usage, JSON-schema output, and rejected local function tools. Samwise is currently scaffolded but does not yet pin OpenAI, `Microsoft.Extensions.AI.OpenAI`, or Microsoft Agent Framework packages, so `2.13.0` must not be described as Samwise's pin. Align this suite and add Agent Framework session round-trip coverage when Samwise commits those exact versions.
 
@@ -582,7 +585,8 @@ Dashboard reads use `IReadOnlyRepository<GatewayState>` with explicit specificat
 | Component | Responsibility | Start here and change here |
 |---|---|---|
 | File storage | Resolves storage roots, isolates project and projectless files, creates private run snapshots, commits successful artifacts, enforces quotas, and removes expired temporary files. | Registration is in [`FileStorageInfrastructureInstaller.cs`](src/CodexGateway.Infrastructure.FileStorage/Composition/FileStorageInfrastructureInstaller.cs). Change paths in [`StoragePaths.cs`](src/CodexGateway.Infrastructure.FileStorage/Configuration/StoragePaths.cs), persistent projects in [`ProjectStorageManager.cs`](src/CodexGateway.Infrastructure.FileStorage/Projects/ProjectStorageManager.cs), uploaded files in [`FileStore.cs`](src/CodexGateway.Infrastructure.FileStorage/Files/FileStore.cs), run snapshots in [`WorkspaceManager.cs`](src/CodexGateway.Infrastructure.FileStorage/Workspaces/WorkspaceManager.cs), and quota enforcement in [`Artifacts`](src/CodexGateway.Infrastructure.FileStorage/Artifacts/). |
-| Codex control plane | Talks to Codex App Server on the host for device login, account state, model discovery, and reasoning-effort discovery. It is separate from model execution. | Change the protocol client and cache behavior in [`CodexAppServerClient.cs`](src/CodexGateway.Infrastructure.Codex/AppServer/CodexAppServerClient.cs). Its application-facing contract is [`ICodexControlPlane.cs`](src/CodexGateway.Logic/Codex/ICodexControlPlane.cs); admin actions are in [`UseCases/CodexAuthentication`](src/CodexGateway.Logic/UseCases/CodexAuthentication/). |
+| Codex authentication | Runs short-lived host CLI commands for `login --device-auth`, `login status`, and `logout`. Device login stays alive only while the code is pending and writes into the same Codex home mounted by run containers. | Change process lifecycle and URL/code parsing in [`HostCodexAuthenticationManager.cs`](src/CodexGateway.Infrastructure.Codex/Authentication/HostCodexAuthenticationManager.cs). Its application port is [`ICodexAuthenticationManager.cs`](src/CodexGateway.Logic/Codex/ICodexAuthenticationManager.cs); UI actions remain in [`UseCases/CodexAuthentication`](src/CodexGateway.Logic/UseCases/CodexAuthentication/). |
+| Codex model catalog | Exposes a restart-scoped configured model list and validates requested model IDs and reasoning efforts without starting Codex or maintaining a cache. | Change values under `Codex:Models` in [`appsettings.json`](src/CodexGateway.App/appsettings.json), the option shape in [`CodexModelOptions.cs`](src/CodexGateway.Logic/Configuration/Models/CodexModelOptions.cs), and mapping in [`ConfiguredCodexModelCatalog.cs`](src/CodexGateway.Infrastructure.Codex/Models/ConfiguredCodexModelCatalog.cs). The application port is [`ICodexModelCatalog.cs`](src/CodexGateway.Logic/Codex/ICodexModelCatalog.cs). |
 | Container execution | Builds hardened Docker arguments, starts one short-lived runner for each model call, filters its environment, consumes Codex JSONL events, cancels/removes containers, and reconciles stale containers at startup. There is no host execution fallback. | Start with [`ContainerCodexRunner.cs`](src/CodexGateway.Infrastructure.Codex/Containers/ContainerCodexRunner.cs). Change Docker arguments and mounts in [`ContainerCommandBuilder.cs`](src/CodexGateway.Infrastructure.Codex/Containers/ContainerCommandBuilder.cs), lifecycle calls in [`ContainerRuntime.cs`](src/CodexGateway.Infrastructure.Codex/Containers/ContainerRuntime.cs), environment policy in [`CodexProcessEnvironment.cs`](src/CodexGateway.Infrastructure.Codex/Containers/CodexProcessEnvironment.cs), and startup checks/reconciliation in [`ContainerRuntimePreflightInitializer.cs`](src/CodexGateway.Infrastructure.Codex/Containers/ContainerRuntimePreflightInitializer.cs). |
 | MCP metadata discovery | Connects to configured trusted servers to obtain live server descriptions, tool descriptions, schemas, annotations, and icons before filtering the catalog for a key/project grant. | Change discovery and metadata normalization in [`McpMetadataDiscoveryService.cs`](src/CodexGateway.Infrastructure.Codex/Mcp/McpMetadataDiscoveryService.cs). Change the returned application model in [`Logic/Tools/Models`](src/CodexGateway.Logic/Tools/Models/) and authorization/filtering in [`GetToolCatalogUseCase.cs`](src/CodexGateway.Logic/UseCases/Tools/GetToolCatalogUseCase.cs). |
 | Gateway-hosted MCP | Creates run-scoped sessions with opaque tokens, proxies HTTP servers, launches local STDIO servers, keeps upstream secrets in the gateway, and cleans sessions up. | Registration/options are in [`GatewayMcpInfrastructureInstaller.cs`](src/CodexGateway.Infrastructure.Mcp/Composition/GatewayMcpInfrastructureInstaller.cs) and [`GatewayMcpOptions.cs`](src/CodexGateway.Infrastructure.Mcp/Configuration/Models/GatewayMcpOptions.cs). Change session/token behavior in [`GatewayMcpSessionManager.cs`](src/CodexGateway.Infrastructure.Mcp/Sessions/GatewayMcpSessionManager.cs), transports in [`Transport`](src/CodexGateway.Infrastructure.Mcp/Transport/), and the internal runner-facing route in [`GatewayMcpEndpointExtensions.cs`](src/CodexGateway.App/Mcp/Endpoints/GatewayMcpEndpointExtensions.cs). |

@@ -46,7 +46,6 @@ public sealed class ProjectSelectorValidationTests : IDisposable
     public void Dispose()
     {
         _client.Dispose();
-        _factory.Services.GetRequiredService<CodexAppServerClient>().Dispose();
         _factory.Dispose();
         for (var attempt = 0; attempt < 20 && Directory.Exists(_factory.RootPath); attempt++)
         {
