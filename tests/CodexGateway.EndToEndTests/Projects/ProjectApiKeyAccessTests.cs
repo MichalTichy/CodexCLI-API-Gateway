@@ -191,7 +191,20 @@ public sealed class ProjectApiKeyAccessTests : IDisposable
     [Fact]
     public async Task Typed_key_identities_and_projects_never_expose_api_key_secrets()
     {
-        await CreateProjectAsync("metadata", "Metadata", true, Access("default"), Access("secondary"));
+        await CreateProjectAsync("z-metadata", "Z metadata", true, Access("default"), Access("secondary"));
+        await CreateProjectAsync("a-metadata", "A metadata", true, Access("default"), Access("secondary"));
+        await _factory.UpsertMcpServerAsync(new HttpMcpServerDefinition
+        {
+            Id = "z-server",
+            Name = "Z server",
+            Url = "https://z.example.test"
+        });
+        await _factory.UpsertMcpServerAsync(new HttpMcpServerDefinition
+        {
+            Id = "a-server",
+            Name = "A server",
+            Url = "https://a.example.test"
+        });
 
         var repository = _factory.Services.GetRequiredService<IReadOnlyRepository<GatewayState>>();
         var keys = (await repository.GetBySpecAsync(new ApiKeysOrderedByIdSpecification()))!;
@@ -201,10 +214,56 @@ public sealed class ProjectApiKeyAccessTests : IDisposable
         Assert.DoesNotContain(SecondaryKey, keyBody, StringComparison.Ordinal);
 
         var projects = await repository.GetBySpecAsync(new ProjectsOrderedByIdSpecification());
+        Assert.Equal(["a-metadata", "z-metadata"], projects!.Select(project => project.Id));
         var projectsBody = JsonSerializer.Serialize(projects);
         Assert.DoesNotContain(DefaultKey, projectsBody, StringComparison.Ordinal);
         Assert.DoesNotContain(SecondaryKey, projectsBody, StringComparison.Ordinal);
 
+        var servers = await repository.GetBySpecAsync(new McpServersOrderedByIdSpecification());
+        Assert.Equal(["a-server", "z-server"], servers!.Select(server => server.Id));
+    }
+
+    [Fact]
+    public async Task Project_access_requires_one_enabled_matching_grant()
+    {
+        var project = new ProjectDefinition
+        {
+            Id = "project-one",
+            Name = "Project One",
+            ApiKeyAccess = [Access("default")]
+        };
+        var repository = _factory.Services.GetRequiredService<IRepository<GatewayState>>();
+        await repository.GetAndUpdateAsync(GatewayState.DocumentId, state =>
+        {
+            state.Projects = [project];
+            return Task.FromResult(true);
+        });
+
+        var resolved = await repository.GetBySpecAsync(
+            new ProjectAccessSpecification("PROJECT-ONE", "default"));
+        Assert.Equal(project.Id, resolved?.Project.Id);
+
+        await repository.GetAndUpdateAsync(GatewayState.DocumentId, state =>
+        {
+            state.Projects = [project with { Enabled = false }];
+            return Task.FromResult(true);
+        });
+        Assert.Null(await repository.GetBySpecAsync(
+            new ProjectAccessSpecification(project.Id, "default")));
+
+        await repository.GetAndUpdateAsync(GatewayState.DocumentId, state =>
+        {
+            state.Projects =
+            [
+                project with
+                {
+                    ApiKeyAccess = [Access("default"), Access("default")]
+                }
+            ];
+            return Task.FromResult(true);
+        });
+        Assert.Null(await repository.GetBySpecAsync(
+            new ProjectAccessSpecification(project.Id, "default")));
     }
 
     [Fact]

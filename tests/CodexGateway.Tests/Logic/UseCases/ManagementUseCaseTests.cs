@@ -34,47 +34,11 @@ public sealed class ManagementUseCaseTests
         Assert.NotEqual(first.Key, second.Key);
         Assert.Equal([first, second], repository.State.ApiKeys);
 
+        repository.QueueSpecificationResult<ApiKeyIdBySecretSpecification>(first.Id);
         var authenticated = await new AuthenticateGatewayRequestUseCaseHandler(repository).Handle(
             new AuthenticateGatewayRequestUseCase(first.Key, null),
             CancellationToken.None);
         Assert.Equal(first.Id, authenticated?.ApiKeyId);
-    }
-
-    [Fact]
-    public async Task Read_specifications_apply_ordering_and_key_identities_exclude_secrets()
-    {
-        var repository = new FakeGatewayStateRepository(new GatewayState
-        {
-            ApiKeys =
-            [
-                new ApiKeyDefinition { Id = "default", Name = "Default", Key = "default-secret" },
-                new ApiKeyDefinition { Id = "secondary", Name = "Secondary", Key = "secondary-secret" }
-            ],
-            Projects =
-            [
-                Project("z-project", "Z"),
-                Project("a-project", "A")
-            ],
-            McpServers =
-            [
-                Server("z-server"),
-                Server("a-server")
-            ]
-        });
-        var projects = await repository.GetBySpecAsync(
-            new ProjectsOrderedByIdSpecification(),
-            CancellationToken.None);
-        var servers = await repository.GetBySpecAsync(
-            new McpServersOrderedByIdSpecification(),
-            CancellationToken.None);
-        var identities = await repository.GetBySpecAsync(
-            new ApiKeysOrderedByIdSpecification(),
-            CancellationToken.None);
-
-        Assert.Equal(["a-project", "z-project"], projects!.Select(project => project.Id));
-        Assert.Equal(["a-server", "z-server"], servers!.Select(server => server.Id));
-        Assert.Equal(["default", "secondary"], identities!.Select(identity => identity.Id));
-        Assert.Null(typeof(ApiKeyIdentity).GetProperty("Key"));
     }
 
     [Fact]

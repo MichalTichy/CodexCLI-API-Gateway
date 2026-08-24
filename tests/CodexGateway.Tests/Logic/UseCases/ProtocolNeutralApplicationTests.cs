@@ -84,6 +84,13 @@ public sealed class ProtocolNeutralApplicationTests
             ApiKeys = [new ApiKeyDefinition { Id = "default", Name = "Default", Key = "test-secret" }],
             Projects = [project]
         });
+        var resolvedAccess = new ResolvedProjectAccess(project, project.ApiKeyAccess.Single());
+        repository.QueueSpecificationResult<ApiKeyIdBySecretSpecification>(null);
+        repository.QueueSpecificationResult<ApiKeyIdBySecretSpecification>("default");
+        repository.QueueSpecificationResult<ApiKeyIdBySecretSpecification>("default");
+        repository.QueueSpecificationResult<ProjectAccessSpecification>(resolvedAccess);
+        repository.QueueSpecificationResult<ApiKeyIdBySecretSpecification>("default");
+        repository.QueueSpecificationResult<ProjectAccessSpecification>(null);
         var access = new AuthenticateGatewayRequestUseCaseHandler(repository);
 
         Assert.Null(await access.Handle(
@@ -104,46 +111,11 @@ public sealed class ProtocolNeutralApplicationTests
     }
 
     [Fact]
-    public async Task Project_access_specification_requires_one_enabled_matching_grant()
-    {
-        var enabled = new ProjectDefinition
-        {
-            Id = "project-one",
-            Name = "Project One",
-            ApiKeyAccess = [new ProjectApiKeyAccess { ApiKeyId = "default" }]
-        };
-        ISpecification<GatewayState, ResolvedProjectAccess?> specification =
-            new ProjectAccessSpecification("PROJECT-ONE", "default");
-
-        var resolved = await specification.ApplyAsync(
-            new[] { new GatewayState { Projects = [enabled] } }.AsQueryable());
-
-        Assert.Equal(enabled, resolved?.Project);
-        Assert.Null(await specification.ApplyAsync(new[]
-        {
-            new GatewayState { Projects = [enabled with { Enabled = false }] }
-        }.AsQueryable()));
-        Assert.Null(await specification.ApplyAsync(
-            new[] { new GatewayState
-            {
-                Projects =
-                [
-                    enabled with
-                    {
-                        ApiKeyAccess =
-                        [
-                            new ProjectApiKeyAccess { ApiKeyId = "default" },
-                            new ProjectApiKeyAccess { ApiKeyId = "default" }
-                        ]
-                    }
-                ]
-            }}.AsQueryable()));
-    }
-
-    [Fact]
     public async Task Generate_assistant_response_use_case_runs_codex_and_exposes_transport_neutral_events()
     {
         var state = new FakeGatewayStateRepository(new GatewayState());
+        state.QueueSpecificationResult<EnabledMcpServersSpecification>(
+            Array.Empty<ResolvedMcpServer>());
         var options = TestOptions();
         var workspaces = new StubWorkspaceManager();
         var runner = new StubCodexRunner();
@@ -189,6 +161,9 @@ public sealed class ProtocolNeutralApplicationTests
             ApiKeyAccess = [new ProjectApiKeyAccess { ApiKeyId = "default" }]
         };
         var state = new FakeGatewayStateRepository(new GatewayState { Projects = [project] });
+        var resolvedAccess = new ResolvedProjectAccess(project, project.ApiKeyAccess.Single());
+        state.QueueSpecificationResult<ProjectAccessSpecification>(resolvedAccess);
+        state.QueueSpecificationResult<ProjectAccessSpecification>(resolvedAccess);
         var options = TestOptions();
         var files = new StubFileStore
         {
@@ -238,6 +213,9 @@ public sealed class ProtocolNeutralApplicationTests
             ApiKeyAccess = [new ProjectApiKeyAccess { ApiKeyId = "default" }]
         };
         var state = new FakeGatewayStateRepository(new GatewayState { Projects = [project] });
+        var resolvedAccess = new ResolvedProjectAccess(project, project.ApiKeyAccess.Single());
+        state.QueueSpecificationResult<ProjectAccessSpecification>(resolvedAccess);
+        state.QueueSpecificationResult<ProjectAccessSpecification>(resolvedAccess);
         var options = TestOptions();
         var files = new StubFileStore { BlockSave = true };
         var coordinator = new RunCoordinator(options);
@@ -276,6 +254,7 @@ public sealed class ProtocolNeutralApplicationTests
             ApiKeyAccess = [new ProjectApiKeyAccess { ApiKeyId = "default" }]
         };
         var state = new FakeGatewayStateRepository(new GatewayState { Projects = [project] });
+        state.QueueSpecificationResult<ProjectAccessSpecification>(null);
         var options = TestOptions();
         var files = new StubFileStore();
         var handler = new GetFileUseCaseHandler(files, state, new RunCoordinator(options));
@@ -359,6 +338,11 @@ public sealed class ProtocolNeutralApplicationTests
             Projects = [project],
             McpServers = [server]
         });
+        var access = project.ApiKeyAccess.Single();
+        state.QueueSpecificationResult<ProjectAccessSpecification>(
+            new ResolvedProjectAccess(project, access));
+        state.QueueSpecificationResult<EnabledMcpServersSpecification>(
+            new[] { new ResolvedMcpServer(server, ["read", "write"], true) });
         var options = TestOptions();
         var handler = new GetToolCatalogUseCaseHandler(
             state,

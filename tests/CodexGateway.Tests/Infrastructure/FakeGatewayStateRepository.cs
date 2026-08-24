@@ -7,6 +7,7 @@ namespace CodexGateway.Tests.Infrastructure;
 public sealed class FakeGatewayStateRepository : IRepository<GatewayState>
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly Dictionary<Type, Queue<object?>> _specificationResults = [];
     private GatewayState? _state;
 
     public FakeGatewayStateRepository()
@@ -22,6 +23,18 @@ public sealed class FakeGatewayStateRepository : IRepository<GatewayState>
         ?? throw new InvalidOperationException("The gateway state has not been initialized.");
 
     public int UpdateCount { get; private set; }
+
+    public void QueueSpecificationResult<TSpecification>(object? result)
+    {
+        var specificationType = typeof(TSpecification);
+        if (!_specificationResults.TryGetValue(specificationType, out var results))
+        {
+            results = new Queue<object?>();
+            _specificationResults.Add(specificationType, results);
+        }
+
+        results.Enqueue(result);
+    }
 
     public async Task AddAsync(
         ICollection<GatewayState> entities,
@@ -160,14 +173,20 @@ public sealed class FakeGatewayStateRepository : IRepository<GatewayState>
     public Task<GatewayState?> GetBySpecAsync(
         ISpecification<GatewayState> specification,
         CancellationToken cancellationToken = default,
-        string? tenantId = null) =>
-        ApplyAsync(specification.ApplyAsync, cancellationToken);
+        string? tenantId = null)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(NextSpecificationResult<GatewayState>(specification));
+    }
 
     public Task<TResult?> GetBySpecAsync<TResult>(
         ISpecification<GatewayState, TResult> specification,
         CancellationToken cancellationToken = default,
-        string? tenantId = null) =>
-        ApplyAsync(specification.ApplyAsync, cancellationToken);
+        string? tenantId = null)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(NextSpecificationResult<TResult>(specification));
+    }
 
     public async Task<IReadOnlyList<GatewayState>> ListAsync(
         CancellationToken cancellationToken = default,
@@ -180,50 +199,47 @@ public sealed class FakeGatewayStateRepository : IRepository<GatewayState>
     public Task<IReadOnlyList<GatewayState>> ListAsync(
         IListSpecification<GatewayState> specification,
         CancellationToken cancellationToken = default,
-        string? tenantId = null) =>
-        ApplyListAsync(specification.ApplyAsync, cancellationToken);
+        string? tenantId = null)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(
+            NextSpecificationResult<IReadOnlyList<GatewayState>>(specification) ?? []);
+    }
 
     public Task<IReadOnlyList<TResult>> ListAsync<TResult>(
         IListSpecification<GatewayState, TResult> specification,
         CancellationToken cancellationToken = default,
-        string? tenantId = null) =>
-        ApplyListAsync(specification.ApplyAsync, cancellationToken);
+        string? tenantId = null)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(
+            NextSpecificationResult<IReadOnlyList<TResult>>(specification) ?? []);
+    }
 
     public async Task<int> CountAsync(
         CancellationToken cancellationToken = default,
         string? tenantId = null) =>
         await GetByIdAsync(GatewayState.DocumentId, cancellationToken, tenantId) is null ? 0 : 1;
 
-    private async Task<TResult?> ApplyAsync<TResult>(
-        Func<IQueryable<GatewayState>, CancellationToken, Task<TResult?>> apply,
-        CancellationToken cancellationToken)
+    private TResult? NextSpecificationResult<TResult>(object specification)
     {
-        await _gate.WaitAsync(cancellationToken);
-        try
+        var specificationType = specification.GetType();
+        if (!_specificationResults.TryGetValue(specificationType, out var results) ||
+            results.Count == 0)
         {
-            return await apply(Query(), cancellationToken);
+            throw new InvalidOperationException(
+                $"No result was configured for specification {specificationType.Name}.");
         }
-        finally
-        {
-            _gate.Release();
-        }
-    }
 
-    private async Task<IReadOnlyList<TResult>> ApplyListAsync<TResult>(
-        Func<IQueryable<GatewayState>, CancellationToken, Task<IReadOnlyList<TResult>>> apply,
-        CancellationToken cancellationToken)
-    {
-        await _gate.WaitAsync(cancellationToken);
-        try
+        var result = results.Dequeue();
+        if (result is null)
         {
-            return await apply(Query(), cancellationToken);
+            return default;
         }
-        finally
-        {
-            _gate.Release();
-        }
-    }
 
-    private IQueryable<GatewayState> Query() =>
-        _state is null ? Array.Empty<GatewayState>().AsQueryable() : new[] { _state }.AsQueryable();
+        return result is TResult typedResult
+            ? typedResult
+            : throw new InvalidOperationException(
+                $"The configured result for {specificationType.Name} is not a {typeof(TResult).Name}.");
+    }
 }
