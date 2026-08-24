@@ -131,7 +131,7 @@ $env:ConnectionStrings__Gateway = 'Host=localhost;Port=5432;Database=codex_gatew
 dotnet run --project src/CodexGateway.App/CodexGateway.App.csproj --urls http://localhost:5050
 ```
 
-Open `http://localhost:5050/admin`, sign in with the `AdminUi` credentials, create an API key, then use **Start device login** to authenticate the dedicated Codex identity. The UI uses Blazor Interactive Server and therefore needs its SignalR/WebSocket connection to remain open.
+Open `http://localhost:5050/admin`, sign in with the `AdminUi` credentials, create an API key, copy its generated secret when it is shown, then use **Start device login** to authenticate the dedicated Codex identity. The UI uses Blazor Interactive Server and therefore needs its SignalR/WebSocket connection to remain open.
 
 ## Docker
 
@@ -493,7 +493,7 @@ All settings can be supplied through `appsettings.json` or normal ASP.NET Core e
 
 The admin browser cookie is a non-persistent session cookie and expires when the browser session ends. Each login also receives an in-memory server session: logout invalidates copied cookies and prevents further events on existing Blazor circuits, while an operation that already started is allowed to finish. A gateway restart invalidates outstanding admin cookies. There are no roles or multiple gateway users. OpenAI API authentication and admin UI authentication are intentionally separate. The Blazor UI executes management operations directly on the server through its authenticated circuit; there is no separate management JSON API. The only admin transport routes are the antiforgery-protected form posts used to issue and revoke the UI cookie. Known placeholder credentials are rejected outside Development.
 
-API keys are stored only in PostgreSQL and managed through the administration UI. A new gateway starts without API keys: sign in to the UI and create the first key before calling the OpenAI-compatible API. API-key secrets are never rendered by the UI after creation. The management UI refers to keys by ID and name when assigning project access and tools.
+API keys are stored only in PostgreSQL and managed through the administration UI. A new gateway starts without API keys: sign in to the UI and create the first key before calling the OpenAI-compatible API. `CreateApiKeyUseCase` generates a cryptographically random 256-bit secret and returns it to the UI, which displays it only after successful creation. The secret is not included in later reads, so copy it immediately. The management UI refers to keys by ID and name when assigning project access and tools.
 
 ## Error contract
 
