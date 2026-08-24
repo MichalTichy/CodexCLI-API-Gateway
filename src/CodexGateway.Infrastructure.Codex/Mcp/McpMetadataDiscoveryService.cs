@@ -21,7 +21,7 @@ public sealed class McpMetadataDiscoveryService(
     private const int MaximumPages = 100;
     private const int MaximumOutputBytes = 4 * 1024 * 1024;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private readonly TimeSpan _timeout = TimeSpan.FromSeconds(options.Value.AppServerRequestTimeoutSeconds);
+    private readonly TimeSpan _timeout = TimeSpan.FromSeconds(options.Value.McpDiscoveryTimeoutSeconds);
 
     public async Task<IReadOnlyList<DiscoveredMcpServer>> DiscoverAsync(
         IReadOnlyList<ResolvedMcpServer> servers,

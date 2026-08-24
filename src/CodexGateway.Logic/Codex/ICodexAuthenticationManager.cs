@@ -1,12 +1,7 @@
-using System.Text.Json;
-using CodexGateway.Logic.Storage;
-
 namespace CodexGateway.Logic.Codex;
 
-public interface ICodexControlPlane
+public interface ICodexAuthenticationManager
 {
-    Task<IReadOnlyList<CodexModel>> GetModelsAsync(bool forceRefresh, CancellationToken cancellationToken);
-
     Task<CodexAccountStatus> GetAccountAsync(CancellationToken cancellationToken);
 
     Task<DeviceLogin> StartDeviceLoginAsync(CancellationToken cancellationToken);

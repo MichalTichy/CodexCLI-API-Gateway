@@ -5,7 +5,7 @@ namespace CodexGateway.Logic.UseCases.CodexAuthentication;
 
 public sealed record CancelCodexDeviceLoginUseCase : IRequest;
 
-public sealed class CancelCodexDeviceLoginUseCaseHandler(ICodexControlPlane codex)
+public sealed class CancelCodexDeviceLoginUseCaseHandler(ICodexAuthenticationManager codex)
     : IRequestHandler<CancelCodexDeviceLoginUseCase>
 {
     public Task Handle(

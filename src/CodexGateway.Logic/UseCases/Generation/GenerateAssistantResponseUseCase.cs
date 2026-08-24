@@ -15,7 +15,8 @@ public sealed record GenerateAssistantResponseUseCase(
     IGenerationObserver? Observer = null) : IRequest<AssistantResponseResult>;
 
 public sealed class GenerateAssistantResponseUseCaseHandler(
-    ICodexControlPlane controlPlane,
+    ICodexAuthenticationManager authentication,
+    ICodexModelCatalog models,
     IReadOnlyRepository<GatewayState> repository,
     ICodexRunner runner,
     IWorkspaceManager workspaces,
@@ -58,19 +59,18 @@ public sealed class GenerateAssistantResponseUseCaseHandler(
             throw GatewayException.InvalidRequest("A model is required.", "model_required", "model");
         }
 
-        if (await controlPlane.GetDeviceLoginAsync(cancellationToken) is { Status: DeviceLoginStatus.Pending })
+        if (await authentication.GetDeviceLoginAsync(cancellationToken) is { Status: DeviceLoginStatus.Pending })
         {
             throw new CodexUnavailableException(
                 "Codex authentication is being updated. Try again after device login completes.");
         }
 
-        if (!(await controlPlane.GetAccountAsync(cancellationToken)).Authenticated)
+        if (!(await authentication.GetAccountAsync(cancellationToken)).Authenticated)
         {
             throw new CodexUnavailableException("The gateway Codex identity is not authenticated.");
         }
 
-        var models = await controlPlane.GetModelsAsync(false, cancellationToken);
-        var model = models.SingleOrDefault(candidate => candidate.Id == modelId)
+        var model = models.GetModels().SingleOrDefault(candidate => candidate.Id == modelId)
             ?? throw GatewayException.InvalidRequest(
                 $"Model '{modelId}' is not available.",
                 "model_not_found",
