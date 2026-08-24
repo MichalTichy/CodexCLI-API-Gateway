@@ -22,10 +22,11 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\CodexGateway.App\CodexGateway.App.csproj" />
     <ProjectReference Include="..\..\src\CodexGateway.Infrastructure.Codex\CodexGateway.Infrastructure.Codex.csproj" />
-    <ProjectReference Include="..\..\src\CodexGateway.Infrastructure.Storage\CodexGateway.Infrastructure.Storage.csproj" />
+    <ProjectReference Include="..\..\src\CodexGateway.Infrastructure.FileStorage\CodexGateway.Infrastructure.FileStorage.csproj" />
     <ProjectReference Include="..\..\src\CodexGateway.Logic\CodexGateway.Logic.csproj" />
     <ProjectReference Include="..\..\src\CodexGateway.Models\CodexGateway.Models.csproj" />
     <ProjectReference Include="..\CodexGateway.FakeCodex\CodexGateway.FakeCodex.csproj" />
+    <ProjectReference Include="..\CodexGateway.Testing\CodexGateway.Testing.csproj" />
   </ItemGroup>
 
 </Project>

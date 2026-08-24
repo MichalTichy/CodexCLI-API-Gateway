@@ -1,6 +1,6 @@
 using System.Text;
 using System.Text.Json;
-using CodexGateway.Infrastructure.Storage;
+using CodexGateway.Infrastructure.FileStorage;
 using CodexGateway.Logic.Configuration;
 using CodexGateway.Logic.Errors;
 using CodexGateway.Models;
