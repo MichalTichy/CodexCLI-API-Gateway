@@ -1,6 +1,7 @@
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Errors;
 using CodexGateway.Models;
+using Marten;
 using Shared.Infrastructure.Persistence.Specifications;
 
 namespace CodexGateway.Logic.Specifications.McpServers;
