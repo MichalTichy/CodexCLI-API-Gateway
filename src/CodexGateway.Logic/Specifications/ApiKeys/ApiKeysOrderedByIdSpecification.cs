@@ -12,12 +12,10 @@ public sealed class ApiKeysOrderedByIdSpecification
         IQueryable<GatewayState> queryable,
         CancellationToken cancellationToken = default)
     {
-        var apiKeys = await queryable
+        return await queryable
             .SelectMany(state => state.ApiKeys)
+            .OrderBy(key => key.Id)
             .Select(key => new ApiKeyIdentity(key.Id, key.Name))
             .ToListAsync(cancellationToken);
-        return apiKeys
-            .OrderBy(key => key.Id, StringComparer.Ordinal)
-            .ToArray();
     }
 }

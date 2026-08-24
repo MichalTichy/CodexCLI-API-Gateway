@@ -22,7 +22,6 @@ public sealed class ProjectAccessSpecification(string projectId, string apiKeyId
             .Where(candidate =>
                 candidate.Enabled &&
                 candidate.Id == normalizedProjectId)
-            .Select(candidate => candidate)
             .SingleOrDefaultAsync(cancellationToken);
         if (project is null)
         {

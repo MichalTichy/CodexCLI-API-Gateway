@@ -15,7 +15,6 @@ public sealed class ProjectDefinitionByIdSpecification(string projectId)
         return queryable
             .SelectMany(state => state.Projects)
             .Where(candidate => candidate.Id == normalizedProjectId)
-            .Select(candidate => candidate)
             .SingleOrDefaultAsync(cancellationToken);
     }
 }

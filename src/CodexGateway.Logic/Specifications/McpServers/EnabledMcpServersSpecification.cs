@@ -25,7 +25,6 @@ public sealed class EnabledMcpServersSpecification(ProjectApiKeyAccess? access)
         var catalog = await queryable
             .SelectMany(state => state.McpServers)
             .Where(server => assignedServerIds.Contains(server.Id))
-            .Select(server => server)
             .ToListAsync(cancellationToken);
         var result = new List<ResolvedMcpServer>();
         foreach (var assignment in access.McpServers ?? [])

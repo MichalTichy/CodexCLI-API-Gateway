@@ -11,12 +11,9 @@ public sealed class McpServersOrderedByIdSpecification
         IQueryable<GatewayState> queryable,
         CancellationToken cancellationToken = default)
     {
-        var servers = await queryable
+        return await queryable
             .SelectMany(state => state.McpServers)
-            .Select(server => server)
+            .OrderBy(server => server.Id)
             .ToListAsync(cancellationToken);
-        return servers
-            .OrderBy(server => server.Id, StringComparer.Ordinal)
-            .ToArray();
     }
 }

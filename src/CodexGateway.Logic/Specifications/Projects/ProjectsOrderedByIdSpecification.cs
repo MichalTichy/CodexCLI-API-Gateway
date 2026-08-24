@@ -11,12 +11,9 @@ public sealed class ProjectsOrderedByIdSpecification
         IQueryable<GatewayState> queryable,
         CancellationToken cancellationToken = default)
     {
-        var projects = await queryable
+        return await queryable
             .SelectMany(state => state.Projects)
-            .Select(project => project)
+            .OrderBy(project => project.Id)
             .ToListAsync(cancellationToken);
-        return projects
-            .OrderBy(project => project.Id, StringComparer.Ordinal)
-            .ToArray();
     }
 }
