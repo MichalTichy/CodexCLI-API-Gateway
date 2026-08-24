@@ -1,0 +1,79 @@
+@namespace CodexGateway.App.Components.Pages.Admin.Codex
+@inherits AdminComponentBase
+
+<div class="card" aria-busy="@IsBusy.ToString().ToLowerInvariant()">
+    @if (!string.IsNullOrWhiteSpace(LoadError))
+    {
+        <div class="card-header">
+            <div>
+                <h3>Account status unavailable</h3>
+                <p class="status error" role="alert">@LoadError</p>
+            </div>
+            <button class="secondary" type="button" disabled="@IsBusy" @onclick="RetryAsync">Retry</button>
+        </div>
+    }
+    else if (Account?.Authenticated == true)
+    {
+        <div class="card-header">
+            <div>
+                <h3>@(Account.Email ?? "Authenticated account")</h3>
+                <div class="badge-row">
+                    <span class="badge on">Authenticated</span>
+                    @if (!string.IsNullOrWhiteSpace(Account.AccountType))
+                    {
+                        <span class="badge">@Account.AccountType</span>
+                    }
+                </div>
+            </div>
+            @if (_confirmLogout)
+            {
+                <div class="confirmation" role="group" aria-label="Confirm Codex logout">
+                    <span class="small">Log out of Codex? New runs will fail until you sign in again.</span>
+                    <button class="danger" type="button" disabled="@IsBusy" @onclick="LogoutAsync">Confirm</button>
+                    <button class="secondary" type="button" disabled="@IsBusy" @onclick="CancelLogout">Cancel</button>
+                </div>
+            }
+            else
+            {
+                <button class="danger" type="button" disabled="@IsBusy" @onclick="ConfirmLogout">Log out of Codex</button>
+            }
+        </div>
+    }
+    else if (Login is { Status: DeviceLoginStatus.Pending })
+    {
+        <div class="card-header">
+            <div>
+                <h3>Complete device login</h3>
+                <p class="muted small">Open the verification page and enter this code.</p>
+                <p><span class="device-code mono">@Login.UserCode</span></p>
+                <a href="@Login.VerificationUrl" target="_blank" rel="noopener noreferrer">@Login.VerificationUrl</a>
+                @if (!string.IsNullOrWhiteSpace(Login.Error))
+                {
+                    <p class="status error" role="alert">@Login.Error</p>
+                }
+            </div>
+            <button class="secondary" type="button" disabled="@IsBusy" @onclick="CancelLoginAsync">Cancel login</button>
+        </div>
+    }
+    else
+    {
+        <div class="card-header">
+            <div>
+                <h3>Not authenticated</h3>
+                <span class="badge warning">Codex login required</span>
+                @if (Login is not null && !string.IsNullOrWhiteSpace(Login.Error))
+                {
+                    <p class="status error" role="alert">@Login.Error</p>
+                }
+            </div>
+            <button type="button" disabled="@IsBusy" @onclick="StartLoginAsync">
+                @(IsBusy ? "Working…" : "Start device login")
+            </button>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Status))
+    {
+        <p class="status @StatusKind.ToString().ToLowerInvariant()" role="status" aria-live="polite">@Status</p>
+    }
+</div>

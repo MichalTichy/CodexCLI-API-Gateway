@@ -1,0 +1,57 @@
+@namespace CodexGateway.App.Components.Pages.Admin
+@page "/admin"
+
+<PageTitle>Codex Gateway Admin</PageTitle>
+
+@if (!AdminOptions.Value.Enabled)
+{
+    <main class="shell narrow-shell">
+        <section class="card">
+            <h1>Administration disabled</h1>
+            <p class="muted">The gateway administration interface is not enabled.</p>
+        </section>
+    </main>
+}
+else
+{
+    <AuthorizeView>
+        <Authorized>
+            <AdminDashboard />
+        </Authorized>
+        <NotAuthorized>
+            <main class="shell login-shell">
+                <section class="card login-card" aria-labelledby="login-heading">
+                    <div class="eyebrow">Codex Gateway</div>
+                    <h1 id="login-heading">Admin login</h1>
+                    <p class="muted">Sign in to manage projects, API-key access, and trusted MCP servers.</p>
+
+                    @if (string.Equals(LoginError, "invalid_credentials", StringComparison.Ordinal))
+                    {
+                        <p class="status error" role="alert">Invalid admin credentials.</p>
+                    }
+                    else if (string.Equals(LoginError, "session_expired", StringComparison.Ordinal))
+                    {
+                        <p class="status error" role="alert">Your admin session is not authenticated. Sign in again.</p>
+                    }
+                    else if (string.Equals(LogoutStatus, "success", StringComparison.Ordinal))
+                    {
+                        <p class="status success" role="status">You have been logged out.</p>
+                    }
+
+                    <form action="/admin/login" method="post" class="stack" autocomplete="on">
+                        <AntiforgeryToken />
+                        <div class="field full">
+                            <label for="username">Username</label>
+                            <input id="username" name="username" autocomplete="username" required autofocus />
+                        </div>
+                        <div class="field full">
+                            <label for="password">Password</label>
+                            <input id="password" name="password" type="password" autocomplete="current-password" required />
+                        </div>
+                        <button type="submit">Log in</button>
+                    </form>
+                </section>
+            </main>
+        </NotAuthorized>
+    </AuthorizeView>
+}
