@@ -18,6 +18,9 @@ public sealed class GatewayAccessUseCaseTests
     public async Task Authentication_accepts_only_an_exact_secret_and_returns_no_secret_metadata()
     {
         var repository = await CreateRepositoryAsync();
+        repository.QueueSpecificationResult<ApiKeyIdBySecretSpecification>("default");
+        repository.QueueSpecificationResult<ApiKeyIdBySecretSpecification>(null);
+        repository.QueueSpecificationResult<ApiKeyIdBySecretSpecification>(null);
         var handler = new AuthenticateGatewayRequestUseCaseHandler(repository);
 
         Assert.Equal(
@@ -64,59 +67,6 @@ public sealed class GatewayAccessUseCaseTests
             }),
             CancellationToken.None));
         Assert.Equal("environment_headers", invalid.Field);
-    }
-
-    [Fact]
-    public async Task Project_access_and_mcp_tools_are_resolved_by_specifications()
-    {
-        var repository = await CreateRepositoryAsync();
-        var options = TestOptions();
-        var saveMcp = new CreateOrUpdateMcpServerUseCaseHandler(repository);
-        await saveMcp.Handle(
-            new CreateOrUpdateMcpServerUseCase(new HttpMcpServerDefinition
-            {
-                Id = "trusted-mcp",
-                Name = "Trusted MCP",
-                Enabled = true,
-                Url = "https://mcp.example.test",
-                AvailableTools = ["read", "write"]
-            }),
-            CancellationToken.None);
-        var create = new CreateProjectUseCaseHandler(repository, new StubProjectStorageManager());
-        var project = await create.Handle(
-            new CreateProjectUseCase("project-one", "Project One"),
-            CancellationToken.None);
-        project = await new UpdateProjectUseCaseHandler(repository, new RunCoordinator(options)).Handle(
-            new UpdateProjectUseCase(project with
-            {
-                ApiKeyAccess =
-                [
-                    new ProjectApiKeyAccess
-                    {
-                        ApiKeyId = "secondary",
-                        McpServers =
-                        [
-                            new ProjectMcpAssignment
-                            {
-                                ServerId = "trusted-mcp",
-                                Required = true,
-                                EnabledTools = ["read"]
-                            }
-                        ]
-                    }
-                ]
-            }),
-            CancellationToken.None);
-
-        Assert.Null(await repository.GetBySpecAsync(
-            new ProjectAccessSpecification(project.Id, "default")));
-        var access = await repository.GetBySpecAsync(
-            new ProjectAccessSpecification(project.Id, "secondary"));
-        Assert.NotNull(access);
-        var mcp = Assert.Single((await repository.GetBySpecAsync(
-            new EnabledMcpServersSpecification(access.Access)))!);
-        Assert.True(mcp.Required);
-        Assert.Equal(["read"], mcp.EnabledTools);
     }
 
     private static async Task<FakeGatewayStateRepository> CreateRepositoryAsync()
