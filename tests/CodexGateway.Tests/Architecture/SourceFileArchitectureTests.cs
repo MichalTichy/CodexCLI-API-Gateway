@@ -83,6 +83,40 @@ public sealed class SourceFileArchitectureTests
         }
     }
 
+    [Fact]
+    public void Gateway_state_specifications_project_before_materialization()
+    {
+        var specificationsDirectory = Path.Combine(
+            RepositoryRoot,
+            "src",
+            "CodexGateway.Logic",
+            "Specifications");
+        var specificationFiles = Directory
+            .EnumerateFiles(specificationsDirectory, "*.cs", SearchOption.AllDirectories)
+            .Where(path => File.ReadAllText(path).Contains(
+                "ISpecification<GatewayState",
+                StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.NotEmpty(specificationFiles);
+        foreach (var specificationFile in specificationFiles)
+        {
+            var source = File.ReadAllText(specificationFile);
+            var queryProjectionMatch = Regex.Match(
+                source,
+                @"queryable\s*\.Select(?:Many)?\s*\(");
+
+            Assert.True(
+                queryProjectionMatch.Success,
+                $"Gateway-state specification '{Path.GetRelativePath(RepositoryRoot, specificationFile)}' " +
+                "must start its database query with a Select projection.");
+            Assert.True(
+                Regex.IsMatch(source, @"\.(?:ToList|SingleOrDefault)Async\s*\("),
+                $"Gateway-state specification '{Path.GetRelativePath(RepositoryRoot, specificationFile)}' " +
+                "must materialize its database query asynchronously.");
+        }
+    }
+
     private static bool IsProductionSource(string path)
     {
         var relativePath = Path.GetRelativePath(RepositoryRoot, path);

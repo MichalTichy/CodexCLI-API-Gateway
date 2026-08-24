@@ -29,7 +29,13 @@ public sealed class McpMetadataDiscoveryTests
                     "title": "Alpha",
                     "description": "Server description",
                     "websiteUrl": "https://mcp.example.test",
-                    "icons": [{ "src": "data:image/svg+xml;base64,PHN2Zy8+", "extension": 7 }]
+                    "icons": [{
+                      "src": "data:image/svg+xml;base64,PHN2Zy8+",
+                      "mimeType": "image/svg+xml",
+                      "sizes": ["any"],
+                      "theme": "dark",
+                      "extension": 7
+                    }]
                   },
                   "tools": {
                     "lookup": {
@@ -65,16 +71,19 @@ public sealed class McpMetadataDiscoveryTests
         Assert.NotNull(server.ServerInfo);
         Assert.Equal("runtime-alpha", server.ServerInfo.Name);
         Assert.Equal("Server description", server.ServerInfo.Description);
-        Assert.True(server.ServerInfo.Icons.HasValue);
-        Assert.Equal(7, server.ServerInfo.Icons.Value[0].GetProperty("extension").GetInt32());
+        var serverIcon = Assert.Single(Assert.IsAssignableFrom<IReadOnlyList<McpIcon>>(server.ServerInfo.Icons));
+        Assert.Equal("image/svg+xml", serverIcon.MimeType);
+        Assert.Equal(["any"], serverIcon.Sizes);
+        Assert.Equal(McpIconTheme.Dark, serverIcon.Theme);
+        Assert.Equal(7, serverIcon.AdditionalProperties!["extension"].GetInt32());
         var tool = Assert.Single(server.Tools);
         Assert.Equal("lookup", tool.Name);
         Assert.Equal("Looks up a record.", tool.Description);
         Assert.Equal(
             JsonValueKind.Array,
             tool.InputSchema.GetProperty("properties").GetProperty("id").GetProperty("type").ValueKind);
-        Assert.True(tool.Annotations.HasValue);
-        Assert.True(tool.Annotations.Value.GetProperty("readOnlyHint").GetBoolean());
+        Assert.True(Assert.IsType<McpToolAnnotations>(tool.Annotations).ReadOnlyHint);
+        Assert.Equal(2, tool.Annotations.AdditionalProperties!["extension"].GetProperty("level").GetInt32());
         Assert.True(tool.Meta.HasValue);
         Assert.Equal(
             "record",
@@ -318,7 +327,7 @@ public sealed class McpMetadataDiscoveryTests
                 "Alpha",
                 description,
                 "https://mcp.example.test",
-                Element("""[{"src":"https://mcp.example.test/icon.svg"}]""")),
+                [new McpIcon { Src = "https://mcp.example.test/icon.svg" }]),
             [
                 new McpToolMetadata(
                     "lookup",
@@ -326,8 +335,8 @@ public sealed class McpMetadataDiscoveryTests
                     "Looks up a record.",
                     inputSchema ?? Element("""{"type":"object"}"""),
                     Element("""{"type":"object"}"""),
-                    Element("""{"readOnlyHint":true}"""),
-                    Element("""[{"src":"https://mcp.example.test/tool.svg"}]"""),
+                    new McpToolAnnotations { ReadOnlyHint = true },
+                    [new McpIcon { Src = "https://mcp.example.test/tool.svg" }],
                     Element("""{"vendor.example/template":"record"}"""))
             ]);
 

@@ -41,11 +41,11 @@ public sealed class GatewayMcpSessionManagerTests
                 CancellationToken.None);
             var connection = Assert.Single(lease.Connections).Value!;
             var url = connection.Url!;
-            var bearerToken = connection.BearerToken!;
+            var sessionToken = connection.SessionToken!;
 
             var context = CreateRequest(
                 url,
-                bearerToken,
+                sessionToken,
                 """{"jsonrpc":"2.0","id":1,"method":"tools/list"}""");
             await sessions.HandleAsync(
                 context,
@@ -55,7 +55,7 @@ public sealed class GatewayMcpSessionManagerTests
             Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
             Assert.Null(upstream.Authorization);
             Assert.Equal(apiKey, upstream.ApiKey);
-            Assert.NotEqual(connection.BearerToken, upstream.ApiKey);
+            Assert.NotEqual(connection.SessionToken, upstream.ApiKey);
             Assert.Equal("""{"jsonrpc":"2.0","id":1,"method":"tools/list"}""", upstream.Body);
         }
         finally
@@ -135,7 +135,7 @@ public sealed class GatewayMcpSessionManagerTests
                 var url = connection.Url!;
                 var context = CreateRequest(
                     url,
-                    connection.BearerToken!,
+                    connection.SessionToken!,
                     """{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26"}}""");
 
                 await sessions.HandleAsync(
