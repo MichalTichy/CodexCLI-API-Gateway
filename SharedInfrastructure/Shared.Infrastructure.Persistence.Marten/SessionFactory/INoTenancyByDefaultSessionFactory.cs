@@ -1,0 +1,3 @@
+namespace Shared.Infrastructure.Persistence.Marten.SessionFactory;
+
+public interface INoTenancyByDefaultSessionFactory : ISessionFactoryWithAlternateTenantSettings;

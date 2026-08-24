@@ -5,6 +5,7 @@ global using CodexGateway.Logic.Errors.Models;
 global using CodexGateway.Logic.Generation.Models;
 global using CodexGateway.Logic.McpServers.Models;
 global using CodexGateway.Logic.Security.Models;
+global using CodexGateway.Logic.Specifications;
 global using CodexGateway.Logic.Specifications.ApiKeys;
 global using CodexGateway.Logic.Specifications.McpServers;
 global using CodexGateway.Logic.Specifications.Projects;
