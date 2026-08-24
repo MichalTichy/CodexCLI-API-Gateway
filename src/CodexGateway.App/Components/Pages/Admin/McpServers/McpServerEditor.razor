@@ -1,0 +1,97 @@
+@namespace CodexGateway.App.Components.Pages.Admin.McpServers
+
+<article class="card" aria-busy="@_busy.ToString().ToLowerInvariant()">
+    <EditForm Model="_editor" OnValidSubmit="SaveAsync" autocomplete="off">
+        <DataAnnotationsValidator />
+        <div class="card-header">
+            <div>
+                <h3>@Server.Name</h3>
+                <div class="badge-row">
+                    <span class="badge @(Server.Enabled ? "on" : "off")">@(Server.Enabled ? "Enabled" : "Disabled")</span>
+                    <span class="badge">@(Server is HttpMcpServerDefinition ? "HTTP" : "STDIO")</span>
+                    <span class="badge">@Server.ExecutionMode</span>
+                </div>
+                <div class="muted small mono">@Server.Id</div>
+            </div>
+            <div class="actions">
+                <button type="submit" disabled="@_busy">@(_busy ? "Saving…" : "Save server")</button>
+                @if (_confirmDelete)
+                {
+                    <span class="confirmation" role="group" aria-label="Confirm server deletion">
+                        <span class="small">Delete this server and remove its grants from every project?</span>
+                        <button class="danger" type="button" disabled="@_busy" @onclick="DeleteAsync">Confirm</button>
+                        <button class="secondary" type="button" disabled="@_busy" @onclick="CancelDelete">Cancel</button>
+                    </span>
+                }
+                else
+                {
+                    <button class="danger" type="button" disabled="@_busy" @onclick="ConfirmDelete">Delete server</button>
+                }
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="field wide">
+                <label for="@($"server-name-{Server.Id}")">Name</label>
+                <InputText id="@($"server-name-{Server.Id}")" @bind-Value="_editor.Name" />
+                <ValidationMessage For="() => _editor.Name" />
+            </div>
+            <div class="field narrow">
+                <label for="@($"server-transport-{Server.Id}")">Transport</label>
+                <InputSelect id="@($"server-transport-{Server.Id}")" @bind-Value="_editor.IsHttp">
+                    <option value="true">HTTP</option>
+                    <option value="false">STDIO</option>
+                </InputSelect>
+            </div>
+            <div class="field narrow">
+                <label for="@($"server-execution-{Server.Id}")">Execution</label>
+                <InputSelect id="@($"server-execution-{Server.Id}")" @bind-Value="_editor.ExecutionMode">
+                    <option value="@McpExecutionMode.Gateway">Gateway</option>
+                    <option value="@McpExecutionMode.Runner">Runner (advanced)</option>
+                </InputSelect>
+            </div>
+            <div class="field narrow checkbox-field">
+                <label class="check" for="@($"server-enabled-{Server.Id}")">
+                    <InputCheckbox id="@($"server-enabled-{Server.Id}")" @bind-Value="_editor.Enabled" />
+                    <span>Enabled</span>
+                </label>
+            </div>
+
+            @if (_editor.IsHttp)
+            {
+                <div class="field wide">
+                    <label for="@($"server-url-{Server.Id}")">HTTP URL</label>
+                    <InputText id="@($"server-url-{Server.Id}")" type="url" @bind-Value="_editor.Url" placeholder="https://mcp.internal.example" />
+                </div>
+                <div class="field full">
+                    <label for="@($"server-environment-headers-{Server.Id}")">HTTP headers from environment (one per line)</label>
+                    <InputTextArea id="@($"server-environment-headers-{Server.Id}")"
+                                   @bind-Value="_editor.EnvironmentHeaders"
+                                   placeholder="Authorization=MCP_AUTHORIZATION&#10;X-Api-Key=MCP_API_KEY" />
+                    <span class="muted small">Each environment variable contains the complete header value.</span>
+                </div>
+            }
+            else
+            {
+                <div class="field wide">
+                    <label for="@($"server-command-{Server.Id}")">STDIO command</label>
+                    <InputText id="@($"server-command-{Server.Id}")" @bind-Value="_editor.Command" placeholder="mcp-server" />
+                </div>
+                <div class="field full">
+                    <label for="@($"server-arguments-{Server.Id}")">Arguments (one per line)</label>
+                    <InputTextArea id="@($"server-arguments-{Server.Id}")" @bind-Value="_editor.Arguments" />
+                </div>
+                <div class="field full">
+                    <label for="@($"server-env-{Server.Id}")">Forwarded environment variable names (one per line)</label>
+                    <InputTextArea id="@($"server-env-{Server.Id}")" @bind-Value="_editor.EnvironmentVariables" />
+                </div>
+            }
+
+            <div class="field full">
+                <label for="@($"server-tools-{Server.Id}")">Available tools (one per line)</label>
+                <InputTextArea id="@($"server-tools-{Server.Id}")" @bind-Value="_editor.AvailableTools" />
+            </div>
+        </div>
+        <p class="status @_statusKind" role="status" aria-live="polite">@_status</p>
+    </EditForm>
+</article>

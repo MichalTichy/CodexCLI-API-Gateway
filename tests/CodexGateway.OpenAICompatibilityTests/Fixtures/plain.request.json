@@ -1,0 +1,15 @@
+{
+  "method": "POST",
+  "path_and_query": "/p/openai-compat/v1/chat/completions",
+  "authorization": "Bearer <redacted>",
+  "content_type": "application/json",
+  "body": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Plain client request: hello from Samwise."
+      }
+    ],
+    "model": "gpt-test-sol"
+  }
+}

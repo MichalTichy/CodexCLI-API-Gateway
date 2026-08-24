@@ -1,0 +1,49 @@
+@namespace CodexGateway.App.Components.Pages.Admin.Projects
+
+<section class="section projects-section" aria-labelledby="projects-heading">
+    <div class="section-heading">
+        <div>
+            <h2 id="projects-heading">Projects</h2>
+            <p class="muted small">Key-specific project and MCP access</p>
+        </div>
+    </div>
+
+    <EditForm Model="_create" OnValidSubmit="CreateAsync" class="card" autocomplete="off">
+        <DataAnnotationsValidator />
+        <h3>Create project</h3>
+        <div class="form-grid">
+            <div class="field">
+                <label for="new-project-id">ID</label>
+                <InputText id="new-project-id" @bind-Value="_create.Id" placeholder="customer-support" />
+                <ValidationMessage For="() => _create.Id" />
+            </div>
+            <div class="field wide">
+                <label for="new-project-name">Name</label>
+                <InputText id="new-project-name" @bind-Value="_create.Name" placeholder="Customer support" />
+                <ValidationMessage For="() => _create.Name" />
+            </div>
+            <div class="field full">
+                <button type="submit" disabled="@_busy">@(_busy ? "Creating…" : "Create project")</button>
+            </div>
+        </div>
+        <p class="status @_statusKind" role="status" aria-live="polite">@_status</p>
+    </EditForm>
+
+    @if (Projects.Count == 0)
+    {
+        <div class="empty">No projects have been created.</div>
+    }
+    else
+    {
+        <div class="stack">
+            @foreach (var project in Projects)
+            {
+                <ProjectEditor Project="project"
+                               ApiKeys="ApiKeys"
+                               Servers="Servers"
+                               OnChanged="OnChanged"
+                               @key="project.Id" />
+            }
+        </div>
+    }
+</section>

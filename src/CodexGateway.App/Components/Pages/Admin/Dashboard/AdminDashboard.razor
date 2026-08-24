@@ -1,0 +1,58 @@
+@namespace CodexGateway.App.Components.Pages.Admin.Dashboard
+@inherits AdminComponentBase
+
+<main class="shell" data-testid="admin-dashboard" aria-busy="@_loading.ToString().ToLowerInvariant()">
+    <header class="topbar">
+        <div>
+            <div class="eyebrow">Internal administration</div>
+            <h1>Codex Gateway</h1>
+            <p class="muted">Projects, trusted MCP servers, and API-key access</p>
+        </div>
+        <div class="topbar-actions">
+            <button class="secondary" type="button" disabled="@_loading" @onclick="RefreshAsync">
+                @(_loading ? "Refreshing…" : "Refresh")
+            </button>
+            <form action="/admin/logout" method="post">
+                <AntiforgeryToken />
+                <button class="secondary" type="submit">Log out</button>
+            </form>
+        </div>
+    </header>
+
+    <p class="status @StatusKind.ToString().ToLowerInvariant()" role="status" aria-live="polite">@Status</p>
+
+    @if (!_initialized)
+    {
+        <section class="card loading-card">
+            <span class="spinner" aria-hidden="true"></span>
+            <span>Loading gateway configuration…</span>
+        </section>
+    }
+    else
+    {
+        <div class="page-grid">
+            <section class="section" aria-labelledby="codex-heading">
+                <div class="section-heading">
+                    <div>
+                        <h2 id="codex-heading">Codex account</h2>
+                        <p class="muted small">Authentication used by gateway runs</p>
+                    </div>
+                </div>
+                <CodexAccountCard Account="_account"
+                                  Login="_login"
+                                  LoadError="@_codexError"
+                                  OnChanged="HandleCodexChangedAsync" />
+
+            </section>
+
+            <ApiKeyList ApiKeys="_apiKeys" OnChanged="HandleChangedAsync" />
+
+            <McpCatalogSection Servers="_servers" OnChanged="HandleChangedAsync" />
+
+            <ProjectsSection Projects="_projects"
+                             ApiKeys="_apiKeys"
+                             Servers="_servers"
+                             OnChanged="HandleChangedAsync" />
+        </div>
+    }
+</main>

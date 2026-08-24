@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!-- The suite intentionally locks the SDK's current developer-message and reasoning wire shapes. -->
+    <NoWarn>$(NoWarn);OPENAI001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.11" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="OpenAI" Version="2.13.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CodexGateway.App\CodexGateway.App.csproj" />
+    <ProjectReference Include="..\..\src\CodexGateway.Infrastructure.Codex\CodexGateway.Infrastructure.Codex.csproj" />
+    <ProjectReference Include="..\..\src\CodexGateway.Infrastructure.FileStorage\CodexGateway.Infrastructure.FileStorage.csproj" />
+    <ProjectReference Include="..\CodexGateway.FakeCodex\CodexGateway.FakeCodex.csproj" />
+    <ProjectReference Include="..\CodexGateway.Testing\CodexGateway.Testing.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Fixtures\**\*" />
+  </ItemGroup>
+
+</Project>

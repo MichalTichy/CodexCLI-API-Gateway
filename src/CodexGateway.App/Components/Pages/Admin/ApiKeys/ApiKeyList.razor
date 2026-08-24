@@ -1,0 +1,65 @@
+@namespace CodexGateway.App.Components.Pages.Admin.ApiKeys
+@inherits AdminComponentBase
+
+<section class="section" aria-labelledby="keys-heading">
+    <div class="section-heading">
+        <div>
+            <h2 id="keys-heading">API keys</h2>
+            <p class="muted small">Create keys before granting project access.</p>
+        </div>
+    </div>
+    <EditForm Model="_create" OnValidSubmit="CreateAsync" class="card" autocomplete="off">
+        <DataAnnotationsValidator />
+        <h3>Create API key</h3>
+        <div class="form-grid">
+            <div class="field">
+                <label for="new-api-key-id">ID</label>
+                <InputText id="new-api-key-id" @bind-Value="_create.Id" placeholder="automation" />
+                <ValidationMessage For="() => _create.Id" />
+            </div>
+            <div class="field">
+                <label for="new-api-key-name">Name</label>
+                <InputText id="new-api-key-name" @bind-Value="_create.Name" placeholder="Automation" />
+                <ValidationMessage For="() => _create.Name" />
+            </div>
+            <div class="field full">
+                <button type="submit" disabled="@IsBusy">@(IsBusy ? "Creating…" : "Create API key")</button>
+            </div>
+        </div>
+        <p class="status @StatusKind.ToString().ToLowerInvariant()" role="status" aria-live="polite">@Status</p>
+    </EditForm>
+
+    @if (_createdApiKey is not null)
+    {
+        <div class="card" role="status" aria-live="polite">
+            <h3>Copy API key now</h3>
+            <p class="muted small">This is the only time the secret for <strong>@_createdApiKey.Name</strong> will be shown.</p>
+            <div class="field">
+                <label for="created-api-key-secret">Secret</label>
+                <input id="created-api-key-secret" class="mono" value="@_createdApiKey.Key" readonly />
+            </div>
+        </div>
+    }
+
+<div class="card">
+    @if (ApiKeys.Count == 0)
+    {
+        <div class="empty">No API keys are configured.</div>
+    }
+    else
+    {
+        <div class="key-list" aria-labelledby="keys-heading">
+            @foreach (var key in ApiKeys)
+            {
+                <div class="key-row" @key="key.Id">
+                    <div>
+                        <strong>@key.Name</strong>
+                        <div class="muted small mono">@key.Id</div>
+                    </div>
+                    <button class="danger" type="button" disabled="@IsBusy" @onclick="() => DeleteAsync(key.Id)">Revoke</button>
+                </div>
+            }
+        </div>
+    }
+</div>
+</section>
