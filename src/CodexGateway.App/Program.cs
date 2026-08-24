@@ -14,6 +14,7 @@ InstallerDiscovery.RunInstallersFromReferencedAssemblies(
     builder.Configuration,
     builder.Environment,
     typeof(Program).Assembly);
+builder.Services.AddAllInitializers(InstallerDiscovery.DefaultAssemblyNamePrefix);
 
 var app = builder.Build();
 
@@ -37,6 +38,11 @@ if (app.Services.GetRequiredService<IOptions<AdminUiOptions>>().Value.Enabled)
     app.MapRazorComponents<App>()
         .AddInteractiveServerRenderMode();
 }
+
+var initializerManager = app.Services.GetRequiredService<InitializerManager>();
+await initializerManager.RunAllInitializersAsync(
+    InitializerTrigger.OnStartup,
+    InitializerTrigger.OnApplicationReady);
 
 app.Run();
 
