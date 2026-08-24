@@ -22,17 +22,24 @@
                 <InputText id="new-api-key-name" @bind-Value="_create.Name" placeholder="Automation" />
                 <ValidationMessage For="() => _create.Name" />
             </div>
-            <div class="field wide">
-                <label for="new-api-key-secret">Secret</label>
-                <InputText id="new-api-key-secret" type="password" @bind-Value="_create.Key" />
-                <ValidationMessage For="() => _create.Key" />
-            </div>
             <div class="field full">
                 <button type="submit" disabled="@IsBusy">@(IsBusy ? "Creating…" : "Create API key")</button>
             </div>
         </div>
         <p class="status @StatusKind.ToString().ToLowerInvariant()" role="status" aria-live="polite">@Status</p>
     </EditForm>
+
+    @if (_createdApiKey is not null)
+    {
+        <div class="card" role="status" aria-live="polite">
+            <h3>Copy API key now</h3>
+            <p class="muted small">This is the only time the secret for <strong>@_createdApiKey.Name</strong> will be shown.</p>
+            <div class="field">
+                <label for="created-api-key-secret">Secret</label>
+                <input id="created-api-key-secret" class="mono" value="@_createdApiKey.Key" readonly />
+            </div>
+        </div>
+    }
 
 <div class="card">
     @if (ApiKeys.Count == 0)

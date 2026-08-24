@@ -1,6 +1,6 @@
 using CodexGateway.Logic.UseCases.ApiKeys;
 using CodexGateway.Logic.Security;
-using CodexGateway.Models;
+using CodexGateway.Models.ApiKeys;
 using MediatR;
 using Microsoft.AspNetCore.Components;
 
@@ -9,6 +9,7 @@ namespace CodexGateway.App.Components.Pages.Admin.ApiKeys;
 public partial class ApiKeyList : AdminComponentBase
 {
     private CreateApiKeyModel _create = new();
+    private ApiKeyDefinition? _createdApiKey;
 
     [Inject]
     private ISender Sender { get; set; } = null!;
@@ -24,15 +25,16 @@ public partial class ApiKeyList : AdminComponentBase
 
     private async Task CreateAsync()
     {
-        string? createdId = null;
+        ApiKeyDefinition? created = null;
         await RunAsync(
-            async () => createdId = (await Sender.Send(
-                new CreateApiKeyUseCase(_create.Id, _create.Name, _create.Key),
-                PageCancellationToken)).Id,
+            async () => created = await Sender.Send(
+                new CreateApiKeyUseCase(_create.Id, _create.Name),
+                PageCancellationToken),
             async () =>
             {
+                _createdApiKey = created;
                 _create = new CreateApiKeyModel();
-                await OnChanged.InvokeAsync($"API key {createdId} created.");
+                await OnChanged.InvokeAsync($"API key {created!.Id} created. Copy its secret now.");
             },
             Logger,
             "Creating API key…",
