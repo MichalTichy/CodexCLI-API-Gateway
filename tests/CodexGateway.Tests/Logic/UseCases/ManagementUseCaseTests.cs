@@ -16,6 +16,32 @@ namespace CodexGateway.Tests.Logic.UseCases;
 public sealed class ManagementUseCaseTests
 {
     [Fact]
+    public async Task Create_api_key_generates_persists_and_returns_a_unique_secret()
+    {
+        var repository = new InMemoryGatewayStateRepository(new GatewayState());
+        var handler = new CreateApiKeyUseCaseHandler(repository);
+
+        var first = await handler.Handle(
+            new CreateApiKeyUseCase(" First_Key ", " First key "),
+            CancellationToken.None);
+        var second = await handler.Handle(
+            new CreateApiKeyUseCase("second-key", "Second key"),
+            CancellationToken.None);
+
+        Assert.Equal("first_key", first.Id);
+        Assert.Equal("First key", first.Name);
+        Assert.Matches("^cg_[0-9a-f]{64}$", first.Key);
+        Assert.Matches("^cg_[0-9a-f]{64}$", second.Key);
+        Assert.NotEqual(first.Key, second.Key);
+        Assert.Equal([first, second], repository.State.ApiKeys);
+
+        var authenticated = await new AuthenticateGatewayRequestUseCaseHandler(repository).Handle(
+            new AuthenticateGatewayRequestUseCase(first.Key, null),
+            CancellationToken.None);
+        Assert.Equal(first.Id, authenticated?.ApiKeyId);
+    }
+
+    [Fact]
     public async Task Read_specifications_apply_ordering_and_key_identities_exclude_secrets()
     {
         var repository = new InMemoryGatewayStateRepository(new GatewayState
