@@ -11,7 +11,7 @@ public sealed record CreateProjectUseCase(string Id, string Name) : IRequest<Pro
 
 public sealed partial class CreateProjectUseCaseHandler(
     IRepository<GatewayState> repository,
-    IProjectStorage projectStorage)
+    IProjectStorageManager projectStorage)
     : IRequestHandler<CreateProjectUseCase, ProjectDefinition>
 {
     public async Task<ProjectDefinition> Handle(

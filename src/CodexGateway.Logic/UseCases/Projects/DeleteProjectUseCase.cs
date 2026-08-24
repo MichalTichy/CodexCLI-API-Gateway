@@ -12,7 +12,7 @@ public sealed record DeleteProjectUseCase(string ProjectId) : IRequest;
 
 public sealed class DeleteProjectUseCaseHandler(
     IRepository<GatewayState> repository,
-    IProjectStorage projectStorage,
+    IProjectStorageManager projectStorage,
     RunCoordinator runs)
     : IRequestHandler<DeleteProjectUseCase>
 {
