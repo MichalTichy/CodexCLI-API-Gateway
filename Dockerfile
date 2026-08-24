@@ -17,7 +17,9 @@ COPY src/CodexGateway.Api/CodexGateway.Api.csproj src/CodexGateway.Api/
 COPY src/CodexGateway.Api.OpenAI/CodexGateway.Api.OpenAI.csproj src/CodexGateway.Api.OpenAI/
 COPY src/CodexGateway.App/CodexGateway.App.csproj src/CodexGateway.App/
 COPY src/CodexGateway.Infrastructure.Codex/CodexGateway.Infrastructure.Codex.csproj src/CodexGateway.Infrastructure.Codex/
-COPY src/CodexGateway.Infrastructure.Mcp/CodexGateway.Infrastructure.Mcp.csproj src/CodexGateway.Infrastructure.Mcp/
+COPY src/CodexGateway.McpGateway/CodexGateway.McpGateway.csproj src/CodexGateway.McpGateway/
+COPY src/CodexGateway.McpGateway.Http/CodexGateway.McpGateway.Http.csproj src/CodexGateway.McpGateway.Http/
+COPY src/CodexGateway.McpGateway.Stdio/CodexGateway.McpGateway.Stdio.csproj src/CodexGateway.McpGateway.Stdio/
 COPY src/CodexGateway.Infrastructure.Persistence/CodexGateway.Infrastructure.Persistence.csproj src/CodexGateway.Infrastructure.Persistence/
 COPY src/CodexGateway.Infrastructure.FileStorage/CodexGateway.Infrastructure.FileStorage.csproj src/CodexGateway.Infrastructure.FileStorage/
 COPY src/CodexGateway.Logic/CodexGateway.Logic.csproj src/CodexGateway.Logic/
@@ -30,7 +32,9 @@ COPY SharedInfrastructure/ SharedInfrastructure/
 COPY src/CodexGateway.Api.OpenAI/ src/CodexGateway.Api.OpenAI/
 COPY src/CodexGateway.App/ src/CodexGateway.App/
 COPY src/CodexGateway.Infrastructure.Codex/ src/CodexGateway.Infrastructure.Codex/
-COPY src/CodexGateway.Infrastructure.Mcp/ src/CodexGateway.Infrastructure.Mcp/
+COPY src/CodexGateway.McpGateway/ src/CodexGateway.McpGateway/
+COPY src/CodexGateway.McpGateway.Http/ src/CodexGateway.McpGateway.Http/
+COPY src/CodexGateway.McpGateway.Stdio/ src/CodexGateway.McpGateway.Stdio/
 COPY src/CodexGateway.Infrastructure.Persistence/ src/CodexGateway.Infrastructure.Persistence/
 COPY src/CodexGateway.Infrastructure.FileStorage/ src/CodexGateway.Infrastructure.FileStorage/
 COPY src/CodexGateway.Logic/ src/CodexGateway.Logic/

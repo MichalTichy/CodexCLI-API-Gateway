@@ -26,7 +26,8 @@ public sealed class ArchitectureDependencyTests
             var references = ReadProjectReferences(project);
             Assert.DoesNotContain("CodexGateway.App", references);
             Assert.DoesNotContain(references, reference =>
-                reference.StartsWith("CodexGateway.Infrastructure", StringComparison.Ordinal));
+                reference.StartsWith("CodexGateway.Infrastructure", StringComparison.Ordinal) ||
+                reference.StartsWith("CodexGateway.McpGateway", StringComparison.Ordinal));
         }
     }
 
@@ -66,6 +67,9 @@ public sealed class ArchitectureDependencyTests
     [InlineData(typeof(CodexGateway.Logic.Composition.LogicInstaller))]
     [InlineData(typeof(CodexGateway.Infrastructure.Codex.Composition.CodexInfrastructureInstaller))]
     [InlineData(typeof(CodexGateway.Infrastructure.FileStorage.Composition.FileStorageInfrastructureInstaller))]
+    [InlineData(typeof(CodexGateway.McpGateway.Composition.McpGatewayInstaller))]
+    [InlineData(typeof(CodexGateway.McpGateway.Http.Composition.HttpMcpGatewayInstaller))]
+    [InlineData(typeof(CodexGateway.McpGateway.Stdio.Composition.StdioMcpGatewayInstaller))]
     public void Every_DI_module_owns_one_public_installer(Type expectedInstaller)
     {
         var installers = expectedInstaller.Assembly
@@ -109,6 +113,29 @@ public sealed class ArchitectureDependencyTests
         Assert.Contains("Shared.Infrastructure.IoC", storageReferences);
 
         Assert.False(File.Exists(ProjectPath("CodexGateway.Infrastructure")));
+    }
+
+    [Fact]
+    public void MCP_gateway_core_and_transports_are_separate_projects()
+    {
+        var coreReferences = ReadProjectReferences(ProjectPath("CodexGateway.McpGateway"));
+        Assert.DoesNotContain("CodexGateway.McpGateway.Http", coreReferences);
+        Assert.DoesNotContain("CodexGateway.McpGateway.Stdio", coreReferences);
+
+        var httpReferences = ReadProjectReferences(ProjectPath("CodexGateway.McpGateway.Http"));
+        Assert.Contains("CodexGateway.McpGateway", httpReferences);
+        Assert.DoesNotContain("CodexGateway.McpGateway.Stdio", httpReferences);
+
+        var stdioReferences = ReadProjectReferences(ProjectPath("CodexGateway.McpGateway.Stdio"));
+        Assert.Contains("CodexGateway.McpGateway", stdioReferences);
+        Assert.DoesNotContain("CodexGateway.McpGateway.Http", stdioReferences);
+
+        var appReferences = ReadProjectReferences(ProjectPath("CodexGateway.App"));
+        Assert.Contains("CodexGateway.McpGateway", appReferences);
+        Assert.Contains("CodexGateway.McpGateway.Http", appReferences);
+        Assert.Contains("CodexGateway.McpGateway.Stdio", appReferences);
+
+        Assert.False(Directory.Exists(ProjectPath("CodexGateway.Infrastructure.Mcp")));
     }
 
     [Fact]
