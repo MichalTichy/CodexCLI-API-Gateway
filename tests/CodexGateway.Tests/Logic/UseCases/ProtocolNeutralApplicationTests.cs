@@ -1,6 +1,5 @@
 using System.Text;
 using System.Text.Json;
-using CodexGateway.Infrastructure.Persistence;
 using CodexGateway.Logic;
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Configuration;
@@ -80,7 +79,7 @@ public sealed class ProtocolNeutralApplicationTests
             Name = "Project One",
             ApiKeyAccess = [new ProjectApiKeyAccess { ApiKeyId = "default" }]
         };
-        var repository = new InMemoryGatewayStateRepository(new GatewayState
+        var repository = new FakeGatewayStateRepository(new GatewayState
         {
             ApiKeys = [new ApiKeyDefinition { Id = "default", Name = "Default", Key = "test-secret" }],
             Projects = [project]
@@ -144,7 +143,7 @@ public sealed class ProtocolNeutralApplicationTests
     [Fact]
     public async Task Generate_assistant_response_use_case_runs_codex_and_exposes_transport_neutral_events()
     {
-        var state = new InMemoryGatewayStateRepository(new GatewayState());
+        var state = new FakeGatewayStateRepository(new GatewayState());
         var options = TestOptions();
         var workspaces = new StubWorkspaceManager();
         var runner = new StubCodexRunner();
@@ -189,7 +188,7 @@ public sealed class ProtocolNeutralApplicationTests
             Name = "Project One",
             ApiKeyAccess = [new ProjectApiKeyAccess { ApiKeyId = "default" }]
         };
-        var state = new InMemoryGatewayStateRepository(new GatewayState { Projects = [project] });
+        var state = new FakeGatewayStateRepository(new GatewayState { Projects = [project] });
         var options = TestOptions();
         var files = new StubFileStore
         {
@@ -238,7 +237,7 @@ public sealed class ProtocolNeutralApplicationTests
             Name = "Project One",
             ApiKeyAccess = [new ProjectApiKeyAccess { ApiKeyId = "default" }]
         };
-        var state = new InMemoryGatewayStateRepository(new GatewayState { Projects = [project] });
+        var state = new FakeGatewayStateRepository(new GatewayState { Projects = [project] });
         var options = TestOptions();
         var files = new StubFileStore { BlockSave = true };
         var coordinator = new RunCoordinator(options);
@@ -276,7 +275,7 @@ public sealed class ProtocolNeutralApplicationTests
             Name = "Project One",
             ApiKeyAccess = [new ProjectApiKeyAccess { ApiKeyId = "default" }]
         };
-        var state = new InMemoryGatewayStateRepository(new GatewayState { Projects = [project] });
+        var state = new FakeGatewayStateRepository(new GatewayState { Projects = [project] });
         var options = TestOptions();
         var files = new StubFileStore();
         var handler = new GetFileUseCaseHandler(files, state, new RunCoordinator(options));
@@ -306,7 +305,7 @@ public sealed class ProtocolNeutralApplicationTests
     public async Task Projectless_file_operations_remain_private_to_the_api_key_without_project_locking()
     {
         var options = TestOptions();
-        var state = new InMemoryGatewayStateRepository(new GatewayState());
+        var state = new FakeGatewayStateRepository(new GatewayState());
         var files = new StubFileStore();
         var handler = new SaveFileUseCaseHandler(files, state, new RunCoordinator(options));
 
@@ -355,7 +354,7 @@ public sealed class ProtocolNeutralApplicationTests
                 }
             ]
         };
-        var state = new InMemoryGatewayStateRepository(new GatewayState
+        var state = new FakeGatewayStateRepository(new GatewayState
         {
             Projects = [project],
             McpServers = [server]
@@ -489,7 +488,7 @@ public sealed class ProtocolNeutralApplicationTests
         public void Delete(RunWorkspace workspace) => Deleted = true;
     }
 
-    private sealed class StubProjectStorage : IProjectStorageManager
+    private sealed class StubProjectStorageManager : IProjectStorageManager
     {
         public void Create(string projectId)
         {

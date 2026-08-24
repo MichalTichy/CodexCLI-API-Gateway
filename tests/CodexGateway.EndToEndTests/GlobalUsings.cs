@@ -1,7 +1,6 @@
 global using CodexGateway.EndToEndTests.Infrastructure;
 global using CodexGateway.Infrastructure.Codex.AppServer;
-global using CodexGateway.Infrastructure.Persistence.Repositories;
-global using CodexGateway.Infrastructure.Storage.Configuration;
+global using CodexGateway.Infrastructure.FileStorage.Configuration;
 global using CodexGateway.Logic.Codex.Models;
 global using CodexGateway.Logic.Security.Models;
 global using CodexGateway.Logic.Specifications.ApiKeys;

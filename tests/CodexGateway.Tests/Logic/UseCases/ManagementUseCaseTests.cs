@@ -1,4 +1,3 @@
-using CodexGateway.Infrastructure.Persistence;
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Configuration;
 using CodexGateway.Logic.Errors;
@@ -18,7 +17,7 @@ public sealed class ManagementUseCaseTests
     [Fact]
     public async Task Create_api_key_generates_persists_and_returns_a_unique_secret()
     {
-        var repository = new InMemoryGatewayStateRepository(new GatewayState());
+        var repository = new FakeGatewayStateRepository(new GatewayState());
         var handler = new CreateApiKeyUseCaseHandler(repository);
 
         var first = await handler.Handle(
@@ -44,7 +43,7 @@ public sealed class ManagementUseCaseTests
     [Fact]
     public async Task Read_specifications_apply_ordering_and_key_identities_exclude_secrets()
     {
-        var repository = new InMemoryGatewayStateRepository(new GatewayState
+        var repository = new FakeGatewayStateRepository(new GatewayState
         {
             ApiKeys =
             [
@@ -81,11 +80,11 @@ public sealed class ManagementUseCaseTests
     [Fact]
     public async Task Project_use_cases_preserve_created_at_and_manage_project_storage()
     {
-        var repository = new InMemoryGatewayStateRepository(new GatewayState
+        var repository = new FakeGatewayStateRepository(new GatewayState
         {
             ApiKeys = [new ApiKeyDefinition { Id = "default", Name = "Default", Key = "test-secret" }]
         });
-        var storage = new RecordingProjectStorage();
+        var storage = new RecordingProjectStorageManager();
         var options = TestOptions();
         var runs = new RunCoordinator(options);
         var create = new CreateProjectUseCaseHandler(repository, storage);
@@ -119,7 +118,7 @@ public sealed class ManagementUseCaseTests
     [Fact]
     public async Task Updating_project_rejects_a_runner_image_that_looks_like_an_engine_option()
     {
-        var repository = new InMemoryGatewayStateRepository(new GatewayState
+        var repository = new FakeGatewayStateRepository(new GatewayState
         {
             Projects = [Project("project-one", "Project One")]
         });
@@ -145,11 +144,11 @@ public sealed class ManagementUseCaseTests
     {
         var options = TestOptions();
         var runs = new RunCoordinator(options);
-        var repository = new InMemoryGatewayStateRepository(new GatewayState
+        var repository = new FakeGatewayStateRepository(new GatewayState
         {
             Projects = [Project("busy-project", "Busy")]
         });
-        var storage = new RecordingProjectStorage();
+        var storage = new RecordingProjectStorageManager();
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var run = runs.ExecuteAsync(
@@ -186,7 +185,7 @@ public sealed class ManagementUseCaseTests
     {
         var target = Server("target");
         var retained = Server("retained");
-        var repository = new InMemoryGatewayStateRepository(new GatewayState
+        var repository = new FakeGatewayStateRepository(new GatewayState
         {
             McpServers = [target, retained],
             Projects =
@@ -289,7 +288,7 @@ public sealed class ManagementUseCaseTests
         }
     });
 
-    private sealed class RecordingProjectStorage : IProjectStorageManager
+    private sealed class RecordingProjectStorageManager : IProjectStorageManager
     {
         public List<string> CreatedIds { get; } = [];
 

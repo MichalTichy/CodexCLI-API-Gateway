@@ -1,10 +1,11 @@
-using CodexGateway.Infrastructure.Persistence;
+using CodexGateway.Testing;
 using CodexGateway.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Shared.Infrastructure.Persistence.Repositories;
 
 namespace CodexGateway.EndToEndTests.Infrastructure;
 
@@ -18,6 +19,7 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>
     private readonly int? _maxArtifactFileMegabytes;
     private readonly int? _maxArtifactTotalMegabytes;
     private readonly bool _adminEnabled;
+    private readonly string _connectionString;
 
     public GatewayFactory(
         int maxConcurrent = 2,
@@ -37,6 +39,7 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>
         _maxArtifactFileMegabytes = maxArtifactFileMegabytes;
         _maxArtifactTotalMegabytes = maxArtifactTotalMegabytes;
         _adminEnabled = adminEnabled;
+        _connectionString = PostgreSqlTestDatabase.CreateConnectionString();
         RootPath = Path.Combine(Path.GetTempPath(), "codex-gateway-e2e", Guid.NewGuid().ToString("N"));
         StoragePath = Path.Combine(RootPath, "data");
         ScenarioPath = Path.Combine(RootPath, "fake");
@@ -54,15 +57,33 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>
 
     public string CodexHomePath { get; }
 
+    protected override IHost CreateHost(IHostBuilder builder)
+    {
+        var host = base.CreateHost(builder);
+        var repository = host.Services.GetRequiredService<IRepository<GatewayState>>();
+        repository.GetAndUpdateAsync(
+                GatewayState.DocumentId,
+                state => state.ApiKeys =
+                [
+                    new ApiKeyDefinition { Id = "default", Name = "Default test key", Key = "e2e-api-key" },
+                    new ApiKeyDefinition { Id = "secondary", Name = "Secondary test key", Key = "e2e-secondary-api-key" }
+                ])
+            .GetAwaiter()
+            .GetResult();
+        return host;
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         var fakeAssembly = typeof(FakeCodexMarker).Assembly.Location;
+        builder.UseSetting("ConnectionStrings:Gateway", _connectionString);
         builder.UseStaticWebAssets();
         builder.UseEnvironment("Testing");
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             var settings = new Dictionary<string, string?>
             {
+                ["ConnectionStrings:Gateway"] = _connectionString,
                 ["Gateway:StoragePath"] = StoragePath,
                 ["Gateway:Limits:MaxConcurrent"] = _maxConcurrent.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["Gateway:Limits:MaxQueued"] = _maxQueued.ToString(System.Globalization.CultureInfo.InvariantCulture),
@@ -115,14 +136,5 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>
 
             configuration.AddInMemoryCollection(settings);
         });
-        builder.ConfigureTestServices(services =>
-            services.AddSingleton(new InMemoryGatewayStateRepository(new GatewayState
-            {
-                ApiKeys =
-                [
-                    new ApiKeyDefinition { Id = "default", Name = "Default test key", Key = "e2e-api-key" },
-                    new ApiKeyDefinition { Id = "secondary", Name = "Secondary test key", Key = "e2e-secondary-api-key" }
-                ]
-            })));
     }
 }

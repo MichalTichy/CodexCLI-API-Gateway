@@ -33,7 +33,7 @@ public sealed class ArchitectureDependencyTests
     [Theory]
     [InlineData("CodexGateway.Logic")]
     [InlineData("CodexGateway.Infrastructure.Codex")]
-    [InlineData("CodexGateway.Infrastructure.Storage")]
+    [InlineData("CodexGateway.Infrastructure.FileStorage")]
     public void Inward_layers_do_not_reference_API_projects(string projectName)
     {
         var references = ReadProjectReferences(ProjectPath(projectName));
@@ -65,7 +65,7 @@ public sealed class ArchitectureDependencyTests
     [InlineData(typeof(CodexGateway.Api.Composition.GatewayApiInstaller))]
     [InlineData(typeof(CodexGateway.Logic.Composition.LogicInstaller))]
     [InlineData(typeof(CodexGateway.Infrastructure.Codex.Composition.CodexInfrastructureInstaller))]
-    [InlineData(typeof(CodexGateway.Infrastructure.Storage.Composition.StorageInfrastructureInstaller))]
+    [InlineData(typeof(CodexGateway.Infrastructure.FileStorage.Composition.FileStorageInfrastructureInstaller))]
     public void Every_DI_module_owns_one_public_installer(Type expectedInstaller)
     {
         var installers = expectedInstaller.Assembly
@@ -101,10 +101,10 @@ public sealed class ArchitectureDependencyTests
     public void Infrastructure_is_split_with_dependencies_pointing_from_codex_to_storage()
     {
         var codexReferences = ReadProjectReferences(ProjectPath("CodexGateway.Infrastructure.Codex"));
-        Assert.Contains("CodexGateway.Infrastructure.Storage", codexReferences);
+        Assert.Contains("CodexGateway.Infrastructure.FileStorage", codexReferences);
         Assert.Contains("Shared.Infrastructure.IoC", codexReferences);
 
-        var storageReferences = ReadProjectReferences(ProjectPath("CodexGateway.Infrastructure.Storage"));
+        var storageReferences = ReadProjectReferences(ProjectPath("CodexGateway.Infrastructure.FileStorage"));
         Assert.DoesNotContain("CodexGateway.Infrastructure.Codex", storageReferences);
         Assert.Contains("Shared.Infrastructure.IoC", storageReferences);
 
@@ -240,7 +240,7 @@ public sealed class ArchitectureDependencyTests
     public void Gateway_configuration_uses_the_shared_Marten_repository_contract()
     {
         var logicAssembly = typeof(CodexGateway.Logic.Composition.LogicInstaller).Assembly;
-        var storageAssembly = typeof(CodexGateway.Infrastructure.Storage.Composition.StorageInfrastructureInstaller).Assembly;
+        var storageAssembly = typeof(CodexGateway.Infrastructure.FileStorage.Composition.FileStorageInfrastructureInstaller).Assembly;
         var repositoryContract = typeof(Shared.Infrastructure.Persistence.Repositories.IRepository<>);
         var repositoryImplementation = typeof(
             Shared.Infrastructure.Persistence.Marten.Repository.Document.NoTenancyMartenRepository<>);
@@ -252,8 +252,8 @@ public sealed class ArchitectureDependencyTests
                     && type.GetGenericTypeDefinition() == repositoryContract);
         Assert.Null(logicAssembly.GetType("CodexGateway.Logic.Storage.IGatewayStateStore"));
         Assert.Null(logicAssembly.GetType("CodexGateway.Logic.Storage.IGatewayConfigurationRepository"));
-        Assert.Null(storageAssembly.GetType("CodexGateway.Infrastructure.Storage.JsonStateStore"));
-        Assert.Null(storageAssembly.GetType("CodexGateway.Infrastructure.Storage.JsonGatewayConfigurationRepository"));
+        Assert.Null(storageAssembly.GetType("CodexGateway.Infrastructure.FileStorage.JsonStateStore"));
+        Assert.Null(storageAssembly.GetType("CodexGateway.Infrastructure.FileStorage.JsonGatewayConfigurationRepository"));
 
         var productionSources = Directory
             .EnumerateFiles(Path.Combine(RepositoryRoot, "src"), "*.cs", SearchOption.AllDirectories)

@@ -129,9 +129,16 @@ public sealed class InstallerDiscoveryTests
 
         InstallerDiscovery.RunInstallersFromReferencedAssemblies(
             services,
-            new ConfigurationBuilder().Build(),
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["ConnectionStrings:Gateway"] =
+                        "Host=localhost;Database=installer_test;Username=test;Password=test"
+                })
+                .Build(),
             new TestHostEnvironment { EnvironmentName = "Testing" },
             typeof(Program).Assembly);
+        services.AddAllInitializers(InstallerDiscovery.DefaultAssemblyNamePrefix);
 
         Assert.Contains(
             services,
@@ -151,21 +158,24 @@ public sealed class InstallerDiscoveryTests
             descriptor => descriptor.ServiceType.FullName ==
                           "CodexGateway.Infrastructure.Codex.Containers.ContainerCodexRunner");
 
+        var initializerTypes = services
+            .Where(descriptor => descriptor.ServiceType == typeof(Shared.Infrastructure.Initializer.IInitializer))
+            .Select(descriptor => descriptor.ImplementationType)
+            .ToArray();
+        Assert.Contains(
+            typeof(CodexGateway.Infrastructure.Persistence.Initialization.GatewayStateInitializer),
+            initializerTypes);
+        Assert.Contains(
+            typeof(CodexGateway.Infrastructure.Codex.Containers.ContainerRuntimePreflightInitializer),
+            initializerTypes);
+
         var hostedServiceTypes = services
             .Where(descriptor => descriptor.ServiceType == typeof(IHostedService))
             .Select(descriptor => descriptor.ImplementationType)
             .ToArray();
-        var preflightIndex = Array.IndexOf(
-            hostedServiceTypes,
-            typeof(CodexGateway.Infrastructure.Codex.Containers.ContainerRuntimePreflightService));
-        var temporaryCleanupIndex = Array.IndexOf(
-            hostedServiceTypes,
-            typeof(CodexGateway.Infrastructure.Storage.Files.TemporaryFileCleanupService));
-        Assert.True(preflightIndex >= 0, "The container runtime preflight hosted service was not registered.");
-        Assert.True(temporaryCleanupIndex >= 0, "The temporary-file cleanup hosted service was not registered.");
-        Assert.True(
-            preflightIndex < temporaryCleanupIndex,
-            "Container runtime preflight must start before temporary-file cleanup.");
+        Assert.Contains(
+            typeof(CodexGateway.Infrastructure.FileStorage.Files.TemporaryFileCleanupService),
+            hostedServiceTypes);
     }
 
     [Fact]

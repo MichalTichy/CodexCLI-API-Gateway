@@ -1,18 +1,22 @@
 using CodexGateway.Infrastructure.Codex;
-using CodexGateway.Infrastructure.Persistence;
+using CodexGateway.Testing;
 using CodexGateway.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Shared.Infrastructure.Persistence.Repositories;
 
 namespace CodexGateway.OpenAICompatibilityTests.Infrastructure;
 
 public sealed class CompatibilityGatewayFactory : WebApplicationFactory<Program>
 {
+    private readonly string _connectionString;
+
     public CompatibilityGatewayFactory()
     {
+        _connectionString = PostgreSqlTestDatabase.CreateConnectionString();
         RootPath = Path.Combine(Path.GetTempPath(), "codex-gateway-openai-compat", Guid.NewGuid().ToString("N"));
         StoragePath = Path.Combine(RootPath, "data");
         ScenarioPath = Path.Combine(RootPath, "fake");
@@ -29,6 +33,21 @@ public sealed class CompatibilityGatewayFactory : WebApplicationFactory<Program>
     public string ScenarioPath { get; }
 
     public string CodexHomePath { get; }
+
+    protected override IHost CreateHost(IHostBuilder builder)
+    {
+        var host = base.CreateHost(builder);
+        var repository = host.Services.GetRequiredService<IRepository<GatewayState>>();
+        repository.GetAndUpdateAsync(
+                GatewayState.DocumentId,
+                state => state.ApiKeys =
+                [
+                    new ApiKeyDefinition { Id = "default", Name = "Default test key", Key = "e2e-api-key" }
+                ])
+            .GetAwaiter()
+            .GetResult();
+        return host;
+    }
 
     public void StopAndDelete()
     {
@@ -50,11 +69,13 @@ public sealed class CompatibilityGatewayFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         var fakeAssembly = typeof(FakeCodexMarker).Assembly.Location;
+        builder.UseSetting("ConnectionStrings:Gateway", _connectionString);
         builder.UseEnvironment("Testing");
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
+                ["ConnectionStrings:Gateway"] = _connectionString,
                 ["Gateway:StoragePath"] = StoragePath,
                 ["Gateway:Limits:MaxConcurrent"] = "2",
                 ["Gateway:Limits:MaxQueued"] = "2",
@@ -80,13 +101,5 @@ public sealed class CompatibilityGatewayFactory : WebApplicationFactory<Program>
                 ["AdminUi:Password"] = "test-password"
             });
         });
-        builder.ConfigureTestServices(services =>
-            services.AddSingleton(new InMemoryGatewayStateRepository(new GatewayState
-            {
-                ApiKeys =
-                [
-                    new ApiKeyDefinition { Id = "default", Name = "Default test key", Key = "e2e-api-key" }
-                ]
-            })));
     }
 }

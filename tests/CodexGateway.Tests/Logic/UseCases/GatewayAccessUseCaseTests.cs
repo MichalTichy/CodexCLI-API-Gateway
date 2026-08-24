@@ -1,4 +1,3 @@
-using CodexGateway.Infrastructure.Persistence;
 using CodexGateway.Logic;
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Configuration;
@@ -83,7 +82,7 @@ public sealed class GatewayAccessUseCaseTests
                 AvailableTools = ["read", "write"]
             }),
             CancellationToken.None);
-        var create = new CreateProjectUseCaseHandler(repository, new StubProjectStorage());
+        var create = new CreateProjectUseCaseHandler(repository, new StubProjectStorageManager());
         var project = await create.Handle(
             new CreateProjectUseCase("project-one", "Project One"),
             CancellationToken.None);
@@ -120,9 +119,9 @@ public sealed class GatewayAccessUseCaseTests
         Assert.Equal(["read"], mcp.EnabledTools);
     }
 
-    private static async Task<InMemoryGatewayStateRepository> CreateRepositoryAsync()
+    private static async Task<FakeGatewayStateRepository> CreateRepositoryAsync()
     {
-        var repository = new InMemoryGatewayStateRepository();
+        var repository = new FakeGatewayStateRepository();
         await repository.AddAsync(new GatewayState
         {
             ApiKeys =
@@ -144,7 +143,7 @@ public sealed class GatewayAccessUseCaseTests
         }
     });
 
-    private sealed class StubProjectStorage : IProjectStorageManager
+    private sealed class StubProjectStorageManager : IProjectStorageManager
     {
         public void Create(string projectId)
         {

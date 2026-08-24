@@ -19,7 +19,7 @@ COPY src/CodexGateway.App/CodexGateway.App.csproj src/CodexGateway.App/
 COPY src/CodexGateway.Infrastructure.Codex/CodexGateway.Infrastructure.Codex.csproj src/CodexGateway.Infrastructure.Codex/
 COPY src/CodexGateway.Infrastructure.Mcp/CodexGateway.Infrastructure.Mcp.csproj src/CodexGateway.Infrastructure.Mcp/
 COPY src/CodexGateway.Infrastructure.Persistence/CodexGateway.Infrastructure.Persistence.csproj src/CodexGateway.Infrastructure.Persistence/
-COPY src/CodexGateway.Infrastructure.Storage/CodexGateway.Infrastructure.Storage.csproj src/CodexGateway.Infrastructure.Storage/
+COPY src/CodexGateway.Infrastructure.FileStorage/CodexGateway.Infrastructure.FileStorage.csproj src/CodexGateway.Infrastructure.FileStorage/
 COPY src/CodexGateway.Logic/CodexGateway.Logic.csproj src/CodexGateway.Logic/
 COPY src/CodexGateway.Models/CodexGateway.Models.csproj src/CodexGateway.Models/
 COPY src/CodexGateway.ServiceDefaults/CodexGateway.ServiceDefaults.csproj src/CodexGateway.ServiceDefaults/
@@ -32,7 +32,7 @@ COPY src/CodexGateway.App/ src/CodexGateway.App/
 COPY src/CodexGateway.Infrastructure.Codex/ src/CodexGateway.Infrastructure.Codex/
 COPY src/CodexGateway.Infrastructure.Mcp/ src/CodexGateway.Infrastructure.Mcp/
 COPY src/CodexGateway.Infrastructure.Persistence/ src/CodexGateway.Infrastructure.Persistence/
-COPY src/CodexGateway.Infrastructure.Storage/ src/CodexGateway.Infrastructure.Storage/
+COPY src/CodexGateway.Infrastructure.FileStorage/ src/CodexGateway.Infrastructure.FileStorage/
 COPY src/CodexGateway.Logic/ src/CodexGateway.Logic/
 COPY src/CodexGateway.Models/ src/CodexGateway.Models/
 COPY src/CodexGateway.ServiceDefaults/ src/CodexGateway.ServiceDefaults/
