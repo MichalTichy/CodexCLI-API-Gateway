@@ -1,10 +1,15 @@
-using Microsoft.Extensions.Hosting;
+using Shared.Infrastructure.Initializer;
 
 namespace CodexGateway.Infrastructure.Codex.Containers;
 
-public sealed class ContainerRuntimePreflightService(ContainerRuntime runtime) : IHostedService
+public sealed class ContainerRuntimePreflightInitializer(ContainerRuntime runtime) : InitializerBase
 {
-    public Task StartAsync(CancellationToken cancellationToken) => runtime.PreflightAsync(cancellationToken);
+    public override int Priority => 0;
 
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public override InitializerTrigger Trigger => InitializerTrigger.OnStartup;
+
+    public override bool RunOnlyInLeaderInstance => false;
+
+    protected override Task RunInitializationLogicAsync() =>
+        runtime.PreflightAsync(CancellationToken.None);
 }

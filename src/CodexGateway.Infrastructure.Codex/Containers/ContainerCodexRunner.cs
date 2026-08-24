@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
-using CodexGateway.Infrastructure.Storage;
+using CodexGateway.Infrastructure.FileStorage;
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.McpServers;
 using CodexGateway.Logic.Errors;

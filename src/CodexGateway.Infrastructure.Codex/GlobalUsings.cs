@@ -1,9 +1,10 @@
 global using CodexGateway.Infrastructure.Codex.Containers;
 global using CodexGateway.Infrastructure.Codex.Containers.Models;
-global using CodexGateway.Infrastructure.Storage.Artifacts;
-global using CodexGateway.Infrastructure.Storage.Configuration;
-global using CodexGateway.Infrastructure.Storage.Files;
-global using CodexGateway.Infrastructure.Storage.Workspaces;
+global using CodexGateway.Infrastructure.FileStorage.Artifacts;
+global using CodexGateway.Infrastructure.FileStorage.Configuration;
+global using CodexGateway.Infrastructure.FileStorage.Files;
+global using CodexGateway.Infrastructure.FileStorage.Workspaces;
+global using Shared.Infrastructure.IoC.Installers;
 global using CodexGateway.Logic.Codex;
 global using CodexGateway.Logic.Codex.Models;
 global using CodexGateway.Logic.Configuration.Models;

@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
-using CodexGateway.Infrastructure.Storage;
+using CodexGateway.Infrastructure.FileStorage;
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.McpServers;
 using CodexGateway.Logic.Configuration;

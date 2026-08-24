@@ -11,8 +11,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CodexGateway.Infrastructure.Storage\CodexGateway.Infrastructure.Storage.csproj" />
+    <ProjectReference Include="..\CodexGateway.Infrastructure.FileStorage\CodexGateway.Infrastructure.FileStorage.csproj" />
     <ProjectReference Include="..\..\SharedInfrastructure\Shared.Infrastructure.IoC\Shared.Infrastructure.IoC.csproj" />
+    <ProjectReference Include="..\..\SharedInfrastructure\Shared.Infrastructure.Initializer\Shared.Infrastructure.Initializer.csproj" />
     <ProjectReference Include="..\CodexGateway.Logic\CodexGateway.Logic.csproj" />
     <ProjectReference Include="..\CodexGateway.Models\CodexGateway.Models.csproj" />
   </ItemGroup>
