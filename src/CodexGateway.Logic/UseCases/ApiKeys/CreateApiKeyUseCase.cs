@@ -1,12 +1,13 @@
+using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using CodexGateway.Logic.Errors;
 using CodexGateway.Models;
 using MediatR;
 using Shared.Infrastructure.Persistence.Repositories;
-using System.Text.RegularExpressions;
 
 namespace CodexGateway.Logic.UseCases.ApiKeys;
 
-public sealed record CreateApiKeyUseCase(string Id, string Name, string Key)
+public sealed record CreateApiKeyUseCase(string Id, string Name)
     : IRequest<ApiKeyDefinition>;
 
 public sealed partial class CreateApiKeyUseCaseHandler(
@@ -19,7 +20,6 @@ public sealed partial class CreateApiKeyUseCaseHandler(
     {
         var id = request.Id?.Trim().ToLowerInvariant() ?? string.Empty;
         var name = request.Name?.Trim() ?? string.Empty;
-        var key = request.Key?.Trim() ?? string.Empty;
         if (!IdPattern().IsMatch(id))
         {
             throw GatewayException.InvalidRequest(
@@ -32,27 +32,38 @@ public sealed partial class CreateApiKeyUseCaseHandler(
             throw GatewayException.InvalidRequest("API key name is required and limited to 128 characters.", parameter: "name");
         }
 
-        if (key.Length == 0 || !string.Equals(key, request.Key, StringComparison.Ordinal))
-        {
-            throw GatewayException.InvalidRequest("API key is required and cannot start or end with whitespace.", parameter: "key");
-        }
-
-        var created = new ApiKeyDefinition { Id = id, Name = name, Key = key };
-        await repository.GetAndUpdateAsync(GatewayState.DocumentId, current =>
+        return await repository.GetAndUpdateAsync(GatewayState.DocumentId, current =>
         {
             if (current.ApiKeys.Any(existing =>
-                    string.Equals(existing.Id, id, StringComparison.Ordinal) ||
-                    string.Equals(existing.Key, key, StringComparison.Ordinal)))
+                    string.Equals(existing.Id, id, StringComparison.Ordinal)))
             {
                 throw GatewayException.InvalidRequest(
-                    "API key IDs and secrets must be unique.",
+                    "An API key with this ID already exists.",
                     "api_key_exists",
                     "id");
             }
 
+            var created = new ApiKeyDefinition
+            {
+                Id = id,
+                Name = name,
+                Key = GenerateUniqueKey(current.ApiKeys)
+            };
             current.ApiKeys.Add(created);
+            return Task.FromResult(created);
         }, cancellationToken);
-        return created;
+    }
+
+    private static string GenerateUniqueKey(IReadOnlyCollection<ApiKeyDefinition> existingKeys)
+    {
+        string key;
+        do
+        {
+            key = "cg_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+        }
+        while (existingKeys.Any(existing => string.Equals(existing.Key, key, StringComparison.Ordinal)));
+
+        return key;
     }
 
     [GeneratedRegex("^[a-z0-9][a-z0-9_-]{0,63}$", RegexOptions.CultureInvariant)]
