@@ -8,7 +8,7 @@ An internal .NET gateway that exposes a dedicated Codex CLI identity through an 
 - Projectless runs with disposable workspaces.
 - Project runs with persistent artifacts and one run at a time per project.
 - Dynamic Codex model and reasoning-effort discovery through Codex App Server.
-- Global API keys configured in appsettings, with per-project access and separate visible/enabled MCP tool grants for each key.
+- Gateway-wide API keys stored in PostgreSQL, with per-project access and separate visible/enabled MCP tool grants for each key.
 - A trusted MCP catalog. An administrator assigns each allowed key exact tool visibility and invocation allowlists inside a project.
 - A server-side interactive Blazor administration UI for Codex device authentication, projects, API-key grants, and the trusted MCP catalog.
 - Bounded concurrency, queueing, timeouts, client-disconnect cancellation, and forced container cleanup.
@@ -18,11 +18,46 @@ An internal .NET gateway that exposes a dedicated Codex CLI identity through an 
 - PostgreSQL document persistence through Marten for API keys, projects, grants, and the trusted MCP catalog.
 - Deterministic end-to-end tests using a fake container engine and fake Codex protocol process; no OpenAI account or network is required for tests.
 
-## Request flow
+## High-level concept
+
+The gateway has one executable host and several self-contained modules. The host discovers each module's installer and composes them, but business behavior stays in protocol-neutral use cases. API adapters translate an external wire format into those use cases. Infrastructure modules implement the ports needed for PostgreSQL, filesystem storage, Codex, containers, and MCP. Persisted records and shared repository contracts sit at the center and do not depend on an API or infrastructure implementation.
 
 ```mermaid
 flowchart LR
-    Client["OpenAI client"] -->|"Global Bearer API key"| API["FastEndpoints API"]
+    Client["Client"] --> Adapter["API adapter<br/>OpenAI today"]
+    Admin["Blazor admin UI"] --> UseCases["Logic<br/>use cases + specifications"]
+    Adapter --> UseCases
+    UseCases --> Models["Models<br/>persisted records"]
+    UseCases --> Ports["Logic ports"]
+    Ports --> Persistence["Marten / PostgreSQL"]
+    Ports --> Storage["Filesystem storage"]
+    Ports --> Codex["Codex + containers"]
+    Ports --> Mcp["Gateway-hosted MCP"]
+    App["App composition root"] -. discovers and registers .-> Adapter
+    App -. discovers and registers .-> UseCases
+    App -. discovers and registers .-> Persistence
+    App -. discovers and registers .-> Storage
+    App -. discovers and registers .-> Codex
+    App -. discovers and registers .-> Mcp
+```
+
+The dependency rule is inward: `App` may reference every selected edge module; an API adapter may reference `Api`, `Logic`, and `Models`; infrastructure implements interfaces owned by `Logic`; and `Logic` depends only on `Models` plus the shared repository/specification contracts. This keeps the OpenAI schema replaceable and prevents database, container, or filesystem details from leaking into use cases.
+
+The normal path through the code is:
+
+1. [`Program.cs`](src/CodexGateway.App/Program.cs) discovers module installers, then defines the visible middleware and endpoint order.
+2. An API adapter endpoint, such as [`ChatCompletionsEndpoint.cs`](src/CodexGateway.Api.OpenAI/ChatCompletions/Endpoints/ChatCompletionsEndpoint.cs), validates the wire request and sends a named MediatR use case.
+3. A handler in [`Logic/UseCases`](src/CodexGateway.Logic/UseCases/) owns the application operation. Reusable database query intent is expressed by a specification in [`Logic/Specifications`](src/CodexGateway.Logic/Specifications/).
+4. The handler accesses persistence through the shared repository contracts and non-database capabilities through ports in `Logic`, such as [`ICodexRunner`](src/CodexGateway.Logic/Codex/ICodexRunner.cs) or [`IProjectStorageManager`](src/CodexGateway.Logic/Storage/IProjectStorageManager.cs).
+5. A focused infrastructure module implements each port. Its installer registers the implementation without making the use case depend on that module.
+
+The [component map](#component-map) identifies the owner of every major responsibility and the exact files to start from when changing it.
+
+## Runtime request flow
+
+```mermaid
+flowchart LR
+    Client["OpenAI client"] -->|"Bearer API key"| API["FastEndpoints API"]
     API --> Scope{"Project selector?"}
     Scope -->|"No selector"| Temp["Disposable workspace"]
     Scope -->|"/p/{id}/v1 or OpenAI-Project"| Grant["Project grant for this API key"]
@@ -37,7 +72,7 @@ flowchart LR
     Container --> Run["codex exec --ephemeral"]
     Run -->|"JSONL events"| Adapter["OpenAI response adapter"]
     Adapter --> Client
-    Control["Admin UI"] --> Projects["Projects + global-key grants + trusted MCP catalog"]
+    Control["Admin UI"] --> Projects["Projects + API-key grants + trusted MCP catalog"]
     Control --> AppServer["Codex App Server"]
     AppServer --> Auth
     AppServer --> Models["Models + reasoning levels"]
@@ -384,7 +419,7 @@ curl.exe http://localhost:5050/p/accounting/v1/files `
   -F "file=@report.csv"
 ```
 
-Project uploads are persistent artifacts shared by the keys allowed into that project. Projectless uploads are private to the global API-key ID that uploaded them, expire after `Gateway:Files:ProjectlessTtlHours`, and must be referenced using either the request-level `file_ids` array or the standard nested content part `{"type":"file","file":{"file_id":"file_..."}}`. The top-level `file_id` form is also accepted as a compatibility extension.
+Project uploads are persistent artifacts shared by the keys allowed into that project. Projectless uploads are private to the API-key ID that uploaded them, expire after `Gateway:Files:ProjectlessTtlHours`, and must be referenced using either the request-level `file_ids` array or the standard nested content part `{"type":"file","file":{"file_id":"file_..."}}`. The top-level `file_id` form is also accepted as a compatibility extension.
 
 Uploaded project files live in the writable artifact tree. If Codex modifies one, file metadata and download length are refreshed from the committed content; if Codex deletes or renames it, the old file ID becomes unavailable.
 
@@ -394,13 +429,13 @@ The sampled guard can briefly overshoot before its next poll; it measures logica
 
 ## Projects and MCP servers
 
-Projects are created only through the management UI/API. Project IDs are immutable. A project request succeeds only when its global API key has an explicit access entry; unknown, disabled, or inaccessible projects use the same `401 invalid_api_key` response so the public API does not reveal project existence.
+Projects are created only through the management UI. Project IDs are immutable. A project request succeeds only when its API key has an explicit access entry; unknown, disabled, or inaccessible projects use the same `401 invalid_api_key` response so the public API does not reveal project existence.
 
 The MCP catalog is the trust boundary:
 
 1. Add a trusted HTTP or STDIO server in the admin UI.
 2. Declare the tools that server is allowed to expose.
-3. In a project, allow a configured global API key and assign that key the server plus exact visible and enabled tools.
+3. In a project, allow an API key and assign that key the server plus exact visible and enabled tools.
 4. Repeat independently for other keys that need different capabilities in the same project.
 5. A run resolves the authenticated key's assignment and receives only its enabled subset through Codex `enabled_tools` configuration.
 
@@ -485,7 +520,7 @@ Run the complete repeatable suite:
 dotnet test CodexGateway.slnx
 ```
 
-The end-to-end tests host the full ASP.NET Core pipeline and call it through `HttpClient`. A deterministic fake container engine launches `CodexGateway.FakeCodex` for the run JSONL protocol, while the fake also implements the App Server protocol. The suite covers global-key/project grants, URL and `OpenAI-Project` scope selection, API/admin authentication boundaries, Blazor login/dashboard/logout rendering, framework assets and circuit negotiation, models/reasoning, rich versioned tool discovery, visible-versus-enabled grants, explicit unsupported-feature errors, JSON-schema output staging and validation, non-streaming and SSE responses (including usage chunks), nested file inputs and scope isolation, project persistence and parallel/serialized runs, per-key MCP filtering, device auth, queue overflow, cancellation, timeouts, stderr flooding, live quota termination, aggregate project-upload limits, symlink rejection, container failures, orphan reconciliation, hardened argument construction, and information-leak prevention. Tests require no Codex login and make no remote AI calls.
+The end-to-end tests host the full ASP.NET Core pipeline and call it through `HttpClient`. A deterministic fake container engine launches `CodexGateway.FakeCodex` for the run JSONL protocol, while the fake also implements the App Server protocol. The suite covers API-key/project grants, URL and `OpenAI-Project` scope selection, API/admin authentication boundaries, Blazor login/dashboard/logout rendering, framework assets and circuit negotiation, models/reasoning, rich versioned tool discovery, visible-versus-enabled grants, explicit unsupported-feature errors, JSON-schema output staging and validation, non-streaming and SSE responses (including usage chunks), nested file inputs and scope isolation, project persistence and parallel/serialized runs, per-key MCP filtering, device auth, queue overflow, cancellation, timeouts, stderr flooding, live quota termination, aggregate project-upload limits, symlink rejection, container failures, orphan reconciliation, hardened argument construction, and information-leak prevention. Tests require no Codex login and make no remote AI calls.
 
 The separate official-client compatibility suite pins `OpenAI` `2.13.0` as the Gateway's reviewed client version and commits sanitized golden wire fixtures for plain/history chat, SSE with usage, JSON-schema output, and rejected local function tools. Samwise is currently scaffolded but does not yet pin OpenAI, `Microsoft.Extensions.AI.OpenAI`, or Microsoft Agent Framework packages, so `2.13.0` must not be described as Samwise's pin. Align this suite and add Agent Framework session round-trip coverage when Samwise commits those exact versions.
 
@@ -504,36 +539,80 @@ That repeatable smoke builds both image targets and verifies:
 
 It deliberately does not make a paid/live model request because a repeatable packaging check has no Codex credentials. Use `-SkipBuild -GatewayImage codex-gateway:verify -RunnerImage codex-gateway-runner:0.148.0` to retest existing images.
 
-## Repository layout
+## Component map
 
-```text
-SharedInfrastructure/Shared.Infrastructure.Persistence*/ Vendored Edifio repository, specification, Marten, session, and unit-of-work infrastructure
-src/CodexGateway.Models/          Persisted project, MCP, and file models
-src/CodexGateway.Logic/           Use cases, specifications, orchestration, and infrastructure ports
-src/CodexGateway.Infrastructure.Persistence/ Gateway Marten installer, state initialization, and test repository
-src/CodexGateway.Infrastructure.Storage/ Filesystem workspaces, artifacts, quotas, and cleanup
-src/CodexGateway.Infrastructure.Codex/   Codex App Server, process/container runtime, and MCP discovery
-src/CodexGateway.Infrastructure.Mcp/     Gateway-hosted HTTP and local STDIO MCP sessions
-SharedInfrastructure/Shared.Infrastructure.IoC/  Installer contracts and deterministic module discovery
-src/CodexGateway.Api/             Schema-neutral FastEndpoints bootstrap and request context access
-src/CodexGateway.Api.OpenAI/      OpenAI wire contracts, endpoints, validation, and mapping
-src/CodexGateway.App/             Composition root, authentication, and Blazor UI
-src/CodexGateway.AppHost/         Aspire orchestration
-src/CodexGateway.ServiceDefaults/ Health, telemetry, discovery, resilience
-tests/CodexGateway.Tests/         Protocol-focused unit tests
-tests/CodexGateway.EndToEndTests/ Repeatable HTTP-to-container-protocol tests
-tests/CodexGateway.OpenAICompatibilityTests/ Official OpenAI .NET client and golden-wire tests
-tests/CodexGateway.FakeCodex/     Deterministic test double executable
-scripts/                          Repeatable production-container verification
-```
+Use this section as the entry point for code changes. Each component owns one kind of decision; follow the links in the last column before searching the rest of the repository.
 
-Dependencies point inward: `App` composes the API adapters and separate Codex, MCP, persistence, and filesystem infrastructure modules. `Logic` depends on `Models` and the vendored shared repository/specification contracts; it does not depend on Marten. `Infrastructure.Persistence` adapts those contracts to Marten/PostgreSQL, while `Infrastructure.Storage` owns only project files, workspaces, artifacts, quotas, and cleanup. API adapters remain replaceable edge modules and cannot reference the host or infrastructure projects.
+### Composition and module boundaries
 
-The Blazor admin UI is also an edge adapter. Every action is a named MediatR use case; dashboard reads use `IReadOnlyRepository<GatewayState>` with explicit specifications. Write handlers use `IRepository<GatewayState>` directly. Marten persists the configuration as one optimistic-concurrency document so catalog changes and related grant updates remain atomic. There is no gateway-specific repository facade or pass-through application-service layer.
+| Component | Responsibility | Start here and change here |
+|---|---|---|
+| Application host | Builds the process, discovers every selected module, and keeps security-sensitive middleware and endpoint order visible. It is the only project that composes API adapters with infrastructure. | Start at [`Program.cs`](src/CodexGateway.App/Program.cs). Add or reorder middleware and mapped endpoint groups there. Add a new module to the process through [`CodexGateway.App.csproj`](src/CodexGateway.App/CodexGateway.App.csproj), then let installer discovery register it. |
+| Installer convention | Gives each module one self-contained place for dependency registration. Installers run deterministically in high, normal, then low priority order. | The contracts and discovery algorithm are in [`Shared.Infrastructure.IoC/Installers`](SharedInfrastructure/Shared.Infrastructure.IoC/Installers/). Change a module's registrations in its own `Composition/*Installer.cs`; for example [`LogicInstaller.cs`](src/CodexGateway.Logic/Composition/LogicInstaller.cs). Do not hide middleware order in an installer. |
+| Architecture rules | Enforces inward dependencies, adapter isolation, installer ownership, and the one-top-level-type-per-file convention. | Change architectural policy in [`ArchitectureDependencyTests.cs`](tests/CodexGateway.Tests/Architecture/ArchitectureDependencyTests.cs), [`InstallerDiscoveryTests.cs`](tests/CodexGateway.Tests/Architecture/InstallerDiscoveryTests.cs), and [`SourceFileArchitectureTests.cs`](tests/CodexGateway.Tests/Architecture/SourceFileArchitectureTests.cs). Update these tests intentionally when introducing a new allowed dependency. |
 
-The admin route and all of its components are grouped under `Components/Pages/Admin`, with feature folders for `ApiKeys`, `Codex`, `Dashboard`, `McpServers`, `Projects`, and `Shared`. Production C# follows one top-level type per file; private nested implementation details may remain with their owner. An architecture test enforces this convention across `src`.
+`App` references the selected edge modules. API adapters reference the schema-neutral `Api` project and the inward projects they need. Infrastructure projects implement interfaces owned by `Logic`. `Logic` references `Models` and shared abstractions, but not Marten, FastEndpoints, Blazor, Docker, or a specific API schema.
 
-Service registration follows Edifio's installer convention. Every application module that owns ordinary `IServiceCollection` registrations has a public parameterless `IInstaller`; the host runs deterministic discovery once, in high, normal, and low priority tiers. Adapter installers contribute endpoint assemblies during normal registration, and the schema-neutral API installer aggregates those assemblies at low priority. `Program.cs` deliberately retains middleware ordering and endpoint mapping because installers configure services only. MediatR is exactly pinned to the pre-license-key `12.5.0` release.
+### Core application and persistence model
+
+| Component | Responsibility | Start here and change here |
+|---|---|---|
+| Persisted gateway model | Defines the durable API keys, projects, project grants, MCP catalog, and file records. [`GatewayState`](src/CodexGateway.Models/Gateway/GatewayState.cs) is stored as one optimistic-concurrency Marten document so related configuration changes are atomic. | Change the aggregate in [`CodexGateway.Models/Gateway`](src/CodexGateway.Models/Gateway/) and the relevant record folder: [`ApiKeys`](src/CodexGateway.Models/ApiKeys/), [`Projects`](src/CodexGateway.Models/Projects/), [`McpServers`](src/CodexGateway.Models/McpServers/), or [`Files`](src/CodexGateway.Models/Files/). Then update affected use cases, specifications, UI editors, and tests. |
+| Use cases | Own one named application operation each: authenticate a request, manage a project or API key, list models, discover tools, handle a file, or generate an assistant response. Endpoints and Blazor components call these handlers through MediatR. | Start in [`CodexGateway.Logic/UseCases`](src/CodexGateway.Logic/UseCases/), organized by feature. Add behavior to the relevant handler instead of an endpoint or generic service. The model-run entry point is [`GenerateAssistantResponseUseCase.cs`](src/CodexGateway.Logic/UseCases/Generation/GenerateAssistantResponseUseCase.cs); request authorization starts in [`AuthenticateGatewayRequestUseCase.cs`](src/CodexGateway.Logic/UseCases/Security/AuthenticateGatewayRequestUseCase.cs). |
+| Specifications | Describe reusable database query intent and keep filtering and ordering translatable to Marten/PostgreSQL. They are for persisted queries, not filesystem, process, or HTTP operations. | Change project, API-key, or MCP query rules in [`CodexGateway.Logic/Specifications`](src/CodexGateway.Logic/Specifications/). Put ordering in the specification's `Apply` method so it executes in the database. Translation coverage lives in [`MartenProjectionTranslationTests.cs`](tests/CodexGateway.Tests/Architecture/MartenProjectionTranslationTests.cs). |
+| Application ports | Prevent application behavior from depending on concrete filesystem, Codex, container, or MCP implementations. | Codex ports are in [`Logic/Codex`](src/CodexGateway.Logic/Codex/), storage ports in [`Logic/Storage`](src/CodexGateway.Logic/Storage/), and the gateway MCP session port in [`Logic/McpServers`](src/CodexGateway.Logic/McpServers/). Change an interface only when the application needs a new capability, then update its owning infrastructure adapter. |
+| Generation orchestration | Converts normalized messages into a Codex prompt, controls admission/project serialization, prepares MCP access, runs Codex, and returns a protocol-neutral result. | Change normalized request/result shapes in [`Logic/Generation/Models`](src/CodexGateway.Logic/Generation/Models/), prompt construction in [`PromptComposer.cs`](src/CodexGateway.Logic/Generation/PromptComposer.cs), concurrency in [`RunCoordinator.cs`](src/CodexGateway.Logic/Codex/RunCoordinator.cs), and end-to-end orchestration in [`GenerateAssistantResponseUseCase.cs`](src/CodexGateway.Logic/UseCases/Generation/GenerateAssistantResponseUseCase.cs). |
+| Repository abstractions | Provide the Edifio-style repository/specification boundary used by `Logic`. This is vendored shared infrastructure rather than gateway-specific application code. | Repository contracts are in [`Shared.Infrastructure.Persistence/Repositories`](SharedInfrastructure/Shared.Infrastructure.Persistence/Repositories/) and specification contracts in [`Shared.Infrastructure.Persistence/Specifications`](SharedInfrastructure/Shared.Infrastructure.Persistence/Specifications/). Change these only for a capability that should be shared by every persisted aggregate. |
+| Marten persistence | Adapts the shared repositories to PostgreSQL, configures optimistic concurrency, initializes the singleton gateway state, and substitutes an in-memory repository in the `Testing` environment. | Gateway registration is in [`PersistenceInfrastructureInstaller.cs`](src/CodexGateway.Infrastructure.Persistence/Composition/PersistenceInfrastructureInstaller.cs), initialization in [`GatewayStateInitializer.cs`](src/CodexGateway.Infrastructure.Persistence/Initialization/GatewayStateInitializer.cs), and the test implementation in [`InMemoryGatewayStateRepository.cs`](src/CodexGateway.Infrastructure.Persistence/Repositories/InMemoryGatewayStateRepository.cs). Generic Marten behavior is in [`Shared.Infrastructure.Persistence.Marten`](SharedInfrastructure/Shared.Infrastructure.Persistence.Marten/). |
+
+Dashboard reads use `IReadOnlyRepository<GatewayState>` with explicit specifications. Write use cases use `IRepository<GatewayState>` directly. There is deliberately no gateway-specific repository facade or pass-through application-service layer.
+
+### HTTP and API schemas
+
+| Component | Responsibility | Start here and change here |
+|---|---|---|
+| Schema-neutral API bootstrap | Configures FastEndpoints once, collects only explicitly selected adapter assemblies, sets request-size limits, and exposes the authenticated request context without knowing an external schema. | Change shared HTTP bootstrap in [`GatewayApiInstaller.cs`](src/CodexGateway.Api/Composition/GatewayApiInstaller.cs), endpoint assembly selection in [`GatewayEndpointAssembly.cs`](src/CodexGateway.Api/Composition/GatewayEndpointAssembly.cs), and request-context access in [`GatewayRequestContextExtensions.cs`](src/CodexGateway.Api/Security/GatewayRequestContextExtensions.cs). Schema-specific routes and envelopes do not belong here. |
+| OpenAI request pipeline | Recognizes OpenAI and project-scoped paths, extracts the Bearer credential and `OpenAI-Project` selector, authenticates through the security use case, and maps failures to the OpenAI error shape. | Start at [`OpenAiRequestMiddleware.cs`](src/CodexGateway.Api.OpenAI/Pipeline/OpenAiRequestMiddleware.cs). Change OpenAI errors in [`OpenAiErrorResponseMapper.cs`](src/CodexGateway.Api.OpenAI/Errors/OpenAiErrorResponseMapper.cs) and JSON defaults in [`OpenAiJson.cs`](src/CodexGateway.Api.OpenAI/Serialization/OpenAiJson.cs). |
+| Chat Completions adapter | Owns the OpenAI chat wire DTOs, validation, mapping, endpoint, and SSE/non-streaming response format. It translates to protocol-neutral generation models and does not execute Codex directly. | Change the route/response stream in [`ChatCompletionsEndpoint.cs`](src/CodexGateway.Api.OpenAI/ChatCompletions/Endpoints/ChatCompletionsEndpoint.cs), accepted request fields in [`ChatCompletionRequest.cs`](src/CodexGateway.Api.OpenAI/ChatCompletions/Models/ChatCompletionRequest.cs), rules in [`ChatCompletionRequestValidator.cs`](src/CodexGateway.Api.OpenAI/ChatCompletions/ChatCompletionRequestValidator.cs), and translation in [`OpenAiChatCompletionMapper.cs`](src/CodexGateway.Api.OpenAI/ChatCompletions/OpenAiChatCompletionMapper.cs). |
+| Model, tool, and file endpoints | Expose model discovery, the custom rich tool catalog, and OpenAI-shaped file operations by calling their corresponding use cases. | Models: [`ModelsEndpoint.cs`](src/CodexGateway.Api.OpenAI/ModelCatalog/Endpoints/ModelsEndpoint.cs) and [`ListModelsUseCase.cs`](src/CodexGateway.Logic/UseCases/ModelCatalog/ListModelsUseCase.cs). Tools: [`ToolsEndpoint.cs`](src/CodexGateway.Api.OpenAI/Tools/Endpoints/ToolsEndpoint.cs) and [`GetToolCatalogUseCase.cs`](src/CodexGateway.Logic/UseCases/Tools/GetToolCatalogUseCase.cs). Files: [`Api.OpenAI/Files`](src/CodexGateway.Api.OpenAI/Files/) and [`Logic/UseCases/Files`](src/CodexGateway.Logic/UseCases/Files/). |
+| Additional API schema | Encapsulates another external contract without changing normalized application behavior. Each adapter owns its routes, DTOs, validation, authentication extraction, error shape, streaming, mapping, and installer. | Follow [Adding an API adapter](#adding-an-api-adapter). Use [`CodexGateway.Api.OpenAI`](src/CodexGateway.Api.OpenAI/) as the reference implementation, not as a dependency. |
+
+### Infrastructure adapters
+
+| Component | Responsibility | Start here and change here |
+|---|---|---|
+| Filesystem storage | Resolves storage roots, isolates project and projectless files, creates private run snapshots, commits successful artifacts, enforces quotas, and removes expired temporary files. | Registration is in [`StorageInfrastructureInstaller.cs`](src/CodexGateway.Infrastructure.Storage/Composition/StorageInfrastructureInstaller.cs). Change paths in [`StoragePaths.cs`](src/CodexGateway.Infrastructure.Storage/Configuration/StoragePaths.cs), persistent projects in [`ProjectStorage.cs`](src/CodexGateway.Infrastructure.Storage/Projects/ProjectStorage.cs), uploaded files in [`FileStore.cs`](src/CodexGateway.Infrastructure.Storage/Files/FileStore.cs), run snapshots in [`WorkspaceManager.cs`](src/CodexGateway.Infrastructure.Storage/Workspaces/WorkspaceManager.cs), and quota enforcement in [`Artifacts`](src/CodexGateway.Infrastructure.Storage/Artifacts/). |
+| Codex control plane | Talks to Codex App Server on the host for device login, account state, model discovery, and reasoning-effort discovery. It is separate from model execution. | Change the protocol client and cache behavior in [`CodexAppServerClient.cs`](src/CodexGateway.Infrastructure.Codex/AppServer/CodexAppServerClient.cs). Its application-facing contract is [`ICodexControlPlane.cs`](src/CodexGateway.Logic/Codex/ICodexControlPlane.cs); admin actions are in [`UseCases/CodexAuthentication`](src/CodexGateway.Logic/UseCases/CodexAuthentication/). |
+| Container execution | Builds hardened Docker arguments, starts one short-lived runner for each model call, filters its environment, consumes Codex JSONL events, cancels/removes containers, and reconciles stale containers at startup. There is no host execution fallback. | Start with [`ContainerCodexRunner.cs`](src/CodexGateway.Infrastructure.Codex/Containers/ContainerCodexRunner.cs). Change Docker arguments and mounts in [`ContainerCommandBuilder.cs`](src/CodexGateway.Infrastructure.Codex/Containers/ContainerCommandBuilder.cs), lifecycle calls in [`ContainerRuntime.cs`](src/CodexGateway.Infrastructure.Codex/Containers/ContainerRuntime.cs), environment policy in [`CodexProcessEnvironment.cs`](src/CodexGateway.Infrastructure.Codex/Containers/CodexProcessEnvironment.cs), and startup checks/reconciliation in [`ContainerRuntimePreflightService.cs`](src/CodexGateway.Infrastructure.Codex/Containers/ContainerRuntimePreflightService.cs). |
+| MCP metadata discovery | Connects to configured trusted servers to obtain live server descriptions, tool descriptions, schemas, annotations, and icons before filtering the catalog for a key/project grant. | Change discovery and metadata normalization in [`McpMetadataDiscoveryService.cs`](src/CodexGateway.Infrastructure.Codex/Mcp/McpMetadataDiscoveryService.cs). Change the returned application model in [`Logic/Tools/Models`](src/CodexGateway.Logic/Tools/Models/) and authorization/filtering in [`GetToolCatalogUseCase.cs`](src/CodexGateway.Logic/UseCases/Tools/GetToolCatalogUseCase.cs). |
+| Gateway-hosted MCP | Creates run-scoped sessions with opaque tokens, proxies HTTP servers, launches local STDIO servers, keeps upstream secrets in the gateway, and cleans sessions up. | Registration/options are in [`GatewayMcpInfrastructureInstaller.cs`](src/CodexGateway.Infrastructure.Mcp/Composition/GatewayMcpInfrastructureInstaller.cs) and [`GatewayMcpOptions.cs`](src/CodexGateway.Infrastructure.Mcp/Configuration/Models/GatewayMcpOptions.cs). Change session/token behavior in [`GatewayMcpSessionManager.cs`](src/CodexGateway.Infrastructure.Mcp/Sessions/GatewayMcpSessionManager.cs), transports in [`Transport`](src/CodexGateway.Infrastructure.Mcp/Transport/), and the internal runner-facing route in [`GatewayMcpEndpointExtensions.cs`](src/CodexGateway.App/Mcp/Endpoints/GatewayMcpEndpointExtensions.cs). |
+
+### Management UI, hosting, and tests
+
+| Component | Responsibility | Start here and change here |
+|---|---|---|
+| Blazor management UI | Provides the trusted server-side interface for Codex login, API keys, projects/grants, and MCP catalog configuration. Components send the same use cases used by other edge adapters; there is no management JSON API. | The route shell is [`AdminPage.razor`](src/CodexGateway.App/Components/Pages/Admin/AdminPage.razor) with code in [`AdminPage.razor.cs`](src/CodexGateway.App/Components/Pages/Admin/AdminPage.razor.cs). Feature UI is grouped under [`ApiKeys`](src/CodexGateway.App/Components/Pages/Admin/ApiKeys/), [`Codex`](src/CodexGateway.App/Components/Pages/Admin/Codex/), [`Dashboard`](src/CodexGateway.App/Components/Pages/Admin/Dashboard/), [`McpServers`](src/CodexGateway.App/Components/Pages/Admin/McpServers/), and [`Projects`](src/CodexGateway.App/Components/Pages/Admin/Projects/). Keep markup in `.razor` and behavior in the matching `.razor.cs`. |
+| Admin authentication/session | Owns the single admin cookie, login/logout form routes, server-side session revocation, and Blazor circuit revalidation. This is separate from OpenAI API-key authentication. | Change login/logout routes in [`AdminAuthenticationRoutes.cs`](src/CodexGateway.App/Admin/Authentication/AdminAuthenticationRoutes.cs), settings in [`AdminUiOptions.cs`](src/CodexGateway.App/Admin/Authentication/Models/AdminUiOptions.cs), registration/cookie policy in [`AppInstaller.cs`](src/CodexGateway.App/Composition/AppInstaller.cs), and circuit/session behavior in [`Admin/Sessions`](src/CodexGateway.App/Admin/Sessions/). |
+| Configuration | Defines validated option shapes and their deployment values. The option class explains meaning; `appsettings.json`, environment variables, Aspire, and Compose provide values. | Gateway/run/file/artifact settings are in [`Logic/Configuration/Models`](src/CodexGateway.Logic/Configuration/Models/); MCP settings in [`GatewayMcpOptions.cs`](src/CodexGateway.Infrastructure.Mcp/Configuration/Models/GatewayMcpOptions.cs); admin settings in [`AdminUiOptions.cs`](src/CodexGateway.App/Admin/Authentication/Models/AdminUiOptions.cs). Defaults are in [`appsettings.json`](src/CodexGateway.App/appsettings.json), Aspire wiring in [`AppHost/Program.cs`](src/CodexGateway.AppHost/Program.cs), and container deployment in [`compose.yaml`](compose.yaml). Update the [configuration table](#configuration) when adding or renaming a public setting. |
+| Service defaults | Adds health endpoints, OpenTelemetry, service discovery, and standard HTTP resilience used by the host. | Change shared operational defaults in [`ServiceDefaults/Hosting/Extensions.cs`](src/CodexGateway.ServiceDefaults/Hosting/Extensions.cs). Map them from [`App/Program.cs`](src/CodexGateway.App/Program.cs). |
+| Aspire AppHost | Runs PostgreSQL, builds the runner image, and starts the gateway with local persistent directories for development. | Change local orchestration in [`CodexGateway.AppHost/Program.cs`](src/CodexGateway.AppHost/Program.cs). Production images and isolation are defined by [`Dockerfile`](Dockerfile) and [`compose.yaml`](compose.yaml). |
+| Unit and architecture tests | Check use cases, adapters, storage, container argument construction, MCP sessions, and architecture without a live service. | Add focused tests under [`tests/CodexGateway.Tests`](tests/CodexGateway.Tests/), mirroring the production feature folder. |
+| OpenAI compatibility tests | Exercise the official pinned OpenAI .NET client and compare sanitized requests/responses with committed golden wire fixtures. | Change compatibility scenarios in [`OfficialOpenAiClientCompatibilityTests.cs`](tests/CodexGateway.OpenAICompatibilityTests/Compatibility/OfficialOpenAiClientCompatibilityTests.cs) and reviewed wire contracts in [`Fixtures`](tests/CodexGateway.OpenAICompatibilityTests/Fixtures/). |
+| End-to-end tests and fake Codex | Host the complete ASP.NET pipeline and replace Docker/Codex with deterministic protocol test doubles. | Add behavior scenarios under [`tests/CodexGateway.EndToEndTests`](tests/CodexGateway.EndToEndTests/). Test host substitutions are in [`GatewayFactory.cs`](tests/CodexGateway.EndToEndTests/Infrastructure/GatewayFactory.cs); the fake process starts at [`CodexGateway.FakeCodex/Program.cs`](tests/CodexGateway.FakeCodex/Program.cs). Production-container verification is in [`scripts/verify-container.ps1`](scripts/verify-container.ps1). |
+
+### Common changes
+
+| Change | Follow this path |
+|---|---|
+| Change how a credential or project is selected | OpenAI extraction in [`OpenAiRequestMiddleware.cs`](src/CodexGateway.Api.OpenAI/Pipeline/OpenAiRequestMiddleware.cs) → protocol-neutral authorization in [`AuthenticateGatewayRequestUseCase.cs`](src/CodexGateway.Logic/UseCases/Security/AuthenticateGatewayRequestUseCase.cs) → persisted lookup rules in [`Specifications/ApiKeys`](src/CodexGateway.Logic/Specifications/ApiKeys/) and [`Specifications/Projects`](src/CodexGateway.Logic/Specifications/Projects/) → boundary tests in [`ProjectSelectorValidationTests.cs`](tests/CodexGateway.EndToEndTests/Projects/ProjectSelectorValidationTests.cs) and [`ProjectApiKeyAccessTests.cs`](tests/CodexGateway.EndToEndTests/Projects/ProjectApiKeyAccessTests.cs). |
+| Change the OpenAI chat contract | Wire DTO/validator/mapper/endpoint in [`Api.OpenAI/ChatCompletions`](src/CodexGateway.Api.OpenAI/ChatCompletions/) → normalized generation models/use case only if the application capability changes → unit tests in [`tests/CodexGateway.Tests/OpenAI/ChatCompletions`](tests/CodexGateway.Tests/OpenAI/ChatCompletions/) → official-client fixtures in [`OpenAICompatibilityTests/Fixtures`](tests/CodexGateway.OpenAICompatibilityTests/Fixtures/). |
+| Change project or API-key management | Persisted record in [`CodexGateway.Models`](src/CodexGateway.Models/) → named write use case in [`Logic/UseCases/Projects`](src/CodexGateway.Logic/UseCases/Projects/) or [`Logic/UseCases/ApiKeys`](src/CodexGateway.Logic/UseCases/ApiKeys/) → query specification when needed → corresponding Blazor feature folder → management and end-to-end tests. |
+| Change MCP catalog/grants or add a transport | Definitions in [`Models/McpServers`](src/CodexGateway.Models/McpServers/) and project assignments in [`Models/Projects`](src/CodexGateway.Models/Projects/) → management use case and specifications → discovery in [`McpMetadataDiscoveryService.cs`](src/CodexGateway.Infrastructure.Codex/Mcp/McpMetadataDiscoveryService.cs) or runtime transport in [`Infrastructure.Mcp/Transport`](src/CodexGateway.Infrastructure.Mcp/Transport/) → MCP editor components → MCP unit/end-to-end tests. |
+| Change filesystem or artifact behavior | Storage port in [`Logic/Storage`](src/CodexGateway.Logic/Storage/) only if the use case needs a new capability → focused implementation in [`Infrastructure.Storage`](src/CodexGateway.Infrastructure.Storage/) → option class when configurable → storage/security/quota tests. |
+| Change container isolation or Codex execution | [`ContainerCodexRunner.cs`](src/CodexGateway.Infrastructure.Codex/Containers/ContainerCodexRunner.cs) for run orchestration, [`ContainerCommandBuilder.cs`](src/CodexGateway.Infrastructure.Codex/Containers/ContainerCommandBuilder.cs) for the security boundary, and [`ContainerRuntime.cs`](src/CodexGateway.Infrastructure.Codex/Containers/ContainerRuntime.cs) for Docker lifecycle → focused container tests → [`verify-container.ps1`](scripts/verify-container.ps1) when the production image or boundary changes. |
+| Add a configuration setting | Add and document the property on the owning `*Options` class → bind/validate it in that module's installer → consume it only in the owning component → set a default in [`appsettings.json`](src/CodexGateway.App/appsettings.json) when appropriate → wire deployment overrides in Aspire/Compose → update the [configuration table](#configuration) and tests. |
+
+Production C# follows one top-level type per file; private nested implementation details may remain with their owner. The admin UI follows `Page.razor` plus `Page.razor.cs`. MediatR is exactly pinned to the pre-license-key `12.5.0` release.
 
 ### Adding an API adapter
 
