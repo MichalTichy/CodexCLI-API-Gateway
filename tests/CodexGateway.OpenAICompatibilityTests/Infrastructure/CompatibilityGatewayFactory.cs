@@ -24,6 +24,7 @@ public sealed class CompatibilityGatewayFactory : WebApplicationFactory<Program>
         Directory.CreateDirectory(StoragePath);
         Directory.CreateDirectory(ScenarioPath);
         Directory.CreateDirectory(CodexHomePath);
+        File.WriteAllText(Path.Combine(ScenarioPath, "authenticated"), string.Empty);
     }
 
     public string RootPath { get; }
@@ -51,7 +52,6 @@ public sealed class CompatibilityGatewayFactory : WebApplicationFactory<Program>
 
     public void StopAndDelete()
     {
-        Services.GetRequiredService<CodexAppServerClient>().Dispose();
         Dispose();
         for (var attempt = 0; attempt < 20 && Directory.Exists(RootPath); attempt++)
         {
@@ -96,7 +96,12 @@ public sealed class CompatibilityGatewayFactory : WebApplicationFactory<Program>
                 ["Codex:Container:PidsLimit"] = "64",
                 ["Codex:Container:TmpfsMegabytes"] = "64",
                 ["Codex:HomePath"] = CodexHomePath,
-                ["Codex:ModelCacheSeconds"] = "3600",
+                ["Codex:Models:0:Id"] = "gpt-test-sol",
+                ["Codex:Models:0:Name"] = "GPT Test Sol",
+                ["Codex:Models:0:SupportedReasoningEfforts:0"] = "low",
+                ["Codex:Models:0:SupportedReasoningEfforts:1"] = "medium",
+                ["Codex:Models:0:SupportedReasoningEfforts:2"] = "high",
+                ["Codex:Models:0:DefaultReasoningEffort"] = "medium",
                 ["AdminUi:Username"] = "test-admin",
                 ["AdminUi:Password"] = "test-password"
             });

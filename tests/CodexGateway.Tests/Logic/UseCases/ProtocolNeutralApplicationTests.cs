@@ -57,7 +57,7 @@ public sealed class ProtocolNeutralApplicationTests
     }
 
     [Fact]
-    public async Task List_models_use_case_returns_the_control_plane_catalog()
+    public async Task List_models_use_case_returns_the_configured_catalog()
     {
         var controlPlane = new StubControlPlane
         {
@@ -120,6 +120,10 @@ public sealed class ProtocolNeutralApplicationTests
         var workspaces = new StubWorkspaceManager();
         var runner = new StubCodexRunner();
         var handler = new GenerateAssistantResponseUseCaseHandler(
+            new StubControlPlane
+            {
+                Models = [new CodexModel("gpt-test", "Test", ["medium"], "medium")]
+            },
             new StubControlPlane
             {
                 Models = [new CodexModel("gpt-test", "Test", ["medium"], "medium")]
@@ -381,7 +385,7 @@ public sealed class ProtocolNeutralApplicationTests
 
     private static string NormalizeNewlines(string value) => value.Replace("\r\n", "\n", StringComparison.Ordinal);
 
-    private sealed class StubControlPlane : ICodexControlPlane
+    private sealed class StubControlPlane : ICodexAuthenticationManager, ICodexModelCatalog
     {
         public IReadOnlyList<CodexModel> Models { get; init; } = [];
 
@@ -389,8 +393,7 @@ public sealed class ProtocolNeutralApplicationTests
 
         public DeviceLogin? Login { get; init; }
 
-        public Task<IReadOnlyList<CodexModel>> GetModelsAsync(bool forceRefresh, CancellationToken cancellationToken) =>
-            Task.FromResult(Models);
+        public IReadOnlyList<CodexModel> GetModels() => Models;
 
         public Task<CodexAccountStatus> GetAccountAsync(CancellationToken cancellationToken) =>
             Task.FromResult(Account);

@@ -90,7 +90,6 @@ public sealed class ProjectGrantRevocationTests : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         _client.Dispose();
-        _factory.Services.GetRequiredService<CodexAppServerClient>().Dispose();
         await _factory.DisposeAsync();
         for (var attempt = 0; attempt < 20 && Directory.Exists(_factory.RootPath); attempt++)
         {

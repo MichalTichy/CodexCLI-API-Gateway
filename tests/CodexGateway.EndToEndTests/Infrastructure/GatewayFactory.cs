@@ -14,7 +14,7 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>
     private readonly int _maxConcurrent;
     private readonly int _maxQueued;
     private readonly int? _timeoutSeconds;
-    private readonly int? _appServerRequestTimeoutSeconds;
+    private readonly int? _authenticationCommandTimeoutSeconds;
     private readonly int? _deviceLoginTimeoutSeconds;
     private readonly int? _maxArtifactFileMegabytes;
     private readonly int? _maxArtifactTotalMegabytes;
@@ -25,7 +25,7 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>
         int maxConcurrent = 2,
         int maxQueued = 2,
         int? timeoutSeconds = null,
-        int? appServerRequestTimeoutSeconds = null,
+        int? authenticationCommandTimeoutSeconds = null,
         int? deviceLoginTimeoutSeconds = null,
         int? maxArtifactFileMegabytes = null,
         int? maxArtifactTotalMegabytes = null,
@@ -34,7 +34,7 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>
         _maxConcurrent = maxConcurrent;
         _maxQueued = maxQueued;
         _timeoutSeconds = timeoutSeconds;
-        _appServerRequestTimeoutSeconds = appServerRequestTimeoutSeconds;
+        _authenticationCommandTimeoutSeconds = authenticationCommandTimeoutSeconds;
         _deviceLoginTimeoutSeconds = deviceLoginTimeoutSeconds;
         _maxArtifactFileMegabytes = maxArtifactFileMegabytes;
         _maxArtifactTotalMegabytes = maxArtifactTotalMegabytes;
@@ -47,6 +47,7 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>
         Directory.CreateDirectory(StoragePath);
         Directory.CreateDirectory(ScenarioPath);
         Directory.CreateDirectory(CodexHomePath);
+        File.WriteAllText(Path.Combine(ScenarioPath, "authenticated"), string.Empty);
     }
 
     public string RootPath { get; }
@@ -104,7 +105,16 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>
                 ["Codex:Container:PidsLimit"] = "64",
                 ["Codex:Container:TmpfsMegabytes"] = "64",
                 ["Codex:HomePath"] = CodexHomePath,
-                ["Codex:ModelCacheSeconds"] = "3600",
+                ["Codex:Models:0:Id"] = "gpt-test-sol",
+                ["Codex:Models:0:Name"] = "GPT Test Sol",
+                ["Codex:Models:0:SupportedReasoningEfforts:0"] = "low",
+                ["Codex:Models:0:SupportedReasoningEfforts:1"] = "medium",
+                ["Codex:Models:0:SupportedReasoningEfforts:2"] = "high",
+                ["Codex:Models:0:DefaultReasoningEffort"] = "medium",
+                ["Codex:Models:1:Id"] = "gpt-test-terra",
+                ["Codex:Models:1:Name"] = "GPT Test Terra",
+                ["Codex:Models:1:SupportedReasoningEfforts:0"] = "high",
+                ["Codex:Models:1:DefaultReasoningEffort"] = "high",
                 ["AdminUi:Enabled"] = _adminEnabled.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["AdminUi:Username"] = "test-admin",
                 ["AdminUi:Password"] = "test-password"
@@ -114,9 +124,9 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>
                 settings["Gateway:Limits:TimeoutSeconds"] = timeoutSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
             }
 
-            if (_appServerRequestTimeoutSeconds is { } appServerRequestTimeoutSeconds)
+            if (_authenticationCommandTimeoutSeconds is { } authenticationCommandTimeoutSeconds)
             {
-                settings["Codex:AppServerRequestTimeoutSeconds"] = appServerRequestTimeoutSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                settings["Codex:AuthenticationCommandTimeoutSeconds"] = authenticationCommandTimeoutSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
             }
 
             if (_deviceLoginTimeoutSeconds is { } deviceLoginTimeoutSeconds)

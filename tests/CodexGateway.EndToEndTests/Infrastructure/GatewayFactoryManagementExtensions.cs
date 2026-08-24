@@ -47,6 +47,6 @@ internal static class GatewayFactoryManagementExtensions
         factory.Services.GetRequiredService<ISender>()
             .Send(new CreateOrUpdateMcpServerUseCase(server), cancellationToken);
 
-    public static ICodexControlPlane GetCodexControlPlane(this GatewayFactory factory) =>
-        factory.Services.GetRequiredService<ICodexControlPlane>();
+    public static ICodexAuthenticationManager GetCodexAuthenticationManager(this GatewayFactory factory) =>
+        factory.Services.GetRequiredService<ICodexAuthenticationManager>();
 }

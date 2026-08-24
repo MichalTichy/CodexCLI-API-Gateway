@@ -2,7 +2,6 @@ global using CodexGateway.Api.OpenAI.ChatCompletions;
 global using CodexGateway.Api.OpenAI.ChatCompletions.Models;
 global using CodexGateway.Api.OpenAI.Configuration.Models;
 global using CodexGateway.App.Admin.Sessions;
-global using CodexGateway.Infrastructure.Codex.AppServer;
 global using CodexGateway.Infrastructure.Codex.Containers;
 global using CodexGateway.Infrastructure.Codex.Containers.Models;
 global using CodexGateway.Infrastructure.Codex.Mcp;
