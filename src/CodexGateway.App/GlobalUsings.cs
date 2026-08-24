@@ -8,7 +8,6 @@ global using CodexGateway.App.Components.Pages.Admin.Projects.Models;
 global using CodexGateway.App.Components.Pages.Admin.Shared;
 global using CodexGateway.App.Components.Pages.Admin.Shared.Models;
 global using CodexGateway.App.Mcp.Endpoints;
-global using CodexGateway.Infrastructure.Codex.AppServer;
 global using CodexGateway.Infrastructure.Mcp.Transport;
 global using Shared.Infrastructure.IoC.Installers;
 global using Shared.Infrastructure.Initializer;
