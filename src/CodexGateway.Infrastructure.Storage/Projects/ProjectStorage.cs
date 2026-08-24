@@ -2,7 +2,7 @@ using CodexGateway.Logic.Storage;
 
 namespace CodexGateway.Infrastructure.Storage.Projects;
 
-public sealed class ProjectStorage(StoragePaths paths) : IProjectStorage
+public sealed class ProjectStorage(StoragePaths paths) : IProjectStorageManager
 {
     public void Create(string projectId)
     {

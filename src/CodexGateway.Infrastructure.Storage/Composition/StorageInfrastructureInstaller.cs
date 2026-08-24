@@ -16,7 +16,7 @@ public sealed class StorageInfrastructureInstaller : IHighPriorityInstaller
         services.TryAddSingleton<StoragePaths>();
 
         services.TryAddSingleton<ProjectStorage>();
-        services.TryAddSingleton<IProjectStorage>(provider =>
+        services.TryAddSingleton<IProjectStorageManager>(provider =>
             provider.GetRequiredService<ProjectStorage>());
 
         services.TryAddSingleton<FileStore>();
