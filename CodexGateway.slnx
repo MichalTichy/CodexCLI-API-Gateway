@@ -13,7 +13,9 @@
     <Project Path="src/CodexGateway.App/CodexGateway.App.csproj" />
     <Project Path="src/CodexGateway.AppHost/CodexGateway.AppHost.csproj" />
     <Project Path="src/CodexGateway.Infrastructure.Codex/CodexGateway.Infrastructure.Codex.csproj" />
-    <Project Path="src/CodexGateway.Infrastructure.Mcp/CodexGateway.Infrastructure.Mcp.csproj" />
+    <Project Path="src/CodexGateway.McpGateway/CodexGateway.McpGateway.csproj" />
+    <Project Path="src/CodexGateway.McpGateway.Http/CodexGateway.McpGateway.Http.csproj" />
+    <Project Path="src/CodexGateway.McpGateway.Stdio/CodexGateway.McpGateway.Stdio.csproj" />
     <Project Path="src/CodexGateway.Infrastructure.Persistence/CodexGateway.Infrastructure.Persistence.csproj" />
     <Project Path="src/CodexGateway.Infrastructure.FileStorage/CodexGateway.Infrastructure.FileStorage.csproj" />
     <Project Path="src/CodexGateway.Logic/CodexGateway.Logic.csproj" />

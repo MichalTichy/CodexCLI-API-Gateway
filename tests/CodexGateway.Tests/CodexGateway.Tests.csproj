@@ -29,7 +29,9 @@
     <ProjectReference Include="..\..\src\CodexGateway.Api.OpenAI\CodexGateway.Api.OpenAI.csproj" />
     <ProjectReference Include="..\..\src\CodexGateway.App\CodexGateway.App.csproj" />
     <ProjectReference Include="..\..\src\CodexGateway.Infrastructure.Codex\CodexGateway.Infrastructure.Codex.csproj" />
-    <ProjectReference Include="..\..\src\CodexGateway.Infrastructure.Mcp\CodexGateway.Infrastructure.Mcp.csproj" />
+    <ProjectReference Include="..\..\src\CodexGateway.McpGateway\CodexGateway.McpGateway.csproj" />
+    <ProjectReference Include="..\..\src\CodexGateway.McpGateway.Http\CodexGateway.McpGateway.Http.csproj" />
+    <ProjectReference Include="..\..\src\CodexGateway.McpGateway.Stdio\CodexGateway.McpGateway.Stdio.csproj" />
     <ProjectReference Include="..\..\src\CodexGateway.Infrastructure.Persistence\CodexGateway.Infrastructure.Persistence.csproj" />
     <ProjectReference Include="..\..\src\CodexGateway.Infrastructure.FileStorage\CodexGateway.Infrastructure.FileStorage.csproj" />
     <ProjectReference Include="..\..\SharedInfrastructure\Shared.Infrastructure.IoC\Shared.Infrastructure.IoC.csproj" />

@@ -1,8 +1,9 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
-using CodexGateway.Infrastructure.Mcp;
 using CodexGateway.Logic.Codex;
+using CodexGateway.McpGateway.Http.Transport;
+using CodexGateway.McpGateway.Stdio.Transport;
 using CodexGateway.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -161,7 +162,8 @@ public sealed class GatewayMcpSessionManagerTests
 
     private static GatewayMcpSessionManager CreateManager(HttpMessageHandler upstream) =>
         new(
-            new TestHttpClientFactory(upstream),
+            new HttpMcpUpstreamFactory(new TestHttpClientFactory(upstream)),
+            new StdioMcpUpstreamFactory(NullLogger<StdioMcpUpstreamFactory>.Instance),
             Options.Create(new GatewayMcpOptions
             {
                 RunnerBaseUrl = "http://gateway.test",
