@@ -5,7 +5,7 @@ namespace CodexGateway.Logic.UseCases.CodexAuthentication;
 
 public sealed record LogoutCodexAccountUseCase : IRequest;
 
-public sealed class LogoutCodexAccountUseCaseHandler(ICodexControlPlane codex)
+public sealed class LogoutCodexAccountUseCaseHandler(ICodexAuthenticationManager codex)
     : IRequestHandler<LogoutCodexAccountUseCase>
 {
     public Task Handle(

@@ -9,14 +9,14 @@ public sealed class CodexOptions
     public const string SectionName = "Codex";
 
     /// <summary>
-    /// Path or command name used to start the Codex CLI app server on the gateway host.
-    /// This process provides account, login, model, and MCP metadata operations; agent runs execute in containers.
+    /// Path or command name used for gateway-triggered Codex device login, status, and logout commands.
+    /// Agent runs use the Codex executable contained in <see cref="Container"/>.<see cref="CodexContainerOptions.Image"/>.
     /// </summary>
     [Required]
     public string ExecutablePath { get; set; } = "codex";
 
     /// <summary>
-    /// Arguments inserted before the gateway-supplied Codex CLI arguments.
+    /// Arguments inserted before the gateway-supplied authentication CLI arguments.
     /// This is useful when <see cref="ExecutablePath"/> points to a wrapper such as <c>dotnet</c> or <c>node</c>.
     /// </summary>
     public string[] ArgumentPrefix { get; set; } = [];
@@ -33,19 +33,25 @@ public sealed class CodexOptions
     public CodexContainerOptions Container { get; set; } = new();
 
     /// <summary>
-    /// Number of seconds a successfully retrieved Codex model list is reused.
-    /// After it expires, the next request for models queries the Codex app server again and replaces the cached list.
-    /// An explicit refresh bypasses the cache before it expires.
+    /// Models exposed by the OpenAI-compatible model catalog and accepted for agent runs.
+    /// Changing this configuration requires an application restart.
     /// </summary>
-    [Range(5, 3600)]
-    public int ModelCacheSeconds { get; set; } = 300;
+    [MinLength(1)]
+    public CodexModelOptions[] Models { get; set; } = [];
 
     /// <summary>
-    /// Maximum time to wait for an individual request to the Codex app server.
-    /// When it elapses, that request is cancelled and reported as unavailable; it does not define the agent-run timeout.
+    /// Maximum time to wait for the short-lived Codex login-status and logout commands.
+    /// It does not limit device login or agent execution.
     /// </summary>
     [Range(1, 300)]
-    public int AppServerRequestTimeoutSeconds { get; set; } = 30;
+    public int AuthenticationCommandTimeoutSeconds { get; set; } = 30;
+
+    /// <summary>
+    /// Maximum time to wait for the isolated MCP metadata-discovery process.
+    /// On expiry, tool discovery fails without affecting agent-run timeouts.
+    /// </summary>
+    [Range(1, 300)]
+    public int McpDiscoveryTimeoutSeconds { get; set; } = 30;
 
     /// <summary>
     /// Maximum lifetime of a pending device-login attempt.

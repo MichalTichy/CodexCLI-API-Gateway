@@ -1,3 +1,4 @@
+global using CodexGateway.Infrastructure.Codex.Mcp;
 global using CodexGateway.Infrastructure.Codex.Containers;
 global using CodexGateway.Infrastructure.Codex.Containers.Models;
 global using CodexGateway.Infrastructure.FileStorage.Artifacts;

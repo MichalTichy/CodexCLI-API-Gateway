@@ -343,7 +343,7 @@ public sealed class ContainerRuntime
             if (server.Definition.ExecutionMode == McpExecutionMode.Gateway &&
                 gatewayConnections.TryGetValue(server.Definition.Id, out var connection))
             {
-                names = [connection.BearerTokenEnvironmentVariable];
+                names = [connection.SessionTokenEnvironmentVariable];
             }
             else
             {
@@ -377,7 +377,7 @@ public sealed class ContainerRuntime
                 OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
         foreach (var connection in gatewayConnections?.Values ?? [])
         {
-            environment[connection.BearerTokenEnvironmentVariable] = connection.BearerToken;
+            environment[connection.SessionTokenEnvironmentVariable] = connection.SessionToken;
         }
 
         return environment;

@@ -5,11 +5,9 @@ using MediatR;
 
 namespace CodexGateway.Logic.UseCases.ModelCatalog;
 
-public sealed record ListModelsUseCase(
-    GatewayRequestContext Context,
-    bool ForceRefresh = false) : IRequest<IReadOnlyList<CodexModel>>;
+public sealed record ListModelsUseCase(GatewayRequestContext Context) : IRequest<IReadOnlyList<CodexModel>>;
 
-public sealed class ListModelsUseCaseHandler(ICodexControlPlane codex)
+public sealed class ListModelsUseCaseHandler(ICodexModelCatalog models)
     : IRequestHandler<ListModelsUseCase, IReadOnlyList<CodexModel>>
 {
     public Task<IReadOnlyList<CodexModel>> Handle(
@@ -22,6 +20,6 @@ public sealed class ListModelsUseCaseHandler(ICodexControlPlane codex)
             throw new InvalidApiKeyException();
         }
 
-        return codex.GetModelsAsync(request.ForceRefresh, cancellationToken);
+        return Task.FromResult(models.GetModels());
     }
 }
