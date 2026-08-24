@@ -2,7 +2,7 @@ using CodexGateway.Logic.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
-namespace CodexGateway.Infrastructure.Storage.Configuration;
+namespace CodexGateway.Infrastructure.FileStorage.Configuration;
 
 public sealed class StoragePaths
 {

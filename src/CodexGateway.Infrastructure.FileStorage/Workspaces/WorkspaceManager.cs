@@ -5,7 +5,7 @@ using CodexGateway.Logic.Storage;
 using CodexGateway.Models;
 using Microsoft.Extensions.Options;
 
-namespace CodexGateway.Infrastructure.Storage.Workspaces;
+namespace CodexGateway.Infrastructure.FileStorage.Workspaces;
 
 public sealed class WorkspaceManager(StoragePaths paths, FileStore files, IOptions<GatewayOptions> options) : IWorkspaceManager
 {

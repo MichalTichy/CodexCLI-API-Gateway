@@ -1,4 +1,4 @@
-# CodexGateway.Infrastructure.Storage
+# CodexGateway.Infrastructure.FileStorage
 
 This project implements filesystem storage for uploads, project artifacts, and isolated run workspaces.
 

@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
-namespace CodexGateway.Infrastructure.Storage.Artifacts;
+namespace CodexGateway.Infrastructure.FileStorage.Artifacts;
 
 internal static class SafeArtifactFile
 {

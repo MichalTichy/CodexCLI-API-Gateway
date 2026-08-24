@@ -4,9 +4,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
-namespace CodexGateway.Infrastructure.Storage.Composition;
+namespace CodexGateway.Infrastructure.FileStorage.Composition;
 
-public sealed class StorageInfrastructureInstaller : IHighPriorityInstaller
+public sealed class FileStorageInfrastructureInstaller : IHighPriorityInstaller
 {
     public void Install(
         IServiceCollection services,
@@ -15,9 +15,9 @@ public sealed class StorageInfrastructureInstaller : IHighPriorityInstaller
     {
         services.TryAddSingleton<StoragePaths>();
 
-        services.TryAddSingleton<ProjectStorage>();
+        services.TryAddSingleton<ProjectStorageManager>();
         services.TryAddSingleton<IProjectStorageManager>(provider =>
-            provider.GetRequiredService<ProjectStorage>());
+            provider.GetRequiredService<ProjectStorageManager>());
 
         services.TryAddSingleton<FileStore>();
         services.TryAddSingleton<IFileStore>(provider =>

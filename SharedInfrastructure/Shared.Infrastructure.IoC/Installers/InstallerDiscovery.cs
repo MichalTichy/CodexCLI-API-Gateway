@@ -10,6 +10,7 @@ namespace Shared.Infrastructure.IoC.Installers;
 public static class InstallerDiscovery
 {
     public const string DefaultAssemblyNamePrefix = "CodexGateway.";
+    private const string SharedInfrastructureAssemblyNamePrefix = "Shared.Infrastructure.";
 
     public static void RunInstallersFromReferencedAssemblies(
         IServiceCollection services,
@@ -79,7 +80,7 @@ public static class InstallerDiscovery
         {
             foreach (var assemblyName in dependencyContext.RuntimeLibraries
                          .SelectMany(library => library.GetDefaultAssemblyNames(dependencyContext))
-                         .Where(name => HasPrefix(name.Name, assemblyNamePrefix))
+                         .Where(name => HasSupportedPrefix(name.Name, assemblyNamePrefix))
                          .OrderBy(GetAssemblyIdentity, StringComparer.Ordinal))
             {
                 Enqueue(assemblyName);
@@ -94,7 +95,7 @@ public static class InstallerDiscovery
         }
 
         return discovered.Values
-            .Where(assembly => HasPrefix(assembly.GetName().Name, assemblyNamePrefix))
+            .Where(assembly => HasSupportedPrefix(assembly.GetName().Name, assemblyNamePrefix))
             .OrderBy(GetAssemblyIdentity, StringComparer.Ordinal)
             .ToArray();
 
@@ -119,7 +120,7 @@ public static class InstallerDiscovery
             }
 
             foreach (var reference in references
-                         .Where(name => HasPrefix(name.Name, assemblyNamePrefix))
+                         .Where(name => HasSupportedPrefix(name.Name, assemblyNamePrefix))
                          .OrderBy(GetAssemblyIdentity, StringComparer.Ordinal))
             {
                 Enqueue(reference);
@@ -334,6 +335,10 @@ public static class InstallerDiscovery
 
     private static bool HasPrefix(string? assemblyName, string assemblyNamePrefix) =>
         assemblyName?.StartsWith(assemblyNamePrefix, StringComparison.Ordinal) is true;
+
+    private static bool HasSupportedPrefix(string? assemblyName, string applicationAssemblyNamePrefix) =>
+        HasPrefix(assemblyName, applicationAssemblyNamePrefix) ||
+        HasPrefix(assemblyName, SharedInfrastructureAssemblyNamePrefix);
 
     private static string GetAssemblyIdentity(Assembly assembly) =>
         assembly.FullName ?? assembly.GetName().Name ?? "<unknown assembly>";

@@ -14,25 +14,12 @@ public sealed class PersistenceInfrastructureInstaller : IHighPriorityInstaller
         IConfiguration configuration,
         IHostEnvironment environment)
     {
-        if (environment.IsEnvironment("Testing"))
+        var connectionString = configuration.GetConnectionString("Gateway")
+            ?? throw new InvalidOperationException(
+                "The ConnectionStrings:Gateway PostgreSQL connection string is required.");
+        services.AddMartenPostgresPersistence(connectionString, options =>
         {
-            services.AddSingleton<InMemoryGatewayStateRepository>();
-            services.AddSingleton<IRepository<GatewayState>>(provider =>
-                provider.GetRequiredService<InMemoryGatewayStateRepository>());
-            services.AddSingleton<IReadOnlyRepository<GatewayState>>(provider =>
-                provider.GetRequiredService<InMemoryGatewayStateRepository>());
-        }
-        else
-        {
-            var connectionString = configuration.GetConnectionString("Gateway")
-                ?? throw new InvalidOperationException(
-                    "The ConnectionStrings:Gateway PostgreSQL connection string is required.");
-            services.AddMartenPostgresPersistence(connectionString, options =>
-            {
-                options.Schema.For<GatewayState>().UseOptimisticConcurrency(true);
-            });
-        }
-
-        services.AddHostedService<GatewayStateInitializer>();
+            options.Schema.For<GatewayState>().UseOptimisticConcurrency(true);
+        });
     }
 }
