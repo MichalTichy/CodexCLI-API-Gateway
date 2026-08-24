@@ -50,7 +50,7 @@ public sealed class GatewayMcpEndpointTests : IAsyncDisposable
             var path = new Uri(connection.Url).PathAndQuery;
 
             using var request = new HttpRequestMessage(HttpMethod.Post, path);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", connection.BearerToken);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", connection.SessionToken);
             request.Content = JsonContent.Create(new { jsonrpc = "2.0", id = 1, method = "tools/list" });
 
             using var response = await client.SendAsync(request);
@@ -58,7 +58,7 @@ public sealed class GatewayMcpEndpointTests : IAsyncDisposable
 
             var received = await capture.Task.Task.WaitAsync(TimeSpan.FromSeconds(10));
             Assert.Equal("real-api-key-value", received.ApiKey);
-            Assert.NotEqual(connection.BearerToken, received.ApiKey);
+            Assert.NotEqual(connection.SessionToken, received.ApiKey);
 
             using var wrong = new HttpRequestMessage(HttpMethod.Post, path);
             wrong.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "wrong-token");

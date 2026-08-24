@@ -59,6 +59,31 @@ public sealed class FileStoreIsolationTests : IDisposable
             _files.GetRequiredAsync(null, "default", secondaryRecord.Id, CancellationToken.None));
     }
 
+    [Theory]
+    [InlineData("report.DOCX")]
+    [InlineData("workbook.xlsm")]
+    [InlineData("presentation.pptx")]
+    [InlineData("document.odt")]
+    [InlineData("design.pages")]
+    [InlineData("photo.heic")]
+    [InlineData("vector.svg")]
+    [InlineData("artwork.psd")]
+    [InlineData("camera.dng")]
+    public async Task Office_documents_and_image_formats_are_accepted(string fileName)
+    {
+        var record = await SaveAsync("default", fileName);
+
+        Assert.Equal(fileName, record.FileName);
+    }
+
+    [Fact]
+    public async Task Executables_remain_rejected()
+    {
+        var exception = await Assert.ThrowsAsync<GatewayException>(() => SaveAsync("default", "payload.exe"));
+
+        Assert.Equal("unsupported_file_type", exception.Code);
+    }
+
     [Fact]
     public async Task Cleanup_handles_scoped_projectless_layouts()
     {

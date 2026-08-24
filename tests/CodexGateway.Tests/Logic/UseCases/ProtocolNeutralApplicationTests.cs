@@ -51,6 +51,7 @@ public sealed class ProtocolNeutralApplicationTests
         Assert.Contains("[user]\nSummarize the file.\n[Attached file: file-one]", NormalizeNewlines(prompt.Text), StringComparison.Ordinal);
         Assert.Contains("./artifacts/file-one_notes.txt", prompt.Text, StringComparison.Ordinal);
         Assert.Contains("structured output 'summary'", prompt.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Codex CLI API Gateway", prompt.Text, StringComparison.Ordinal);
         Assert.Equal(["file-one"], prompt.TemporaryFileIds);
         Assert.Equal("object", prompt.OutputSchema?.GetProperty("type").GetString());
         Assert.Equal(1, files.GetCount);
