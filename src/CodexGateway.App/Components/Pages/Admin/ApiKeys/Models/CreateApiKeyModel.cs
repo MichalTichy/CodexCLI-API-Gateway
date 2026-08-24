@@ -11,7 +11,4 @@ internal sealed class CreateApiKeyModel
     [Required]
     [MaxLength(128)]
     public string Name { get; set; } = string.Empty;
-
-    [Required]
-    public string Key { get; set; } = string.Empty;
 }
