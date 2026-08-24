@@ -6,7 +6,7 @@ This project contains protocol-neutral application behavior. HTTP endpoints and 
 
 1. A caller sends a request from `UseCases/{Purpose}/{UseCaseName}.cs` through MediatR.
 2. The handler beside that request in the same file validates input and coordinates the operation.
-3. Specifications select data from `GatewayState`; storage, Codex, and MCP interfaces perform external work.
+3. Specifications asynchronously filter and project only the required data from `GatewayState` before materialization. Authentication compares the supplied API key in the database and returns only its ID, so the authentication path never materializes stored secrets.
 4. The handler returns a model from the relevant purpose folder without depending on an HTTP schema.
 
 ## Folders

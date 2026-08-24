@@ -9,6 +9,7 @@
   <ItemGroup>
     <!-- Keep the exact pre-license-key release; do not float to MediatR 13+. -->
     <PackageReference Include="MediatR" Version="[12.5.0]" />
+    <PackageReference Include="Marten" Version="9.3.5" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.0" />

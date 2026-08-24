@@ -48,16 +48,9 @@ public sealed class CodexOptions
     public int AppServerRequestTimeoutSeconds { get; set; } = 30;
 
     /// <summary>
-    /// Maximum lifetime of a pending device-login attempt when <see cref="DeviceLoginTimeoutSeconds"/> is not set.
+    /// Maximum lifetime of a pending device-login attempt.
     /// On expiry, the login is cancelled and its status becomes expired.
     /// </summary>
-    [Range(1, 60)]
-    public int DeviceLoginTimeoutMinutes { get; set; } = 15;
-
-    /// <summary>
-    /// Optional second-based override for <see cref="DeviceLoginTimeoutMinutes"/>.
-    /// Intended for deployments or tests that require a timeout shorter or more precise than whole minutes.
-    /// </summary>
     [Range(1, 3600)]
-    public int? DeviceLoginTimeoutSeconds { get; set; }
+    public int DeviceLoginTimeoutSeconds { get; set; } = 900;
 }

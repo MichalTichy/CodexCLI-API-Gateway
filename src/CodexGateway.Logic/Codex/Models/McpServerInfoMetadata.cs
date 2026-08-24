@@ -1,4 +1,3 @@
-using System.Text.Json;
 using CodexGateway.Models;
 
 namespace CodexGateway.Logic.Codex.Models;
@@ -9,4 +8,4 @@ public sealed record McpServerInfoMetadata(
     string? Title,
     string? Description,
     string? WebsiteUrl,
-    JsonElement? Icons);
+    IReadOnlyList<McpIcon>? Icons);

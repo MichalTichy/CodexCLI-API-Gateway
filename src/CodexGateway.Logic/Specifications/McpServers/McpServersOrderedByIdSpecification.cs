@@ -1,4 +1,5 @@
 using CodexGateway.Models;
+using Marten;
 using Shared.Infrastructure.Persistence.Specifications;
 
 namespace CodexGateway.Logic.Specifications.McpServers;
@@ -6,14 +7,16 @@ namespace CodexGateway.Logic.Specifications.McpServers;
 public sealed class McpServersOrderedByIdSpecification
     : ISpecification<GatewayState, IReadOnlyList<McpServerDefinition>>
 {
-    public Task<IReadOnlyList<McpServerDefinition>?> ApplyAsync(
+    public async Task<IReadOnlyList<McpServerDefinition>?> ApplyAsync(
         IQueryable<GatewayState> queryable,
         CancellationToken cancellationToken = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyList<McpServerDefinition> result = (queryable.SingleOrDefault()?.McpServers ?? [])
+        var servers = await queryable
+            .SelectMany(state => state.McpServers)
+            .Select(server => server)
+            .ToListAsync(cancellationToken);
+        return servers
             .OrderBy(server => server.Id, StringComparer.Ordinal)
             .ToArray();
-        return Task.FromResult<IReadOnlyList<McpServerDefinition>?>(result);
     }
 }

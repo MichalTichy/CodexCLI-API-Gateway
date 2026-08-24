@@ -2,8 +2,6 @@ using CodexGateway.Logic.Specifications;
 using CodexGateway.Models;
 using MediatR;
 using Shared.Infrastructure.Persistence.Repositories;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace CodexGateway.Logic.UseCases.Security;
 
@@ -24,11 +22,9 @@ public sealed class AuthenticateGatewayRequestUseCaseHandler(
             return null;
         }
 
-        var definitions = await repository.GetBySpecAsync(
-                new ApiKeyDefinitionsSpecification(),
-                cancellationToken)
-            ?? [];
-        var apiKeyId = FindApiKeyId(definitions, request.ApiKey);
+        var apiKeyId = await repository.GetBySpecAsync(
+            new ApiKeyIdBySecretSpecification(request.ApiKey),
+            cancellationToken);
         if (apiKeyId is null)
         {
             return null;
@@ -47,21 +43,4 @@ public sealed class AuthenticateGatewayRequestUseCaseHandler(
             : new GatewayRequestContext(apiKeyId, access.Project.Id);
     }
 
-    private static string? FindApiKeyId(
-        IEnumerable<ApiKeyDefinition> definitions,
-        string suppliedKey)
-    {
-        var suppliedHash = SHA256.HashData(Encoding.UTF8.GetBytes(suppliedKey));
-        string? match = null;
-        foreach (var definition in definitions)
-        {
-            var configuredHash = SHA256.HashData(Encoding.UTF8.GetBytes(definition.Key));
-            if (CryptographicOperations.FixedTimeEquals(suppliedHash, configuredHash))
-            {
-                match = definition.Id;
-            }
-        }
-
-        return match;
-    }
 }

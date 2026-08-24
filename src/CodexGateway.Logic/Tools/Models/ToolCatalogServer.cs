@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace CodexGateway.Logic.Tools.Models;
 
 public sealed record ToolCatalogServer(
@@ -10,5 +8,5 @@ public sealed record ToolCatalogServer(
     string? Title,
     string? Description,
     string? WebsiteUrl,
-    JsonElement? Icons,
+    IReadOnlyList<McpIcon>? Icons,
     IReadOnlyList<ToolCatalogTool> Tools);

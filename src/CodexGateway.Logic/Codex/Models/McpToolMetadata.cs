@@ -9,6 +9,6 @@ public sealed record McpToolMetadata(
     string? Description,
     JsonElement InputSchema,
     JsonElement? OutputSchema,
-    JsonElement? Annotations,
-    JsonElement? Icons,
+    McpToolAnnotations? Annotations,
+    IReadOnlyList<McpIcon>? Icons,
     JsonElement? Meta);

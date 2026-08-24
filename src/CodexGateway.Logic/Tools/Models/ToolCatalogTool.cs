@@ -9,8 +9,8 @@ public sealed record ToolCatalogTool(
     string? Description,
     JsonElement InputSchema,
     JsonElement? OutputSchema,
-    JsonElement? Annotations,
-    JsonElement? Icons,
+    McpToolAnnotations? Annotations,
+    IReadOnlyList<McpIcon>? Icons,
     JsonElement? Meta)
 {
     public string Id => ServerId + "/" + Name;

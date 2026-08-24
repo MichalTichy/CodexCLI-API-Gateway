@@ -1,4 +1,5 @@
 using CodexGateway.Models;
+using Marten;
 using Shared.Infrastructure.Persistence.Specifications;
 
 namespace CodexGateway.Logic.Specifications.Projects;
@@ -11,23 +12,21 @@ namespace CodexGateway.Logic.Specifications.Projects;
 public sealed class ProjectAccessSpecification(string projectId, string apiKeyId)
     : ISpecification<GatewayState, ResolvedProjectAccess?>
 {
-    public Task<ResolvedProjectAccess?> ApplyAsync(
+    public async Task<ResolvedProjectAccess?> ApplyAsync(
         IQueryable<GatewayState> queryable,
         CancellationToken cancellationToken = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        var source = queryable.SingleOrDefault();
-        if (source is null)
-        {
-            return Task.FromResult<ResolvedProjectAccess?>(null);
-        }
-
-        var project = source.Projects.SingleOrDefault(candidate =>
-            candidate.Enabled &&
-            string.Equals(candidate.Id, projectId, StringComparison.OrdinalIgnoreCase));
+        var normalizedProjectId = projectId.Trim().ToLowerInvariant();
+        var project = await queryable
+            .SelectMany(state => state.Projects)
+            .Where(candidate =>
+                candidate.Enabled &&
+                candidate.Id == normalizedProjectId)
+            .Select(candidate => candidate)
+            .SingleOrDefaultAsync(cancellationToken);
         if (project is null)
         {
-            return Task.FromResult<ResolvedProjectAccess?>(null);
+            return null;
         }
 
         var matches = (project.ApiKeyAccess ?? [])
@@ -37,6 +36,6 @@ public sealed class ProjectAccessSpecification(string projectId, string apiKeyId
         var result = matches.Length == 1
             ? new ResolvedProjectAccess(project, matches[0])
             : null;
-        return Task.FromResult(result);
+        return result;
     }
 }

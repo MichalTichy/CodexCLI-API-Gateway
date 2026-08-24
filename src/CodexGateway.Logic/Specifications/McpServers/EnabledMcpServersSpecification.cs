@@ -1,6 +1,7 @@
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Errors;
 using CodexGateway.Models;
+using Marten;
 using Shared.Infrastructure.Persistence.Specifications;
 
 namespace CodexGateway.Logic.Specifications.McpServers;
@@ -8,17 +9,24 @@ namespace CodexGateway.Logic.Specifications.McpServers;
 public sealed class EnabledMcpServersSpecification(ProjectApiKeyAccess? access)
     : ISpecification<GatewayState, IReadOnlyList<ResolvedMcpServer>>
 {
-    public Task<IReadOnlyList<ResolvedMcpServer>?> ApplyAsync(
+    public async Task<IReadOnlyList<ResolvedMcpServer>?> ApplyAsync(
         IQueryable<GatewayState> queryable,
         CancellationToken cancellationToken = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
         if (access is null)
         {
-            return Task.FromResult<IReadOnlyList<ResolvedMcpServer>?>([]);
+            return [];
         }
 
-        var catalog = queryable.SingleOrDefault()?.McpServers ?? [];
+        var assignedServerIds = (access.McpServers ?? [])
+            .Select(assignment => assignment.ServerId)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var catalog = await queryable
+            .SelectMany(state => state.McpServers)
+            .Where(server => assignedServerIds.Contains(server.Id))
+            .Select(server => server)
+            .ToListAsync(cancellationToken);
         var result = new List<ResolvedMcpServer>();
         foreach (var assignment in access.McpServers ?? [])
         {
@@ -41,6 +49,6 @@ public sealed class EnabledMcpServersSpecification(ProjectApiKeyAccess? access)
             result.Add(new ResolvedMcpServer(definition, selected, assignment.Required));
         }
 
-        return Task.FromResult<IReadOnlyList<ResolvedMcpServer>?>(result);
+        return result;
     }
 }

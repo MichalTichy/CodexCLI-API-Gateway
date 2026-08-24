@@ -1,4 +1,5 @@
 using CodexGateway.Models;
+using Marten;
 using Shared.Infrastructure.Persistence.Specifications;
 
 namespace CodexGateway.Logic.Specifications.Projects;
@@ -10,9 +11,11 @@ public sealed class ProjectDefinitionByIdSpecification(string projectId)
         IQueryable<GatewayState> queryable,
         CancellationToken cancellationToken = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        var result = queryable.SingleOrDefault()?.Projects.SingleOrDefault(candidate =>
-            string.Equals(candidate.Id, projectId, StringComparison.OrdinalIgnoreCase));
-        return Task.FromResult(result);
+        var normalizedProjectId = projectId.Trim().ToLowerInvariant();
+        return queryable
+            .SelectMany(state => state.Projects)
+            .Where(candidate => candidate.Id == normalizedProjectId)
+            .Select(candidate => candidate)
+            .SingleOrDefaultAsync(cancellationToken);
     }
 }

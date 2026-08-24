@@ -52,7 +52,6 @@ public sealed class PromptComposer(IFileStore files)
         }
 
         var prompt = new StringBuilder();
-        prompt.AppendLine("You are responding through Codex CLI API Gateway.");
         prompt.AppendLine("The current working directory is an isolated run workspace.");
         prompt.AppendLine("Use ./artifacts for input and output files. Shell-command network access is disabled.");
         if (input.StructuredOutput is { } output)
