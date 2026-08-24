@@ -31,8 +31,5 @@ public sealed class CodexInfrastructureInstaller : IHighPriorityInstaller
         services.TryAddSingleton<CodexAppServerClient>();
         services.TryAddSingleton<ICodexControlPlane>(provider =>
             provider.GetRequiredService<CodexAppServerClient>());
-
-        services.TryAddEnumerable(
-            ServiceDescriptor.Singleton<IHostedService, ContainerRuntimePreflightService>());
     }
 }
