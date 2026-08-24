@@ -1,6 +1,9 @@
 using System.Net.Http.Headers;
+using CodexGateway.McpGateway.Transport;
+using CodexGateway.McpGateway.Transport.Models;
+using Microsoft.AspNetCore.Http;
 
-namespace CodexGateway.Infrastructure.Mcp.Transport;
+namespace CodexGateway.McpGateway.Http.Transport;
 
 internal sealed class HttpGatewayMcpUpstream(
     HttpClient client,

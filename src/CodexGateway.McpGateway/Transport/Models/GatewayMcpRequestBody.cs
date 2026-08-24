@@ -1,6 +1,6 @@
-namespace CodexGateway.Infrastructure.Mcp.Transport.Models;
+namespace CodexGateway.McpGateway.Transport.Models;
 
-internal static class GatewayMcpRequestBody
+public static class GatewayMcpRequestBody
 {
     private const int MaximumBytes = 1_048_576;
 

@@ -1,9 +1,14 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
-using CodexGateway.Models;
+using CodexGateway.McpGateway.Errors;
+using CodexGateway.McpGateway.Transport;
+using CodexGateway.McpGateway.Transport.Models;
+using CodexGateway.Models.McpServers;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
-namespace CodexGateway.Infrastructure.Mcp.Transport;
+namespace CodexGateway.McpGateway.Stdio.Transport;
 
 internal sealed class LocalStdioGatewayMcpUpstream : IGatewayMcpUpstream
 {

@@ -7,16 +7,15 @@ using CodexGateway.Models;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 
-namespace CodexGateway.Infrastructure.Mcp.Sessions;
+namespace CodexGateway.McpGateway.Sessions;
 
 public sealed class GatewayMcpSessionManager(
-    IHttpClientFactory httpClientFactory,
+    IHttpMcpUpstreamFactory httpUpstreams,
+    IStdioMcpUpstreamFactory stdioUpstreams,
     IOptions<GatewayMcpOptions> options,
     ILogger<GatewayMcpSessionManager> logger)
     : IGatewayMcpSessionFactory, IGatewayMcpRequestHandler
 {
-    internal const string HttpClientName = "GatewayMcp";
-
     private readonly ConcurrentDictionary<string, GatewayMcpSession> _sessions =
         new(StringComparer.Ordinal);
 
@@ -148,15 +147,10 @@ public sealed class GatewayMcpSessionManager(
     {
         return definition switch
         {
-            HttpMcpServerDefinition http => new HttpGatewayMcpUpstream(
-                httpClientFactory.CreateClient(HttpClientName),
-                new Uri(http.Url, UriKind.Absolute),
-                GetEnvironmentHeaders(http.EnvironmentHeaders, definition.Id)),
-            StdioMcpServerDefinition stdio => await LocalStdioGatewayMcpUpstream.StartAsync(
+            HttpMcpServerDefinition http => httpUpstreams.Create(http),
+            StdioMcpServerDefinition stdio => await stdioUpstreams.StartAsync(
                 stdio,
                 workspacePath,
-                GetEnvironmentValues(stdio.EnvironmentVariables),
-                logger,
                 cancellationToken),
             _ => throw new InvalidOperationException(
                 $"MCP server '{definition.Id}' has an unsupported transport.")
@@ -173,43 +167,6 @@ public sealed class GatewayMcpSessionManager(
         }
 
         return new Uri(baseUri.ToString().TrimEnd('/') + "/");
-    }
-
-    private static IReadOnlyDictionary<string, string> GetEnvironmentHeaders(
-        IReadOnlyDictionary<string, string> headers,
-        string serverId)
-    {
-        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (headerName, environmentVariable) in headers)
-        {
-            var value = Environment.GetEnvironmentVariable(environmentVariable);
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                throw new InvalidOperationException(
-                    $"Environment variable '{environmentVariable}' for HTTP MCP server '{serverId}' is unavailable.");
-            }
-
-            values.Add(headerName, value);
-        }
-
-        return values;
-    }
-
-    private static IReadOnlyDictionary<string, string> GetEnvironmentValues(
-        IEnumerable<string>? names)
-    {
-        var values = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var name in (names ?? []).Where(name => !string.IsNullOrWhiteSpace(name))
-                     .Distinct(StringComparer.Ordinal))
-        {
-            var value = Environment.GetEnvironmentVariable(name);
-            if (value is not null)
-            {
-                values.Add(name, value);
-            }
-        }
-
-        return values;
     }
 
     private static string CreateTokenEnvironmentVariable(string serverId, string sessionId)

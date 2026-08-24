@@ -1,8 +1,8 @@
-global using CodexGateway.Infrastructure.Mcp.Configuration.Models;
-global using CodexGateway.Infrastructure.Mcp.Errors;
-global using CodexGateway.Infrastructure.Mcp.Sessions;
-global using CodexGateway.Infrastructure.Mcp.Transport;
-global using CodexGateway.Infrastructure.Mcp.Transport.Models;
+global using CodexGateway.McpGateway.Configuration.Models;
+global using CodexGateway.McpGateway.Errors;
+global using CodexGateway.McpGateway.Sessions;
+global using CodexGateway.McpGateway.Transport;
+global using CodexGateway.McpGateway.Transport.Models;
 global using Shared.Infrastructure.IoC.Installers;
 global using CodexGateway.Logic.Codex.Models;
 global using CodexGateway.Logic.McpServers;

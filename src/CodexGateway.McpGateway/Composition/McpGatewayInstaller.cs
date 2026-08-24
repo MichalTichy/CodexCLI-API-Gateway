@@ -4,9 +4,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
-namespace CodexGateway.Infrastructure.Mcp.Composition;
+namespace CodexGateway.McpGateway.Composition;
 
-public sealed class GatewayMcpInfrastructureInstaller : IHighPriorityInstaller
+public sealed class McpGatewayInstaller : IHighPriorityInstaller
 {
     public void Install(
         IServiceCollection services,
@@ -18,7 +18,6 @@ public sealed class GatewayMcpInfrastructureInstaller : IHighPriorityInstaller
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        services.AddHttpClient(GatewayMcpSessionManager.HttpClientName);
         services.TryAddSingleton<GatewayMcpSessionManager>();
         services.TryAddSingleton<IGatewayMcpSessionFactory>(provider =>
             provider.GetRequiredService<GatewayMcpSessionManager>());

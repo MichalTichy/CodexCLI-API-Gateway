@@ -1,6 +1,6 @@
-namespace CodexGateway.Infrastructure.Mcp.Errors;
+namespace CodexGateway.McpGateway.Errors;
 
-internal sealed class GatewayMcpRequestException(
+public sealed class GatewayMcpRequestException(
     int statusCode,
     string message,
     Exception? innerException = null)
