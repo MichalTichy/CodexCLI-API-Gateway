@@ -144,7 +144,7 @@ public sealed class GatewayAccessUseCaseTests
         }
     });
 
-    private sealed class StubProjectStorage : IProjectStorage
+    private sealed class StubProjectStorage : IProjectStorageManager
     {
         public void Create(string projectId)
         {

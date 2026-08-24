@@ -263,7 +263,7 @@ public sealed class ManagementUseCaseTests
         }
     });
 
-    private sealed class RecordingProjectStorage : IProjectStorage
+    private sealed class RecordingProjectStorage : IProjectStorageManager
     {
         public List<string> CreatedIds { get; } = [];
 
