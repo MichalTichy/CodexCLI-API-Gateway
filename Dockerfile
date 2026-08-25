@@ -11,6 +11,8 @@ WORKDIR /source
 COPY Directory.Build.props global.json CodexGateway.slnx ./
 COPY SharedInfrastructure/Shared.Infrastructure.CurrentTenancyProvider/Shared.Infrastructure.CurrentTenancyProvider.csproj SharedInfrastructure/Shared.Infrastructure.CurrentTenancyProvider/
 COPY SharedInfrastructure/Shared.Infrastructure.IoC/Shared.Infrastructure.IoC.csproj SharedInfrastructure/Shared.Infrastructure.IoC/
+COPY SharedInfrastructure/Shared.Infrastructure.Initializer/Shared.Infrastructure.Initializer.csproj SharedInfrastructure/Shared.Infrastructure.Initializer/
+COPY SharedInfrastructure/Shared.Infrastructure.LeaderElection/Shared.Infrastructure.LeaderElection.csproj SharedInfrastructure/Shared.Infrastructure.LeaderElection/
 COPY SharedInfrastructure/Shared.Infrastructure.Persistence/Shared.Infrastructure.Persistence.csproj SharedInfrastructure/Shared.Infrastructure.Persistence/
 COPY SharedInfrastructure/Shared.Infrastructure.Persistence.Marten/Shared.Infrastructure.Persistence.Marten.csproj SharedInfrastructure/Shared.Infrastructure.Persistence.Marten/
 COPY src/CodexGateway.Api/CodexGateway.Api.csproj src/CodexGateway.Api/
