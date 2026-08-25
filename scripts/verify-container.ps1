@@ -299,6 +299,10 @@ cat artifacts/smoke.txt
     $admin = Invoke-WebRequest -Uri "$baseUrl/admin" -UseBasicParsing -TimeoutSec 5
     Assert-True ($admin.StatusCode -eq 200) "Admin UI returned HTTP $($admin.StatusCode)."
 
+    $blazor = Invoke-WebRequest -Uri "$baseUrl/_framework/blazor.web.js" -UseBasicParsing -TimeoutSec 5
+    Assert-True ($blazor.StatusCode -eq 200) "Blazor framework returned HTTP $($blazor.StatusCode)."
+    Assert-True ($blazor.RawContentLength -gt 1000) 'Blazor framework response was unexpectedly empty.'
+
     try {
         Invoke-WebRequest -Uri "$baseUrl/v1/models" -UseBasicParsing -TimeoutSec 5 | Out-Null
         throw 'Unauthenticated OpenAI API request unexpectedly succeeded.'
