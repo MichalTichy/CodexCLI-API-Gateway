@@ -1,65 +1,110 @@
 @namespace CodexGateway.App.Components.Pages.Admin.ApiKeys
 @inherits AdminComponentBase
 
-<section class="section" aria-labelledby="keys-heading">
-    <div class="section-heading">
+<section class="content-section" aria-labelledby="keys-heading">
+    <div class="section-title-row">
         <div>
             <h2 id="keys-heading">API keys</h2>
-            <p class="muted small">Create keys before granting project access.</p>
+            <p>Create a credential here, then grant it access inside a project.</p>
         </div>
     </div>
-    <EditForm Model="_create" OnValidSubmit="CreateAsync" class="card" autocomplete="off">
-        <DataAnnotationsValidator />
-        <h3>Create API key</h3>
-        <div class="form-grid">
-            <div class="field">
-                <label for="new-api-key-id">ID</label>
-                <InputText id="new-api-key-id" @bind-Value="_create.Id" placeholder="automation" />
-                <ValidationMessage For="() => _create.Id" />
-            </div>
-            <div class="field">
-                <label for="new-api-key-name">Name</label>
-                <InputText id="new-api-key-name" @bind-Value="_create.Name" placeholder="Automation" />
-                <ValidationMessage For="() => _create.Name" />
-            </div>
-            <div class="field full">
-                <button type="submit" disabled="@IsBusy">@(IsBusy ? "Creating…" : "Create API key")</button>
-            </div>
-        </div>
-        <p class="status @StatusKind.ToString().ToLowerInvariant()" role="status" aria-live="polite">@Status</p>
+
+    <EditForm Model="_create" OnValidSubmit="CreateAsync" autocomplete="off">
+        <LumexCard Class="form-card">
+            <LumexCardHeader Class="flex-col items-start gap-1">
+                <h3>Create API key</h3>
+                <p>Choose a stable identifier that explains who or what will use this credential.</p>
+            </LumexCardHeader>
+            <LumexDivider />
+            <LumexCardBody Class="gap-5">
+                <DataAnnotationsValidator />
+                <div class="form-grid-two">
+                    <div>
+                        <LumexTextbox id="new-api-key-id"
+                                      Behavior="@InputBehavior.OnInput"
+                                      @bind-Value="_create.Id"
+                                      Label="Identifier"
+                                      Placeholder="automation"
+                                      Description="Lowercase identifier used in project grants."
+                                      LabelPlacement="@LabelPlacement.Outside"
+                                      Variant="@InputVariant.Outlined" />
+                        <ValidationMessage For="() => _create.Id" />
+                    </div>
+                    <div>
+                        <LumexTextbox id="new-api-key-name"
+                                      Behavior="@InputBehavior.OnInput"
+                                      @bind-Value="_create.Name"
+                                      Label="Display name"
+                                      Placeholder="Automation"
+                                      Description="Human-readable name shown throughout the UI."
+                                      LabelPlacement="@LabelPlacement.Outside"
+                                      Variant="@InputVariant.Outlined" />
+                        <ValidationMessage For="() => _create.Name" />
+                    </div>
+                </div>
+                <div class="flex justify-end">
+                    <LumexButton Type="@ButtonType.Submit" Color="@ThemeColor.Primary" Disabled="@IsBusy">
+                        @(IsBusy ? "Creating…" : "Create API key")
+                    </LumexButton>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Status))
+                {
+                    <LumexAlert Color="@(StatusKind == AdminStatusKind.Error ? ThemeColor.Danger : ThemeColor.Default)" Description="@Status" />
+                }
+            </LumexCardBody>
+        </LumexCard>
     </EditForm>
 
     @if (_createdApiKey is not null)
     {
-        <div class="card" role="status" aria-live="polite">
-            <h3>Copy API key now</h3>
-            <p class="muted small">This is the only time the secret for <strong>@_createdApiKey.Name</strong> will be shown.</p>
-            <div class="field">
-                <label for="created-api-key-secret">Secret</label>
-                <input id="created-api-key-secret" class="mono" value="@_createdApiKey.Key" readonly />
-            </div>
-        </div>
+        <LumexAlert Color="@ThemeColor.Warning" Title="Copy API key now" role="status" aria-live="polite">
+            <DescriptionContent>
+                <div class="grid gap-3">
+                    <p>This is the only time the secret for <strong>@_createdApiKey.Name</strong> will be shown.</p>
+                    <LumexTextbox id="created-api-key-secret"
+                                  Value="@_createdApiKey.Key"
+                                  Label="Secret"
+                                  ReadOnly="@true"
+                                  LabelPlacement="@LabelPlacement.Outside"
+                                  Variant="@InputVariant.Outlined"
+                                  Class="font-mono" />
+                </div>
+            </DescriptionContent>
+        </LumexAlert>
     }
 
-<div class="card">
-    @if (ApiKeys.Count == 0)
-    {
-        <div class="empty">No API keys are configured.</div>
-    }
-    else
-    {
-        <div class="key-list" aria-labelledby="keys-heading">
-            @foreach (var key in ApiKeys)
+    <LumexCard Class="form-card">
+        <LumexCardHeader Class="flex-row items-center justify-between">
+            <div>
+                <h3>Active credentials</h3>
+                <p>@ApiKeys.Count configured</p>
+            </div>
+            <LumexChip Variant="@ChipVariant.Flat">@ApiKeys.Count</LumexChip>
+        </LumexCardHeader>
+        <LumexDivider />
+        <LumexCardBody>
+            @if (ApiKeys.Count == 0)
             {
-                <div class="key-row" @key="key.Id">
-                    <div>
-                        <strong>@key.Name</strong>
-                        <div class="muted small mono">@key.Id</div>
-                    </div>
-                    <button class="danger" type="button" disabled="@IsBusy" @onclick="() => DeleteAsync(key.Id)">Revoke</button>
+                <div class="empty-state">No API keys are configured.</div>
+            }
+            else
+            {
+                <div class="key-list" aria-labelledby="keys-heading">
+                    @foreach (var key in ApiKeys)
+                    {
+                        <div class="list-row" @key="key.Id">
+                            <div class="flex min-w-0 items-center gap-3">
+                                <div class="list-avatar" aria-hidden="true">@key.Name[..1].ToUpperInvariant()</div>
+                                <div class="min-w-0">
+                                    <strong class="block truncate text-sm text-foreground">@key.Name</strong>
+                                    <span class="block truncate font-mono text-xs text-foreground-400">@key.Id</span>
+                                </div>
+                            </div>
+                            <LumexButton Color="@ThemeColor.Danger" Variant="@Variant.Light" Size="@Size.Small" Disabled="@IsBusy" OnClick="@(() => DeleteAsync(key.Id))">Revoke</LumexButton>
+                        </div>
+                    }
                 </div>
             }
-        </div>
-    }
-</div>
+        </LumexCardBody>
+    </LumexCard>
 </section>

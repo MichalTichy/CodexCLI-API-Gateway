@@ -67,3 +67,4 @@ data/
 .verify/
 *.user
 *.suo
+node_modules/

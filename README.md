@@ -99,6 +99,7 @@ This is strong workspace/process isolation for a trusted internal tool, not a ho
 - A current Docker Engine and CLI with `--mount volume-subpath` support (named-volume deployments require it)
 - PostgreSQL 18 (started automatically by Aspire or Compose)
 - Codex CLI `0.148.0` on the gateway host; it is used only for UI-triggered device login, login status, and logout, never for model execution
+- Node.js 20 or newer only when changing the administration UI styles; the compiled stylesheet is committed for normal .NET and Docker builds
 
 The gateway uses one dedicated `CODEX_HOME`; do not point it at a developer's normal Codex directory.
 Run the gateway as a non-root user so run and auth directories retain the runner UID/GID. The gateway fails startup as root instead of silently creating storage that its non-root runner cannot use. Compose already configures an explicitly non-root gateway user.
@@ -133,6 +134,8 @@ dotnet run --project src/CodexGateway.App/CodexGateway.App.csproj --urls http://
 ```
 
 Open `http://localhost:5050/admin`, sign in with the `AdminUi` credentials, create an API key, copy its generated secret when it is shown, then use **Start device login** to authenticate the dedicated Codex identity. The UI uses Blazor Interactive Server and therefore needs its SignalR/WebSocket connection to remain open.
+
+The administration UI uses [LumexUI](https://lumexui.org/) components and Tailwind CSS 4. Its source stylesheet is [`admin.css`](src/CodexGateway.App/Styles/admin.css); after changing UI classes or styles, run `npm install` once and then `npm run css:build` from the repository root. The generated [`admin.css`](src/CodexGateway.App/wwwroot/admin.css) is committed so gateway builds do not require Node.js.
 
 The gateway starts `codex login --device-auth` with `CODEX_HOME` set to `Codex:HomePath`. The UI displays the verification URL and one-time code produced by that command. After the user completes verification, Codex writes credentials into that directory. Agent containers mount the same directory at `/codex-home`, which is how every isolated execution shares the gateway identity. Login itself runs on the gateway host and does not need another container.
 

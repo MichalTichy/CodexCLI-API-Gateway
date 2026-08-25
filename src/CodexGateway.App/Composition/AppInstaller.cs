@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using LumexUI.Extensions;
 
 namespace CodexGateway.App.Composition;
 
@@ -85,6 +86,7 @@ public sealed class AppInstaller : IHighPriorityInstaller
         services.AddCascadingAuthenticationState();
         services.AddRazorComponents()
             .AddInteractiveServerComponents();
+        services.AddLumexServices();
         services.AddSingleton<AdminSessionRegistry>();
         services.AddScoped<AdminRevalidatingAuthenticationStateProvider>();
         services.AddScoped<AuthenticationStateProvider>(provider =>

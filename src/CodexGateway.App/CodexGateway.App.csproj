@@ -11,6 +11,7 @@
   <ItemGroup>
     <PackageReference Include="FastEndpoints" Version="8.2.0" />
     <PackageReference Include="FastEndpoints.Swagger" Version="8.2.0" />
+    <PackageReference Include="LumexUI" Version="2.4.0" />
     <!-- Keep the exact pre-license-key release; do not float to MediatR 13+. -->
     <PackageReference Include="MediatR" Version="[12.5.0]" />
   </ItemGroup>

@@ -1,58 +1,171 @@
 @namespace CodexGateway.App.Components.Pages.Admin.Dashboard
 @inherits AdminComponentBase
 
-<main class="shell" data-testid="admin-dashboard" aria-busy="@_loading.ToString().ToLowerInvariant()">
-    <header class="topbar">
-        <div>
-            <div class="eyebrow">Internal administration</div>
-            <h1>Codex Gateway</h1>
-            <p class="muted">Projects, trusted MCP servers, and API-key access</p>
+<main class="admin-shell" data-testid="admin-dashboard" aria-busy="@_loading.ToString().ToLowerInvariant()">
+    <aside class="admin-sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-mark brand-mark-small" aria-hidden="true">CG</div>
+            <div>
+                <strong class="block text-sm text-foreground">Codex Gateway</strong>
+                <span class="text-xs text-foreground-400">Control plane</span>
+            </div>
         </div>
-        <div class="topbar-actions">
-            <button class="secondary" type="button" disabled="@_loading" @onclick="RefreshAsync">
-                @(_loading ? "Refreshing…" : "Refresh")
-            </button>
+
+        <nav class="sidebar-nav" aria-label="Administration sections">
+            <p class="nav-label">Workspace</p>
+            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.Overview)" OnClick="@(() => SelectSection(AdminSection.Overview))">
+                <span class="nav-glyph" aria-hidden="true">⌂</span><span>Overview</span>
+            </LumexButton>
+            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.ApiKeys)" OnClick="@(() => SelectSection(AdminSection.ApiKeys))">
+                <span class="nav-glyph" aria-hidden="true">⌁</span><span>API keys</span><span class="nav-count">@_apiKeys.Count</span>
+            </LumexButton>
+            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.Projects)" OnClick="@(() => SelectSection(AdminSection.Projects))">
+                <span class="nav-glyph" aria-hidden="true">◇</span><span>Projects</span><span class="nav-count">@_projects.Count</span>
+            </LumexButton>
+            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.McpServers)" OnClick="@(() => SelectSection(AdminSection.McpServers))">
+                <span class="nav-glyph" aria-hidden="true">⌘</span><span>MCP servers</span><span class="nav-count">@_servers.Count</span>
+            </LumexButton>
+
+            <p class="nav-label mt-5">Runtime</p>
+            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.Codex)" OnClick="@(() => SelectSection(AdminSection.Codex))">
+                <span class="nav-glyph" aria-hidden="true">◉</span><span>Codex account</span>
+            </LumexButton>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="flex items-center justify-between gap-3 px-2">
+                <span class="text-xs text-foreground-400">Codex status</span>
+                <LumexChip Color="@CodexStatusColor" Variant="@ChipVariant.Flat" Size="@Size.Small">
+                    @CodexStatusLabel
+                </LumexChip>
+            </div>
+            <LumexButton Variant="@Variant.Flat" Disabled="@_loading" FullWidth="@true" OnClick="RefreshAsync">
+                @(_loading ? "Refreshing…" : "Refresh data")
+            </LumexButton>
             <form action="/admin/logout" method="post">
                 <AntiforgeryToken />
-                <button class="secondary" type="submit">Log out</button>
+                <LumexButton Type="@ButtonType.Submit" Variant="@Variant.Light" FullWidth="@true">Log out</LumexButton>
             </form>
         </div>
-    </header>
+    </aside>
 
-    <p class="status @StatusKind.ToString().ToLowerInvariant()" role="status" aria-live="polite">@Status</p>
+    <section class="admin-content">
+        <header class="content-header">
+            <div>
+                <p class="eyebrow">@SectionEyebrow</p>
+                <h1 class="text-3xl font-semibold tracking-tight text-foreground">@SectionTitle</h1>
+                <p class="mt-2 text-sm leading-6 text-foreground-500">@SectionDescription</p>
+            </div>
+            <div class="hidden items-center gap-2 sm:flex">
+                <LumexChip Variant="@ChipVariant.Flat" Size="@Size.Small">Internal</LumexChip>
+                <LumexChip Color="@ThemeColor.Success" Variant="@ChipVariant.Dot" Size="@Size.Small">Online</LumexChip>
+            </div>
+        </header>
 
-    @if (!_initialized)
-    {
-        <section class="card loading-card">
-            <span class="spinner" aria-hidden="true"></span>
-            <span>Loading gateway configuration…</span>
-        </section>
-    }
-    else
-    {
-        <div class="page-grid">
-            <section class="section" aria-labelledby="codex-heading">
-                <div class="section-heading">
-                    <div>
-                        <h2 id="codex-heading">Codex account</h2>
-                        <p class="muted small">Authentication used by gateway runs</p>
+        @if (!string.IsNullOrWhiteSpace(Status))
+        {
+            <LumexAlert Color="@StatusColor" Description="@Status" Class="mb-5" />
+        }
+
+        @if (!_initialized)
+        {
+            <LumexCard Class="grid min-h-72 place-items-center border border-default-200/60 bg-surface1/80">
+                <LumexCardBody Class="items-center justify-center gap-4 text-center">
+                    <LumexSpinner Color="@ThemeColor.Primary" Label="Loading gateway configuration…" />
+                </LumexCardBody>
+            </LumexCard>
+        }
+        else
+        {
+            @switch (_selectedSection)
+            {
+                case AdminSection.Overview:
+                    <div class="grid gap-6">
+                        <section class="metric-grid" aria-label="Gateway summary">
+                            <LumexCard Class="metric-card">
+                                <LumexCardBody>
+                                    <span class="metric-label">Projects</span>
+                                    <strong class="metric-value">@_projects.Count</strong>
+                                    <span class="metric-caption">@_projects.Count(project => project.Enabled) enabled</span>
+                                </LumexCardBody>
+                            </LumexCard>
+                            <LumexCard Class="metric-card">
+                                <LumexCardBody>
+                                    <span class="metric-label">API keys</span>
+                                    <strong class="metric-value">@_apiKeys.Count</strong>
+                                    <span class="metric-caption">Global credentials</span>
+                                </LumexCardBody>
+                            </LumexCard>
+                            <LumexCard Class="metric-card">
+                                <LumexCardBody>
+                                    <span class="metric-label">MCP servers</span>
+                                    <strong class="metric-value">@_servers.Count</strong>
+                                    <span class="metric-caption">@_servers.Count(server => server.Enabled) available</span>
+                                </LumexCardBody>
+                            </LumexCard>
+                            <LumexCard Class="metric-card metric-card-accent">
+                                <LumexCardBody>
+                                    <span class="metric-label">Codex</span>
+                                    <strong class="text-xl font-semibold text-foreground">@CodexStatusLabel</strong>
+                                    <span class="metric-caption">Run identity</span>
+                                </LumexCardBody>
+                            </LumexCard>
+                        </section>
+
+                        <div class="overview-grid">
+                            <section aria-labelledby="codex-overview-heading">
+                                <div class="section-title-row">
+                                    <div>
+                                        <h2 id="codex-overview-heading">Codex account</h2>
+                                        <p>Authentication shared by isolated runs.</p>
+                                    </div>
+                                    <LumexButton Size="@Size.Small" Variant="@Variant.Light" OnClick="@(() => SelectSection(AdminSection.Codex))">Manage</LumexButton>
+                                </div>
+                                <CodexAccountCard Account="_account" Login="_login" LoadError="@_codexError" OnChanged="HandleCodexChangedAsync" />
+                            </section>
+
+                            <LumexCard Class="border border-default-200/60 bg-surface1/80">
+                                <LumexCardHeader Class="flex-col items-start gap-1">
+                                    <h2 class="text-lg font-semibold">Configuration flow</h2>
+                                    <p class="text-sm text-foreground-500">The shortest path to a working project.</p>
+                                </LumexCardHeader>
+                                <LumexDivider />
+                                <LumexCardBody Class="gap-5">
+                                    <button type="button" class="flow-step" @onclick="() => SelectSection(AdminSection.ApiKeys)">
+                                        <span>1</span><div><strong>Create an API key</strong><p>The generated secret is shown once.</p></div>
+                                    </button>
+                                    <button type="button" class="flow-step" @onclick="() => SelectSection(AdminSection.McpServers)">
+                                        <span>2</span><div><strong>Trust MCP servers</strong><p>Define transports and available tools.</p></div>
+                                    </button>
+                                    <button type="button" class="flow-step" @onclick="() => SelectSection(AdminSection.Projects)">
+                                        <span>3</span><div><strong>Grant project access</strong><p>Connect keys to only the tools they need.</p></div>
+                                    </button>
+                                </LumexCardBody>
+                            </LumexCard>
+                        </div>
                     </div>
-                </div>
-                <CodexAccountCard Account="_account"
-                                  Login="_login"
-                                  LoadError="@_codexError"
-                                  OnChanged="HandleCodexChangedAsync" />
-
-            </section>
-
-            <ApiKeyList ApiKeys="_apiKeys" OnChanged="HandleChangedAsync" />
-
-            <McpCatalogSection Servers="_servers" OnChanged="HandleChangedAsync" />
-
-            <ProjectsSection Projects="_projects"
-                             ApiKeys="_apiKeys"
-                             Servers="_servers"
-                             OnChanged="HandleChangedAsync" />
-        </div>
-    }
+                    break;
+                case AdminSection.ApiKeys:
+                    <ApiKeyList ApiKeys="_apiKeys" OnChanged="HandleChangedAsync" />
+                    break;
+                case AdminSection.Projects:
+                    <ProjectsSection Projects="_projects" ApiKeys="_apiKeys" Servers="_servers" OnChanged="HandleChangedAsync" />
+                    break;
+                case AdminSection.McpServers:
+                    <McpCatalogSection Servers="_servers" OnChanged="HandleChangedAsync" />
+                    break;
+                case AdminSection.Codex:
+                    <section class="max-w-4xl" aria-labelledby="codex-heading">
+                        <div class="section-title-row">
+                            <div>
+                                <h2 id="codex-heading">Run identity</h2>
+                                <p>The dedicated Codex account mounted into every isolated execution container.</p>
+                            </div>
+                        </div>
+                        <CodexAccountCard Account="_account" Login="_login" LoadError="@_codexError" OnChanged="HandleCodexChangedAsync" />
+                    </section>
+                    break;
+            }
+        }
+    </section>
 </main>

@@ -1,15 +1,18 @@
 @namespace CodexGateway.App.Components.Pages.Admin
 @page "/admin"
 
-<PageTitle>Codex Gateway Admin</PageTitle>
+<PageTitle>Codex Gateway</PageTitle>
 
 @if (!AdminOptions.Value.Enabled)
 {
-    <main class="shell narrow-shell">
-        <section class="card">
-            <h1>Administration disabled</h1>
-            <p class="muted">The gateway administration interface is not enabled.</p>
-        </section>
+    <main class="grid min-h-screen place-items-center px-6 py-12">
+        <LumexCard Class="w-full max-w-lg border border-default-200/60 bg-surface1/90 shadow-2xl shadow-black/20">
+            <LumexCardBody Class="gap-3 p-8 text-center">
+                <div class="mx-auto grid size-12 place-items-center rounded-2xl bg-warning/10 text-xl text-warning">!</div>
+                <h1 class="text-2xl font-semibold text-foreground">Administration disabled</h1>
+                <p class="text-sm leading-6 text-foreground-500">The gateway administration interface is not enabled for this deployment.</p>
+            </LumexCardBody>
+        </LumexCard>
     </main>
 }
 else
@@ -19,37 +22,72 @@ else
             <AdminDashboard />
         </Authorized>
         <NotAuthorized>
-            <main class="shell login-shell">
-                <section class="card login-card" aria-labelledby="login-heading">
-                    <div class="eyebrow">Codex Gateway</div>
-                    <h1 id="login-heading">Admin login</h1>
-                    <p class="muted">Sign in to manage projects, API-key access, and trusted MCP servers.</p>
+            <main class="login-layout">
+                <section class="login-brand" aria-label="Codex Gateway introduction">
+                    <div class="brand-mark" aria-hidden="true">CG</div>
+                    <div>
+                        <p class="eyebrow">Internal control plane</p>
+                        <h1 class="max-w-xl text-4xl font-semibold tracking-tight text-white sm:text-5xl">A clear view of every gateway connection.</h1>
+                        <p class="mt-5 max-w-lg text-base leading-7 text-zinc-300">Manage API access, isolated projects, trusted MCP servers, and the Codex account used by every run.</p>
+                    </div>
+                    <div class="login-feature-list" aria-label="Gateway capabilities">
+                        <span>Project-scoped API access</span>
+                        <span>Isolated Codex execution</span>
+                        <span>Controlled MCP forwarding</span>
+                    </div>
+                </section>
 
-                    @if (string.Equals(LoginError, "invalid_credentials", StringComparison.Ordinal))
-                    {
-                        <p class="status error" role="alert">Invalid admin credentials.</p>
-                    }
-                    else if (string.Equals(LoginError, "session_expired", StringComparison.Ordinal))
-                    {
-                        <p class="status error" role="alert">Your admin session is not authenticated. Sign in again.</p>
-                    }
-                    else if (string.Equals(LogoutStatus, "success", StringComparison.Ordinal))
-                    {
-                        <p class="status success" role="status">You have been logged out.</p>
-                    }
+                <section class="login-form-panel">
+                    <LumexCard Class="w-full max-w-md border border-default-200/70 bg-surface1/95 shadow-2xl shadow-black/30">
+                        <LumexCardHeader Class="flex-col items-start gap-2 px-7 pt-7">
+                            <LumexChip Color="@ThemeColor.Primary" Variant="@ChipVariant.Flat" Size="@Size.Small">Administrator</LumexChip>
+                            <h2 id="login-heading" class="text-2xl font-semibold tracking-tight text-foreground">Admin login</h2>
+                            <p class="text-sm leading-6 text-foreground-500">Sign in to manage this gateway instance.</p>
+                        </LumexCardHeader>
+                        <LumexCardBody Class="gap-5 px-7 pb-7">
+                            @if (string.Equals(LoginError, "invalid_credentials", StringComparison.Ordinal))
+                            {
+                                <LumexAlert Color="@ThemeColor.Danger" Title="Sign-in failed" Description="The username or password is incorrect." />
+                            }
+                            else if (string.Equals(LoginError, "session_expired", StringComparison.Ordinal))
+                            {
+                                <LumexAlert Color="@ThemeColor.Warning" Title="Session expired" Description="Sign in again to continue." />
+                            }
+                            else if (string.Equals(LogoutStatus, "success", StringComparison.Ordinal))
+                            {
+                                <LumexAlert Color="@ThemeColor.Success" Title="Signed out" Description="Your administrator session has ended." />
+                            }
 
-                    <form action="/admin/login" method="post" class="stack" autocomplete="on">
-                        <AntiforgeryToken />
-                        <div class="field full">
-                            <label for="username">Username</label>
-                            <input id="username" name="username" autocomplete="username" required autofocus />
-                        </div>
-                        <div class="field full">
-                            <label for="password">Password</label>
-                            <input id="password" name="password" type="password" autocomplete="current-password" required />
-                        </div>
-                        <button type="submit">Log in</button>
-                    </form>
+                            <form action="/admin/login" method="post" class="grid gap-4" autocomplete="on">
+                                <AntiforgeryToken />
+                                <LumexTextbox id="username"
+                                              name="username"
+                                              Label="Username"
+                                              Placeholder="Enter your username"
+                                              LabelPlacement="@LabelPlacement.Outside"
+                                              Variant="@InputVariant.Outlined"
+                                              Required="@true"
+                                              Autofocus="@true"
+                                              autocomplete="username" />
+                                <LumexTextbox id="password"
+                                              name="password"
+                                              Type="@InputType.Password"
+                                              Label="Password"
+                                              Placeholder="Enter your password"
+                                              LabelPlacement="@LabelPlacement.Outside"
+                                              Variant="@InputVariant.Outlined"
+                                              Required="@true"
+                                              autocomplete="current-password" />
+                                <LumexButton Type="@ButtonType.Submit"
+                                             Color="@ThemeColor.Primary"
+                                             FullWidth="@true"
+                                             Class="mt-1 font-semibold">
+                                    Log in
+                                </LumexButton>
+                            </form>
+                        </LumexCardBody>
+                    </LumexCard>
+                    <p class="mt-5 text-center text-xs text-foreground-400">Codex Gateway · Internal administration</p>
                 </section>
             </main>
         </NotAuthorized>

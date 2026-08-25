@@ -6,12 +6,14 @@ using CodexGateway.Logic.UseCases.CodexAuthentication;
 using CodexGateway.Models;
 using MediatR;
 using Microsoft.AspNetCore.Components;
+using LumexUI.Common;
 using Shared.Infrastructure.Persistence.Repositories;
 
 namespace CodexGateway.App.Components.Pages.Admin.Dashboard;
 
 public partial class AdminDashboard : AdminComponentBase
 {
+    private AdminSection _selectedSection;
     private IReadOnlyList<ProjectDefinition> _projects = [];
     private IReadOnlyList<McpServerDefinition> _servers = [];
     private IReadOnlyList<ApiKeyIdentity> _apiKeys = [];
@@ -24,6 +26,60 @@ public partial class AdminDashboard : AdminComponentBase
     private bool _refreshRequested;
     private bool _showRefreshSuccess;
     private Task? _refreshTask;
+
+    private string SectionEyebrow => _selectedSection switch
+    {
+        AdminSection.Overview => "Gateway status",
+        AdminSection.ApiKeys => "Access management",
+        AdminSection.Projects => "Isolation boundaries",
+        AdminSection.McpServers => "Tool catalog",
+        AdminSection.Codex => "Runtime identity",
+        _ => string.Empty
+    };
+
+    private string SectionTitle => _selectedSection switch
+    {
+        AdminSection.Overview => "Overview",
+        AdminSection.ApiKeys => "API keys",
+        AdminSection.Projects => "Projects",
+        AdminSection.McpServers => "MCP servers",
+        AdminSection.Codex => "Codex account",
+        _ => string.Empty
+    };
+
+    private string SectionDescription => _selectedSection switch
+    {
+        AdminSection.Overview => "Gateway health, access configuration, and run identity at a glance.",
+        AdminSection.ApiKeys => "Create and revoke the global credentials consumers use to reach the gateway.",
+        AdminSection.Projects => "Define project boundaries and grant each API key only the MCP tools it needs.",
+        AdminSection.McpServers => "Manage the trusted HTTP and STDIO servers that projects can use.",
+        AdminSection.Codex => "Authenticate the dedicated Codex identity shared by isolated run containers.",
+        _ => string.Empty
+    };
+
+    private string CodexStatusLabel => _codexError is not null
+        ? "Unavailable"
+        : _account?.Authenticated == true
+            ? "Authenticated"
+            : _login is { Status: DeviceLoginStatus.Pending }
+                ? "Login pending"
+                : "Not connected";
+
+    private ThemeColor CodexStatusColor => _codexError is not null
+        ? ThemeColor.Danger
+        : _account?.Authenticated == true
+            ? ThemeColor.Success
+            : _login is { Status: DeviceLoginStatus.Pending }
+                ? ThemeColor.Warning
+                : ThemeColor.Default;
+
+    private ThemeColor StatusColor => StatusKind switch
+    {
+        AdminStatusKind.Success => ThemeColor.Success,
+        AdminStatusKind.Warning => ThemeColor.Warning,
+        AdminStatusKind.Error => ThemeColor.Danger,
+        _ => ThemeColor.Default
+    };
 
     [Inject]
     private ISender Sender { get; set; } = null!;
@@ -173,6 +229,13 @@ public partial class AdminDashboard : AdminComponentBase
         StartPollingIfNeeded();
     }
 
+    private void SelectSection(AdminSection section) => _selectedSection = section;
+
+    private string NavButtonClass(AdminSection section) =>
+        section == _selectedSection
+            ? "nav-button nav-button-selected"
+            : "nav-button";
+
     private void StartPollingIfNeeded()
     {
         if (_login is not { Status: DeviceLoginStatus.Pending } ||
@@ -205,6 +268,15 @@ public partial class AdminDashboard : AdminComponentBase
         catch (OperationCanceledException) when (PageCancellationToken.IsCancellationRequested)
         {
         }
+    }
+
+    private enum AdminSection
+    {
+        Overview,
+        ApiKeys,
+        Projects,
+        McpServers,
+        Codex
     }
 
 }

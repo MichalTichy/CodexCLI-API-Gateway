@@ -1,148 +1,148 @@
 @namespace CodexGateway.App.Components.Pages.Admin.Projects
 
-<article class="card" aria-busy="@_busy.ToString().ToLowerInvariant()">
+<article aria-busy="@_busy.ToString().ToLowerInvariant()">
     <EditForm Model="_editor" OnValidSubmit="SaveAsync" autocomplete="off">
-        <DataAnnotationsValidator />
-        <div class="card-header">
-            <div>
-                <h3>@Project.Name</h3>
-                <span class="badge @(Project.Enabled ? "on" : "off")">@(Project.Enabled ? "Enabled" : "Disabled")</span>
-                <div class="muted small mono">@Project.Id</div>
-            </div>
-            <div class="actions">
-                <button type="submit" disabled="@_busy">@(_busy ? "Saving…" : "Save project")</button>
-                @if (_confirmDelete)
+        <LumexCard Class="form-card">
+            <LumexCardHeader Class="responsive-row">
+                <div>
+                    <h3>@Project.Name</h3>
+                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                        <LumexChip Color="@(Project.Enabled ? ThemeColor.Success : ThemeColor.Default)" Variant="@ChipVariant.Dot" Size="@Size.Small">@(Project.Enabled ? "Enabled" : "Disabled")</LumexChip>
+                        <span class="font-mono text-xs text-foreground-400">@Project.Id</span>
+                    </div>
+                </div>
+                <div class="flex flex-wrap justify-end gap-2">
+                    <LumexButton Type="@ButtonType.Submit" Color="@ThemeColor.Primary" Disabled="@_busy">@(_busy ? "Saving…" : "Save project")</LumexButton>
+                    @if (_confirmDelete)
+                    {
+                        <div class="confirmation-panel" role="group" aria-label="Confirm project deletion">
+                            <span>Delete the project and its stored artifacts?</span>
+                            <LumexButton Color="@ThemeColor.Danger" Size="@Size.Small" Disabled="@_busy" OnClick="DeleteAsync">Confirm</LumexButton>
+                            <LumexButton Variant="@Variant.Light" Size="@Size.Small" Disabled="@_busy" OnClick="CancelDelete">Cancel</LumexButton>
+                        </div>
+                    }
+                    else
+                    {
+                        <LumexButton Color="@ThemeColor.Danger" Variant="@Variant.Light" Disabled="@_busy" OnClick="ConfirmDelete">Delete</LumexButton>
+                    }
+                </div>
+            </LumexCardHeader>
+            <LumexDivider />
+            <LumexCardBody Class="gap-6">
+                <DataAnnotationsValidator />
+                <div class="form-grid-two">
+                    <div>
+                        <LumexTextbox id="@($"project-name-{Project.Id}")" Behavior="@InputBehavior.OnInput" @bind-Value="_editor.Name" Label="Project name" LabelPlacement="@LabelPlacement.Outside" Variant="@InputVariant.Outlined" />
+                        <ValidationMessage For="() => _editor.Name" />
+                    </div>
+                    <label class="toggle-field" for="@($"project-enabled-{Project.Id}")">
+                        <InputCheckbox id="@($"project-enabled-{Project.Id}")" @bind-Value="_editor.Enabled" />
+                        <span><strong>Enabled</strong><small>Accept requests for this project</small></span>
+                    </label>
+                    <div class="sm:col-span-2">
+                        <LumexTextbox id="@($"project-runner-image-{Project.Id}")"
+                                      Behavior="@InputBehavior.OnInput"
+                                      @bind-Value="_editor.RunnerImage"
+                                      Label="Runner image"
+                                      Placeholder="Use the default runner image"
+                                      Description="Optional container image override for this project's runs."
+                                      LabelPlacement="@LabelPlacement.Outside"
+                                      Variant="@InputVariant.Outlined" />
+                        <ValidationMessage For="() => _editor.RunnerImage" />
+                    </div>
+                </div>
+
+                <LumexDivider />
+                <div class="section-title-row">
+                    <div>
+                        <h4>API-key access</h4>
+                        <p>Grant project access first, then select the MCP servers and individual tools.</p>
+                    </div>
+                    <LumexChip Variant="@ChipVariant.Flat" Size="@Size.Small">@_editor.ApiKeys.Count keys</LumexChip>
+                </div>
+
+                @if (_editor.ApiKeys.Count == 0)
                 {
-                    <span class="confirmation" role="group" aria-label="Confirm project deletion">
-                        <span class="small">Delete project and stored artifacts? This cannot be undone.</span>
-                        <button class="danger" type="button" disabled="@_busy" @onclick="DeleteAsync">Confirm</button>
-                        <button class="secondary" type="button" disabled="@_busy" @onclick="CancelDelete">Cancel</button>
-                    </span>
+                    <div class="empty-state">Configure a gateway API key before granting project access.</div>
                 }
                 else
                 {
-                    <button class="danger" type="button" disabled="@_busy" @onclick="ConfirmDelete">Delete project</button>
-                }
-            </div>
-        </div>
-
-        <div class="form-grid">
-            <div class="field wide">
-                <label for="@($"project-name-{Project.Id}")">Project name</label>
-                <InputText id="@($"project-name-{Project.Id}")" @bind-Value="_editor.Name" />
-                <ValidationMessage For="() => _editor.Name" />
-            </div>
-            <div class="field narrow checkbox-field">
-                <label class="check" for="@($"project-enabled-{Project.Id}")">
-                    <InputCheckbox id="@($"project-enabled-{Project.Id}")" @bind-Value="_editor.Enabled" />
-                    <span>Enabled</span>
-                </label>
-            </div>
-            <div class="field wide">
-                <label for="@($"project-runner-image-{Project.Id}")">Runner image</label>
-                <InputText id="@($"project-runner-image-{Project.Id}")"
-                           @bind-Value="_editor.RunnerImage"
-                           placeholder="Use the default runner image" />
-                <div class="muted small">Optional override for this project's runs.</div>
-                <ValidationMessage For="() => _editor.RunnerImage" />
-            </div>
-        </div>
-
-        <div class="divider"></div>
-        <div>
-            <h4>API-key access</h4>
-            <p class="muted small">Only checked servers and tools are granted. New catalog entries remain unavailable until selected.</p>
-        </div>
-
-        @if (_editor.ApiKeys.Count == 0)
-        {
-            <div class="empty">Configure a gateway API key before granting project access.</div>
-        }
-        else
-        {
-            <div class="compact-stack">
-                @foreach (var access in _editor.ApiKeys)
-                {
-                    <div class="access-key @(!access.HasProjectAccess ? "is-disabled" : null)" @key="access.Id">
-                        <div class="access-head">
-                            <div>
-                                <label class="check" for="@($"access-{Project.Id}-{access.Id}")">
-                                    <input id="@($"access-{Project.Id}-{access.Id}")" type="checkbox" @bind="access.HasProjectAccess" />
-                                    <span>@access.Name</span>
-                                </label>
-                                <div class="muted small mono">@access.Id</div>
-                            </div>
-                            <span class="badge @(access.HasProjectAccess ? "on" : "off")">
-                                @(access.HasProjectAccess ? "Project access" : "No access")
-                            </span>
-                        </div>
-
-                        @if (access.Servers.Count == 0)
+                    <div class="grid gap-3">
+                        @foreach (var access in _editor.ApiKeys)
                         {
-                            <div class="empty compact-empty">No MCP servers are configured.</div>
-                        }
-                        else
-                        {
-                            <div class="grant-list">
-                                @foreach (var server in access.Servers)
+                            <section class="access-card @(!access.HasProjectAccess ? "access-card-disabled" : null)" @key="access.Id">
+                                <header class="access-card-header">
+                                    <label class="toggle-field toggle-field-compact" for="@($"access-{Project.Id}-{access.Id}")">
+                                        <input id="@($"access-{Project.Id}-{access.Id}")" type="checkbox" @bind="access.HasProjectAccess" />
+                                        <span><strong>@access.Name</strong><small class="font-mono">@access.Id</small></span>
+                                    </label>
+                                    <LumexChip Color="@(access.HasProjectAccess ? ThemeColor.Success : ThemeColor.Default)" Variant="@ChipVariant.Dot" Size="@Size.Small">
+                                        @(access.HasProjectAccess ? "Project access" : "No access")
+                                    </LumexChip>
+                                </header>
+
+                                @if (access.Servers.Count == 0)
                                 {
-                                    var serverAvailable = access.HasProjectAccess && server.CatalogEnabled;
-                                    var toolsAvailable = serverAvailable && server.Granted;
-                                    <div class="server-grant" @key="server.Id">
-                                        <div class="server-grant-head">
-                                            <label class="check" for="@($"grant-{Project.Id}-{access.Id}-{server.Id}")">
-                                                <input id="@($"grant-{Project.Id}-{access.Id}-{server.Id}")"
-                                                       type="checkbox"
-                                                       @bind="server.Granted"
-                                                       disabled="@(!serverAvailable)" />
-                                                <span>@server.Name</span>
-                                            </label>
-                                            <div class="actions">
-                                                <span class="badge @(server.CatalogEnabled ? "on" : "off")">
-                                                    @(server.CatalogEnabled ? "Catalog enabled" : "Catalog disabled")
-                                                </span>
-                                                <label class="check small" for="@($"required-{Project.Id}-{access.Id}-{server.Id}")">
-                                                    <input id="@($"required-{Project.Id}-{access.Id}-{server.Id}")"
-                                                           type="checkbox"
-                                                           @bind="server.Required"
-                                                           disabled="@(!toolsAvailable)" />
-                                                    <span>Required</span>
-                                                </label>
-                                            </div>
-                                        </div>
-
-                                        @if (server.Tools.Count == 0)
+                                    <div class="empty-state empty-state-compact">No MCP servers are configured.</div>
+                                }
+                                else
+                                {
+                                    <div class="grant-list">
+                                        @foreach (var server in access.Servers)
                                         {
-                                            <span class="muted small">No catalog tools</span>
-                                        }
-                                        else
-                                        {
-                                            <div class="tool-list">
-                                                <div class="tool-grant-row tool-grant-head" aria-hidden="true">
-                                                    <span>Tool</span><span>Enabled</span>
-                                                </div>
-                                                @foreach (var tool in server.Tools)
-                                                {
-                                                    <div class="tool-grant-row" @key="tool.Name">
-                                                        <span class="mono small">@tool.Name</span>
-                                                        <label class="check small">
-                                                            <InputCheckbox @bind-Value="tool.Enabled"
-                                                                           disabled="@(!toolsAvailable)" />
-                                                            <span>Allow</span>
+                                            var serverAvailable = access.HasProjectAccess && server.CatalogEnabled;
+                                            var toolsAvailable = serverAvailable && server.Granted;
+                                            <section class="server-grant" @key="server.Id">
+                                                <header class="server-grant-header">
+                                                    <label class="toggle-field toggle-field-compact" for="@($"grant-{Project.Id}-{access.Id}-{server.Id}")">
+                                                        <input id="@($"grant-{Project.Id}-{access.Id}-{server.Id}")" type="checkbox" @bind="server.Granted" disabled="@(!serverAvailable)" />
+                                                        <span><strong>@server.Name</strong><small>MCP server</small></span>
+                                                    </label>
+                                                    <div class="flex flex-wrap items-center justify-end gap-2">
+                                                        <LumexChip Color="@(server.CatalogEnabled ? ThemeColor.Success : ThemeColor.Default)" Variant="@ChipVariant.Dot" Size="@Size.Small">
+                                                            @(server.CatalogEnabled ? "Catalog enabled" : "Catalog disabled")
+                                                        </LumexChip>
+                                                        <label class="inline-check" for="@($"required-{Project.Id}-{access.Id}-{server.Id}")">
+                                                            <input id="@($"required-{Project.Id}-{access.Id}-{server.Id}")" type="checkbox" @bind="server.Required" disabled="@(!toolsAvailable)" />
+                                                            <span>Required</span>
                                                         </label>
                                                     </div>
+                                                </header>
+
+                                                @if (server.Tools.Count == 0)
+                                                {
+                                                    <span class="text-xs text-foreground-400">No catalog tools</span>
                                                 }
-                                            </div>
+                                                else
+                                                {
+                                                    <div class="tool-table">
+                                                        <div class="tool-row tool-row-header" aria-hidden="true"><span>Tool</span><span>Access</span></div>
+                                                        @foreach (var tool in server.Tools)
+                                                        {
+                                                            <div class="tool-row" @key="tool.Name">
+                                                                <code>@tool.Name</code>
+                                                                <label class="inline-check">
+                                                                    <InputCheckbox @bind-Value="tool.Enabled" disabled="@(!toolsAvailable)" />
+                                                                    <span>Allow</span>
+                                                                </label>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+                                            </section>
                                         }
                                     </div>
                                 }
-                            </div>
+                            </section>
                         }
                     </div>
                 }
-            </div>
-        }
 
-        <p class="status @_statusKind" role="status" aria-live="polite">@_status</p>
+                @if (!string.IsNullOrWhiteSpace(_status))
+                {
+                    <LumexAlert Color="@(_statusKind == "error" ? ThemeColor.Danger : ThemeColor.Default)" Description="@_status" />
+                }
+            </LumexCardBody>
+        </LumexCard>
     </EditForm>
 </article>

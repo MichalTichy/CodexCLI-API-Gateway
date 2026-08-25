@@ -1,79 +1,100 @@
 @namespace CodexGateway.App.Components.Pages.Admin.Codex
 @inherits AdminComponentBase
 
-<div class="card" aria-busy="@IsBusy.ToString().ToLowerInvariant()">
-    @if (!string.IsNullOrWhiteSpace(LoadError))
-    {
-        <div class="card-header">
-            <div>
-                <h3>Account status unavailable</h3>
-                <p class="status error" role="alert">@LoadError</p>
-            </div>
-            <button class="secondary" type="button" disabled="@IsBusy" @onclick="RetryAsync">Retry</button>
-        </div>
-    }
-    else if (Account?.Authenticated == true)
-    {
-        <div class="card-header">
-            <div>
-                <h3>@(Account.Email ?? "Authenticated account")</h3>
-                <div class="badge-row">
-                    <span class="badge on">Authenticated</span>
-                    @if (!string.IsNullOrWhiteSpace(Account.AccountType))
-                    {
-                        <span class="badge">@Account.AccountType</span>
-                    }
+<LumexCard Class="form-card" aria-busy="@IsBusy.ToString().ToLowerInvariant()">
+    <LumexCardBody Class="gap-5">
+        @if (!string.IsNullOrWhiteSpace(LoadError))
+        {
+            <div class="responsive-row">
+                <div class="flex items-start gap-4">
+                    <div class="status-orb status-orb-danger" aria-hidden="true">!</div>
+                    <div>
+                        <h3>Account status unavailable</h3>
+                        <p class="mt-1 text-sm text-danger" role="alert">@LoadError</p>
+                    </div>
                 </div>
+                <LumexButton Variant="@Variant.Flat" Disabled="@IsBusy" OnClick="RetryAsync">Retry</LumexButton>
             </div>
-            @if (_confirmLogout)
-            {
-                <div class="confirmation" role="group" aria-label="Confirm Codex logout">
-                    <span class="small">Log out of Codex? New runs will fail until you sign in again.</span>
-                    <button class="danger" type="button" disabled="@IsBusy" @onclick="LogoutAsync">Confirm</button>
-                    <button class="secondary" type="button" disabled="@IsBusy" @onclick="CancelLogout">Cancel</button>
+        }
+        else if (Account?.Authenticated == true)
+        {
+            <div class="responsive-row">
+                <div class="flex items-center gap-4">
+                    <div class="status-orb status-orb-success" aria-hidden="true">✓</div>
+                    <div>
+                        <h3>@(Account.Email ?? "Authenticated account")</h3>
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            <LumexChip Color="@ThemeColor.Success" Variant="@ChipVariant.Dot" Size="@Size.Small">Authenticated</LumexChip>
+                            @if (!string.IsNullOrWhiteSpace(Account.AccountType))
+                            {
+                                <LumexChip Variant="@ChipVariant.Flat" Size="@Size.Small">@Account.AccountType</LumexChip>
+                            }
+                        </div>
+                    </div>
                 </div>
-            }
-            else
-            {
-                <button class="danger" type="button" disabled="@IsBusy" @onclick="ConfirmLogout">Log out of Codex</button>
-            }
-        </div>
-    }
-    else if (Login is { Status: DeviceLoginStatus.Pending })
-    {
-        <div class="card-header">
-            <div>
-                <h3>Complete device login</h3>
-                <p class="muted small">Open the verification page and enter this code.</p>
-                <p><span class="device-code mono">@Login.UserCode</span></p>
-                <a href="@Login.VerificationUrl" target="_blank" rel="noopener noreferrer">@Login.VerificationUrl</a>
+                @if (_confirmLogout)
+                {
+                    <div class="confirmation-panel" role="group" aria-label="Confirm Codex logout">
+                        <span>New runs will fail until you sign in again.</span>
+                        <LumexButton Color="@ThemeColor.Danger" Size="@Size.Small" Disabled="@IsBusy" OnClick="LogoutAsync">Confirm logout</LumexButton>
+                        <LumexButton Variant="@Variant.Light" Size="@Size.Small" Disabled="@IsBusy" OnClick="CancelLogout">Cancel</LumexButton>
+                    </div>
+                }
+                else
+                {
+                    <LumexButton Color="@ThemeColor.Danger" Variant="@Variant.Light" Disabled="@IsBusy" OnClick="ConfirmLogout">Log out of Codex</LumexButton>
+                }
+            </div>
+        }
+        else if (Login is { Status: DeviceLoginStatus.Pending })
+        {
+            <div class="grid gap-5">
+                <div class="responsive-row">
+                    <div class="flex items-start gap-4">
+                        <div class="status-orb status-orb-warning" aria-hidden="true">→</div>
+                        <div>
+                            <h3>Complete device login</h3>
+                            <p class="mt-1 text-sm text-foreground-500">Open the verification page and enter the code below.</p>
+                        </div>
+                    </div>
+                    <LumexButton Variant="@Variant.Light" Disabled="@IsBusy" OnClick="CancelLoginAsync">Cancel login</LumexButton>
+                </div>
+                <div class="device-login-panel">
+                    <div>
+                        <span class="block text-xs font-semibold uppercase tracking-wider text-foreground-400">Device code</span>
+                        <code class="device-code">@Login.UserCode</code>
+                    </div>
+                    <LumexButton As="a" href="@Login.VerificationUrl" target="_blank" rel="noopener noreferrer" Color="@ThemeColor.Primary">Open verification page</LumexButton>
+                </div>
                 @if (!string.IsNullOrWhiteSpace(Login.Error))
                 {
-                    <p class="status error" role="alert">@Login.Error</p>
+                    <LumexAlert Color="@ThemeColor.Danger" Description="@Login.Error" />
                 }
             </div>
-            <button class="secondary" type="button" disabled="@IsBusy" @onclick="CancelLoginAsync">Cancel login</button>
-        </div>
-    }
-    else
-    {
-        <div class="card-header">
-            <div>
-                <h3>Not authenticated</h3>
-                <span class="badge warning">Codex login required</span>
-                @if (Login is not null && !string.IsNullOrWhiteSpace(Login.Error))
-                {
-                    <p class="status error" role="alert">@Login.Error</p>
-                }
+        }
+        else
+        {
+            <div class="responsive-row">
+                <div class="flex items-center gap-4">
+                    <div class="status-orb" aria-hidden="true">○</div>
+                    <div>
+                        <h3>Not authenticated</h3>
+                        <p class="mt-1 text-sm text-foreground-500">Connect a dedicated Codex account before running requests.</p>
+                        @if (Login is not null && !string.IsNullOrWhiteSpace(Login.Error))
+                        {
+                            <p class="mt-2 text-sm text-danger" role="alert">@Login.Error</p>
+                        }
+                    </div>
+                </div>
+                <LumexButton Color="@ThemeColor.Primary" Disabled="@IsBusy" OnClick="StartLoginAsync">
+                    @(IsBusy ? "Working…" : "Start device login")
+                </LumexButton>
             </div>
-            <button type="button" disabled="@IsBusy" @onclick="StartLoginAsync">
-                @(IsBusy ? "Working…" : "Start device login")
-            </button>
-        </div>
-    }
+        }
 
-    @if (!string.IsNullOrWhiteSpace(Status))
-    {
-        <p class="status @StatusKind.ToString().ToLowerInvariant()" role="status" aria-live="polite">@Status</p>
-    }
-</div>
+        @if (!string.IsNullOrWhiteSpace(Status))
+        {
+            <LumexAlert Color="@(StatusKind == AdminStatusKind.Error ? ThemeColor.Danger : ThemeColor.Default)" Description="@Status" />
+        }
+    </LumexCardBody>
+</LumexCard>

@@ -1,97 +1,90 @@
 @namespace CodexGateway.App.Components.Pages.Admin.McpServers
 
-<article class="card" aria-busy="@_busy.ToString().ToLowerInvariant()">
+<article aria-busy="@_busy.ToString().ToLowerInvariant()">
     <EditForm Model="_editor" OnValidSubmit="SaveAsync" autocomplete="off">
-        <DataAnnotationsValidator />
-        <div class="card-header">
-            <div>
-                <h3>@Server.Name</h3>
-                <div class="badge-row">
-                    <span class="badge @(Server.Enabled ? "on" : "off")">@(Server.Enabled ? "Enabled" : "Disabled")</span>
-                    <span class="badge">@(Server is HttpMcpServerDefinition ? "HTTP" : "STDIO")</span>
-                    <span class="badge">@Server.ExecutionMode</span>
+        <LumexCard Class="form-card">
+            <LumexCardHeader Class="responsive-row">
+                <div>
+                    <h3>@Server.Name</h3>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        <LumexChip Color="@(Server.Enabled ? ThemeColor.Success : ThemeColor.Default)" Variant="@ChipVariant.Dot" Size="@Size.Small">@(Server.Enabled ? "Enabled" : "Disabled")</LumexChip>
+                        <LumexChip Variant="@ChipVariant.Flat" Size="@Size.Small">@(Server is HttpMcpServerDefinition ? "HTTP" : "STDIO")</LumexChip>
+                        <LumexChip Variant="@ChipVariant.Flat" Size="@Size.Small">@Server.ExecutionMode</LumexChip>
+                    </div>
+                    <span class="mt-2 block font-mono text-xs text-foreground-400">@Server.Id</span>
                 </div>
-                <div class="muted small mono">@Server.Id</div>
-            </div>
-            <div class="actions">
-                <button type="submit" disabled="@_busy">@(_busy ? "Saving…" : "Save server")</button>
-                @if (_confirmDelete)
+                <div class="flex flex-wrap justify-end gap-2">
+                    <LumexButton Type="@ButtonType.Submit" Color="@ThemeColor.Primary" Disabled="@_busy">@(_busy ? "Saving…" : "Save server")</LumexButton>
+                    @if (_confirmDelete)
+                    {
+                        <div class="confirmation-panel" role="group" aria-label="Confirm server deletion">
+                            <span>Remove this server from every project?</span>
+                            <LumexButton Color="@ThemeColor.Danger" Size="@Size.Small" Disabled="@_busy" OnClick="DeleteAsync">Confirm</LumexButton>
+                            <LumexButton Variant="@Variant.Light" Size="@Size.Small" Disabled="@_busy" OnClick="CancelDelete">Cancel</LumexButton>
+                        </div>
+                    }
+                    else
+                    {
+                        <LumexButton Color="@ThemeColor.Danger" Variant="@Variant.Light" Disabled="@_busy" OnClick="ConfirmDelete">Delete</LumexButton>
+                    }
+                </div>
+            </LumexCardHeader>
+            <LumexDivider />
+            <LumexCardBody Class="gap-5">
+                <DataAnnotationsValidator />
+                <div class="form-grid-two">
+                    <div>
+                        <LumexTextbox id="@($"server-name-{Server.Id}")" Behavior="@InputBehavior.OnInput" @bind-Value="_editor.Name" Label="Display name" LabelPlacement="@LabelPlacement.Outside" Variant="@InputVariant.Outlined" />
+                        <ValidationMessage For="() => _editor.Name" />
+                    </div>
+                    <div class="native-field">
+                        <label for="@($"server-transport-{Server.Id}")">Transport</label>
+                        <InputSelect id="@($"server-transport-{Server.Id}")" class="native-select" @bind-Value="_editor.IsHttp">
+                            <option value="true">HTTP</option>
+                            <option value="false">STDIO</option>
+                        </InputSelect>
+                    </div>
+                    <div class="native-field">
+                        <label for="@($"server-execution-{Server.Id}")">Execution</label>
+                        <InputSelect id="@($"server-execution-{Server.Id}")" class="native-select" @bind-Value="_editor.ExecutionMode">
+                            <option value="@McpExecutionMode.Gateway">Gateway</option>
+                            <option value="@McpExecutionMode.Runner">Runner (advanced)</option>
+                        </InputSelect>
+                    </div>
+                    <label class="toggle-field" for="@($"server-enabled-{Server.Id}")">
+                        <InputCheckbox id="@($"server-enabled-{Server.Id}")" @bind-Value="_editor.Enabled" />
+                        <span><strong>Enabled</strong><small>Available for project grants</small></span>
+                    </label>
+
+                    @if (_editor.IsHttp)
+                    {
+                        <LumexTextbox id="@($"server-url-{Server.Id}")" Type="@InputType.Url" Behavior="@InputBehavior.OnInput" @bind-Value="_editor.Url" Label="HTTP URL" Placeholder="https://mcp.internal.example" LabelPlacement="@LabelPlacement.Outside" Variant="@InputVariant.Outlined" Class="sm:col-span-2" />
+                        <LumexTextarea id="@($"server-environment-headers-{Server.Id}")"
+                                       Behavior="@InputBehavior.OnInput"
+                                       @bind-Value="_editor.EnvironmentHeaders"
+                                       Label="HTTP headers from environment"
+                                       Description="One mapping per line. Each environment variable contains the complete header value."
+                                       Placeholder="Authorization=MCP_AUTHORIZATION&#10;X-Api-Key=MCP_API_KEY"
+                                       LabelPlacement="@LabelPlacement.Outside"
+                                       Variant="@InputVariant.Outlined"
+                                       MinRows="3"
+                                       Class="sm:col-span-2" />
+                    }
+                    else
+                    {
+                        <LumexTextbox id="@($"server-command-{Server.Id}")" Behavior="@InputBehavior.OnInput" @bind-Value="_editor.Command" Label="STDIO command" Placeholder="mcp-server" LabelPlacement="@LabelPlacement.Outside" Variant="@InputVariant.Outlined" Class="sm:col-span-2" />
+                        <LumexTextarea id="@($"server-arguments-{Server.Id}")" Behavior="@InputBehavior.OnInput" @bind-Value="_editor.Arguments" Label="Arguments" Description="One argument per line." LabelPlacement="@LabelPlacement.Outside" Variant="@InputVariant.Outlined" MinRows="3" />
+                        <LumexTextarea id="@($"server-env-{Server.Id}")" Behavior="@InputBehavior.OnInput" @bind-Value="_editor.EnvironmentVariables" Label="Forwarded environment variables" Description="One variable name per line." LabelPlacement="@LabelPlacement.Outside" Variant="@InputVariant.Outlined" MinRows="3" />
+                    }
+
+                    <LumexTextarea id="@($"server-tools-{Server.Id}")" Behavior="@InputBehavior.OnInput" @bind-Value="_editor.AvailableTools" Label="Available tools" Description="One tool name per line." LabelPlacement="@LabelPlacement.Outside" Variant="@InputVariant.Outlined" MinRows="4" Class="sm:col-span-2" />
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(_status))
                 {
-                    <span class="confirmation" role="group" aria-label="Confirm server deletion">
-                        <span class="small">Delete this server and remove its grants from every project?</span>
-                        <button class="danger" type="button" disabled="@_busy" @onclick="DeleteAsync">Confirm</button>
-                        <button class="secondary" type="button" disabled="@_busy" @onclick="CancelDelete">Cancel</button>
-                    </span>
+                    <LumexAlert Color="@(_statusKind == "error" ? ThemeColor.Danger : ThemeColor.Default)" Description="@_status" />
                 }
-                else
-                {
-                    <button class="danger" type="button" disabled="@_busy" @onclick="ConfirmDelete">Delete server</button>
-                }
-            </div>
-        </div>
-
-        <div class="form-grid">
-            <div class="field wide">
-                <label for="@($"server-name-{Server.Id}")">Name</label>
-                <InputText id="@($"server-name-{Server.Id}")" @bind-Value="_editor.Name" />
-                <ValidationMessage For="() => _editor.Name" />
-            </div>
-            <div class="field narrow">
-                <label for="@($"server-transport-{Server.Id}")">Transport</label>
-                <InputSelect id="@($"server-transport-{Server.Id}")" @bind-Value="_editor.IsHttp">
-                    <option value="true">HTTP</option>
-                    <option value="false">STDIO</option>
-                </InputSelect>
-            </div>
-            <div class="field narrow">
-                <label for="@($"server-execution-{Server.Id}")">Execution</label>
-                <InputSelect id="@($"server-execution-{Server.Id}")" @bind-Value="_editor.ExecutionMode">
-                    <option value="@McpExecutionMode.Gateway">Gateway</option>
-                    <option value="@McpExecutionMode.Runner">Runner (advanced)</option>
-                </InputSelect>
-            </div>
-            <div class="field narrow checkbox-field">
-                <label class="check" for="@($"server-enabled-{Server.Id}")">
-                    <InputCheckbox id="@($"server-enabled-{Server.Id}")" @bind-Value="_editor.Enabled" />
-                    <span>Enabled</span>
-                </label>
-            </div>
-
-            @if (_editor.IsHttp)
-            {
-                <div class="field wide">
-                    <label for="@($"server-url-{Server.Id}")">HTTP URL</label>
-                    <InputText id="@($"server-url-{Server.Id}")" type="url" @bind-Value="_editor.Url" placeholder="https://mcp.internal.example" />
-                </div>
-                <div class="field full">
-                    <label for="@($"server-environment-headers-{Server.Id}")">HTTP headers from environment (one per line)</label>
-                    <InputTextArea id="@($"server-environment-headers-{Server.Id}")"
-                                   @bind-Value="_editor.EnvironmentHeaders"
-                                   placeholder="Authorization=MCP_AUTHORIZATION&#10;X-Api-Key=MCP_API_KEY" />
-                    <span class="muted small">Each environment variable contains the complete header value.</span>
-                </div>
-            }
-            else
-            {
-                <div class="field wide">
-                    <label for="@($"server-command-{Server.Id}")">STDIO command</label>
-                    <InputText id="@($"server-command-{Server.Id}")" @bind-Value="_editor.Command" placeholder="mcp-server" />
-                </div>
-                <div class="field full">
-                    <label for="@($"server-arguments-{Server.Id}")">Arguments (one per line)</label>
-                    <InputTextArea id="@($"server-arguments-{Server.Id}")" @bind-Value="_editor.Arguments" />
-                </div>
-                <div class="field full">
-                    <label for="@($"server-env-{Server.Id}")">Forwarded environment variable names (one per line)</label>
-                    <InputTextArea id="@($"server-env-{Server.Id}")" @bind-Value="_editor.EnvironmentVariables" />
-                </div>
-            }
-
-            <div class="field full">
-                <label for="@($"server-tools-{Server.Id}")">Available tools (one per line)</label>
-                <InputTextArea id="@($"server-tools-{Server.Id}")" @bind-Value="_editor.AvailableTools" />
-            </div>
-        </div>
-        <p class="status @_statusKind" role="status" aria-live="polite">@_status</p>
+            </LumexCardBody>
+        </LumexCard>
     </EditForm>
 </article>

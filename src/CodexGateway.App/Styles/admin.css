@@ -1,0 +1,382 @@
+@import "tailwindcss";
+@import "../bin/lumexui/theme";
+
+@source "../bin/lumexui/*.cs";
+@source "../Components/**/*.razor";
+@source "../Components/**/*.cs";
+
+@theme {
+    --font-sans: "Inter", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+    html {
+        min-width: 320px;
+        min-height: 100%;
+        background: #09090b;
+    }
+
+    body {
+        min-height: 100vh;
+        margin: 0;
+        background:
+            radial-gradient(circle at 12% -8%, rgb(99 102 241 / 18%), transparent 32rem),
+            radial-gradient(circle at 88% 0%, rgb(20 184 166 / 10%), transparent 28rem),
+            #09090b;
+        color: #f4f4f5;
+        font-family: var(--font-sans);
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+        font: inherit;
+    }
+
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible {
+        outline: 2px solid rgb(129 140 248 / 80%);
+        outline-offset: 2px;
+    }
+}
+
+@layer components {
+    .login-layout {
+        @apply grid min-h-screen lg:grid-cols-[minmax(0,1.15fr)_minmax(28rem,.85fr)];
+    }
+
+    .login-brand {
+        @apply relative hidden overflow-hidden border-r border-white/10 px-12 py-14 lg:flex lg:flex-col lg:justify-between xl:px-20;
+        background: linear-gradient(145deg, rgb(24 24 27 / 94%), rgb(15 23 42 / 88%));
+    }
+
+    .login-brand::after {
+        content: "";
+        @apply pointer-events-none absolute -right-44 -bottom-48 size-[34rem] rounded-full border border-indigo-400/20;
+        box-shadow: 0 0 0 5rem rgb(99 102 241 / 4%), 0 0 0 10rem rgb(45 212 191 / 3%);
+    }
+
+    .login-form-panel {
+        @apply flex min-h-screen flex-col items-center justify-center px-6 py-12;
+    }
+
+    .brand-mark {
+        @apply grid size-14 place-items-center rounded-2xl border border-indigo-400/30 bg-indigo-500/15 text-sm font-black tracking-widest text-indigo-200 shadow-lg shadow-indigo-950/30;
+    }
+
+    .brand-mark-small {
+        @apply size-10 rounded-xl text-[.65rem];
+    }
+
+    .eyebrow {
+        @apply mb-2 text-[.7rem] font-bold tracking-[.16em] text-primary uppercase;
+    }
+
+    .login-feature-list {
+        @apply relative z-10 flex flex-wrap gap-3 text-xs text-zinc-300;
+    }
+
+    .login-feature-list span {
+        @apply rounded-full border border-white/10 bg-white/5 px-3 py-2 backdrop-blur-sm;
+    }
+
+    .admin-shell {
+        @apply mx-auto grid min-h-screen w-full max-w-[1680px] lg:grid-cols-[16.5rem_minmax(0,1fr)];
+    }
+
+    .admin-sidebar {
+        @apply flex flex-col border-b border-default-200/60 bg-surface1/70 p-4 backdrop-blur-xl lg:sticky lg:top-0 lg:h-screen lg:border-r lg:border-b-0;
+    }
+
+    .sidebar-brand {
+        @apply flex items-center gap-3 px-2 py-2;
+    }
+
+    .sidebar-nav {
+        @apply mt-5 grid gap-1 sm:grid-cols-5 lg:grid-cols-1;
+    }
+
+    .nav-label {
+        @apply hidden px-3 pb-1 text-[.66rem] font-bold tracking-[.14em] text-foreground-400 uppercase lg:block;
+    }
+
+    .nav-button {
+        @apply min-w-0 justify-start gap-3 px-3 text-foreground-500 sm:justify-center lg:justify-start;
+    }
+
+    .nav-button-selected {
+        @apply bg-primary/15 text-primary-300;
+    }
+
+    .nav-glyph {
+        @apply grid size-5 shrink-0 place-items-center text-base;
+    }
+
+    .nav-count {
+        @apply ml-auto hidden rounded-full bg-default-100 px-2 py-0.5 text-[.65rem] text-foreground-400 lg:inline-flex;
+    }
+
+    .sidebar-footer {
+        @apply mt-4 grid gap-2 border-t border-default-200/60 pt-4 lg:mt-auto;
+    }
+
+    .admin-content {
+        @apply min-w-0 px-5 py-7 sm:px-8 lg:px-10 lg:py-9 xl:px-14;
+    }
+
+    .content-header {
+        @apply mb-7 flex items-start justify-between gap-6;
+    }
+
+    .content-section {
+        @apply grid max-w-6xl gap-5;
+    }
+
+    .section-title-row {
+        @apply flex flex-wrap items-end justify-between gap-4;
+    }
+
+    .section-title-row h2 {
+        @apply text-xl font-semibold tracking-tight text-foreground;
+    }
+
+    .section-title-row h4 {
+        @apply text-base font-semibold text-foreground;
+    }
+
+    .section-title-row p,
+    .form-card [data-slot="header"] p {
+        @apply mt-1 text-sm leading-6 text-foreground-500;
+    }
+
+    .metric-grid {
+        @apply grid gap-4 sm:grid-cols-2 xl:grid-cols-4;
+    }
+
+    .metric-card {
+        @apply border border-default-200/60 bg-surface1/80 shadow-sm;
+    }
+
+    .metric-card [data-slot="body"] {
+        @apply gap-1 p-5;
+    }
+
+    .metric-card-accent {
+        @apply border-primary/30 bg-primary/5;
+    }
+
+    .metric-label {
+        @apply text-xs font-medium text-foreground-500;
+    }
+
+    .metric-value {
+        @apply text-3xl font-semibold tracking-tight text-foreground;
+    }
+
+    .metric-caption {
+        @apply text-xs text-foreground-400;
+    }
+
+    .overview-grid {
+        @apply grid items-start gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,.8fr)];
+    }
+
+    .overview-grid > section {
+        @apply grid gap-3;
+    }
+
+    .flow-step {
+        @apply flex w-full items-start gap-3 rounded-xl border border-transparent p-2 text-left transition hover:border-default-200 hover:bg-default-50;
+    }
+
+    .flow-step > span {
+        @apply grid size-7 shrink-0 place-items-center rounded-lg bg-primary/15 text-xs font-bold text-primary;
+    }
+
+    .flow-step strong {
+        @apply block text-sm font-semibold text-foreground;
+    }
+
+    .flow-step p {
+        @apply mt-1 text-xs leading-5 text-foreground-500;
+    }
+
+    .form-card {
+        @apply border border-default-200/60 bg-surface1/80 shadow-sm;
+    }
+
+    .form-card h3 {
+        @apply text-base font-semibold text-foreground;
+    }
+
+    .form-grid-two {
+        @apply grid gap-5 sm:grid-cols-2;
+    }
+
+    .responsive-row {
+        @apply flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-center;
+    }
+
+    .native-field {
+        @apply grid content-start gap-1.5;
+    }
+
+    .native-field label {
+        @apply text-xs font-medium text-foreground-600;
+    }
+
+    .native-select {
+        @apply min-h-10 w-full rounded-xl border border-default-300 bg-default-100 px-3 text-sm text-foreground outline-none transition focus:border-primary;
+    }
+
+    .validation-message {
+        @apply mt-1 block text-xs text-danger;
+    }
+
+    .key-list {
+        @apply grid gap-2;
+    }
+
+    .list-row {
+        @apply flex items-center justify-between gap-4 rounded-xl border border-default-200/60 bg-default-50/50 px-4 py-3;
+    }
+
+    .list-avatar {
+        @apply grid size-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-xs font-bold text-primary;
+    }
+
+    .empty-state {
+        @apply rounded-xl border border-dashed border-default-300 px-5 py-10 text-center text-sm text-foreground-400;
+    }
+
+    .empty-state-compact {
+        @apply mt-3 px-4 py-5;
+    }
+
+    .status-orb {
+        @apply grid size-11 shrink-0 place-items-center rounded-2xl bg-default-100 text-lg font-semibold text-foreground-500;
+    }
+
+    .status-orb-success {
+        @apply bg-success/15 text-success;
+    }
+
+    .status-orb-warning {
+        @apply bg-warning/15 text-warning;
+    }
+
+    .status-orb-danger {
+        @apply bg-danger/15 text-danger;
+    }
+
+    .confirmation-panel {
+        @apply flex max-w-xl flex-wrap items-center justify-end gap-2 rounded-xl border border-danger/30 bg-danger/10 p-2 text-xs text-danger-300;
+    }
+
+    .device-login-panel {
+        @apply flex flex-col items-stretch justify-between gap-5 rounded-2xl border border-warning/25 bg-warning/5 p-5 sm:flex-row sm:items-center;
+    }
+
+    .device-code {
+        @apply mt-2 block text-2xl font-semibold tracking-[.18em] text-warning;
+    }
+
+    .toggle-field {
+        @apply flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border border-default-200/70 bg-default-50/60 px-4 py-3;
+    }
+
+    .toggle-field input,
+    .inline-check input {
+        @apply size-4 shrink-0 accent-primary;
+    }
+
+    .toggle-field > span {
+        @apply grid gap-0.5;
+    }
+
+    .toggle-field strong {
+        @apply text-sm font-semibold text-foreground;
+    }
+
+    .toggle-field small {
+        @apply text-xs text-foreground-400;
+    }
+
+    .toggle-field-compact {
+        @apply min-h-0 border-0 bg-transparent p-0;
+    }
+
+    .inline-check {
+        @apply inline-flex cursor-pointer items-center gap-2 text-xs font-medium text-foreground-600;
+    }
+
+    .inline-check:has(input:disabled),
+    .toggle-field:has(input:disabled) {
+        @apply cursor-not-allowed opacity-50;
+    }
+
+    .access-card {
+        @apply rounded-2xl border border-default-200/70 bg-default-50/40 p-4 transition;
+    }
+
+    .access-card-disabled .grant-list {
+        @apply opacity-50;
+    }
+
+    .access-card-header,
+    .server-grant-header {
+        @apply flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center;
+    }
+
+    .grant-list {
+        @apply mt-4 grid gap-3;
+    }
+
+    .server-grant {
+        @apply grid gap-4 rounded-xl border border-default-200/60 bg-surface1/70 p-4;
+    }
+
+    .tool-table {
+        @apply overflow-hidden rounded-xl border border-default-200/60;
+    }
+
+    .tool-row {
+        @apply grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-t border-default-200/50 px-3 py-2 first:border-t-0;
+    }
+
+    .tool-row code {
+        @apply overflow-hidden text-ellipsis text-xs text-foreground-600;
+    }
+
+    .tool-row-header {
+        @apply bg-default-100/70 text-[.65rem] font-semibold tracking-wider text-foreground-400 uppercase;
+    }
+
+    @media (max-width: 1023px) {
+        .sidebar-footer {
+            @apply grid-cols-2;
+        }
+
+        .sidebar-footer > div {
+            @apply hidden;
+        }
+    }
+
+    @media (max-width: 639px) {
+        .sidebar-nav {
+            @apply grid-cols-2;
+        }
+
+        .admin-sidebar {
+            @apply gap-2;
+        }
+
+        .sidebar-footer {
+            @apply grid-cols-2;
+        }
+    }
+}

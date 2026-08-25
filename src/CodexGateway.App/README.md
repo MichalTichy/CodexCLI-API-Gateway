@@ -15,5 +15,6 @@ This is the executable gateway host. It composes the protocol adapters and infra
 - `Admin/Authentication/` — admin login routes and settings models.
 - `Admin/Sessions/` — server-side admin-session validation for requests and Blazor circuits.
 - `Components/Pages/Admin/{Purpose}/` — feature components; form and editor data is under each purpose's `Models/` folder.
+- `Styles/admin.css` — Tailwind CSS 4 source and LumexUI theme entry point; rebuild it from the repository root with `npm run css:build`.
 - `Mcp/Endpoints/` — the internal MCP route used by isolated run containers.
-- `Properties/` and `wwwroot/` — host metadata and static UI assets.
+- `Properties/` and `wwwroot/` — host metadata and static UI assets, including the committed generated administration stylesheet.
