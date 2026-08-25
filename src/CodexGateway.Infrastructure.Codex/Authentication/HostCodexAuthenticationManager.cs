@@ -17,7 +17,10 @@ public sealed class HostCodexAuthenticationManager : ICodexAuthenticationManager
         "https?://[^\\s<>()]+",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
     private static readonly Regex DeviceCodePattern = new(
-        "\\b[A-Z0-9]{4}(?:-[A-Z0-9]{4})+\\b",
+        "\\b[A-Z0-9]{4,8}(?:-[A-Z0-9]{4,8})+\\b",
+        RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
+    private static readonly Regex AnsiEscapePattern = new(
+        "\\x1B(?:\\[[0-?]*[ -/]*[@-~]|\\][^\\x07\\x1B]*(?:\\x07|\\x1B\\\\))",
         RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
     private readonly CodexOptions _options;
     private readonly string _codexHome;
@@ -109,8 +112,6 @@ public sealed class HostCodexAuthenticationManager : ICodexAuthenticationManager
                     throw new InvalidOperationException("Process did not start.");
                 }
 
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
                 var lifetime = new CancellationTokenSource(TimeSpan.FromSeconds(_options.DeviceLoginTimeoutSeconds));
                 lock (_stateGate)
                 {
@@ -120,6 +121,10 @@ public sealed class HostCodexAuthenticationManager : ICodexAuthenticationManager
                     _authenticationGeneration = generation;
                 }
 
+                // Codex can print the device URL and code immediately. Register the
+                // process before reading output so those first lines cannot be discarded.
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
                 _ = MonitorLoginAsync(process, output, loginReady, lifetime, generation);
                 return await loginReady.Task.WaitAsync(cancellationToken);
             }
@@ -290,7 +295,7 @@ public sealed class HostCodexAuthenticationManager : ICodexAuthenticationManager
             return;
         }
 
-        var login = output.Add(line);
+        var login = output.Add(AnsiEscapePattern.Replace(line, string.Empty));
         if (login is null)
         {
             return;

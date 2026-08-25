@@ -38,7 +38,7 @@ public sealed class HostCliAuthLifecycleTests
 
         Assert.Equal(DeviceLoginStatus.Pending, login.Status);
         Assert.Equal("https://example.test/device", login.VerificationUrl);
-        Assert.Equal("TEST-CODE", login.UserCode);
+        Assert.Equal("TEST-CODE5", login.UserCode);
         var invocation = Assert.Single(await harness.ReadInvocationsAsync("device-login"));
         Assert.Equal(Path.GetFullPath(harness.Factory.CodexHomePath), invocation.CodexHome);
 

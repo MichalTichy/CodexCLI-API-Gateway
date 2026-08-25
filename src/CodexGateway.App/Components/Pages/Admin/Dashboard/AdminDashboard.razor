@@ -14,30 +14,41 @@
         <nav class="sidebar-nav" aria-label="Administration sections">
             <p class="nav-label">Workspace</p>
             <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.Overview)" OnClick="@(() => SelectSection(AdminSection.Overview))">
-                <span class="nav-glyph" aria-hidden="true">⌂</span><span>Overview</span>
+                <span class="nav-glyph" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10.8 12 3l9 7.8"/><path d="M5.5 9.5V21h13V9.5M9.5 21v-6h5v6"/></svg>
+                </span><span>Overview</span>
             </LumexButton>
             <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.ApiKeys)" OnClick="@(() => SelectSection(AdminSection.ApiKeys))">
-                <span class="nav-glyph" aria-hidden="true">⌁</span><span>API keys</span><span class="nav-count">@_apiKeys.Count</span>
+                <span class="nav-glyph" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="15" r="4"/><path d="m11 12 8-8m-3 3 3 3m-6 0 2 2"/></svg>
+                </span><span>API keys</span><span class="nav-count">@_apiKeys.Count</span>
             </LumexButton>
             <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.Projects)" OnClick="@(() => SelectSection(AdminSection.Projects))">
-                <span class="nav-glyph" aria-hidden="true">◇</span><span>Projects</span><span class="nav-count">@_projects.Count</span>
+                <span class="nav-glyph" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3.5 6.5h6l2 2h9v10.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z"/><path d="M3.5 9h17"/></svg>
+                </span><span>Projects</span><span class="nav-count">@_projects.Count</span>
             </LumexButton>
             <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.McpServers)" OnClick="@(() => SelectSection(AdminSection.McpServers))">
-                <span class="nav-glyph" aria-hidden="true">⌘</span><span>MCP servers</span><span class="nav-count">@_servers.Count</span>
+                <span class="nav-glyph" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="6" rx="2"/><rect x="4" y="14" width="16" height="6" rx="2"/><path d="M8 7h.01M8 17h.01M12 7h5M12 17h5"/></svg>
+                </span><span>MCP servers</span><span class="nav-count">@_servers.Count</span>
             </LumexButton>
 
             <p class="nav-label mt-5">Runtime</p>
             <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.Codex)" OnClick="@(() => SelectSection(AdminSection.Codex))">
-                <span class="nav-glyph" aria-hidden="true">◉</span><span>Codex account</span>
+                <span class="nav-glyph" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m7 9 3 3-3 3m5 0h5"/></svg>
+                </span><span>Codex account</span>
             </LumexButton>
         </nav>
 
         <div class="sidebar-footer">
-            <div class="flex items-center justify-between gap-3 px-2">
-                <span class="text-xs text-foreground-400">Codex status</span>
-                <LumexChip Color="@CodexStatusColor" Variant="@ChipVariant.Flat" Size="@Size.Small">
-                    @CodexStatusLabel
-                </LumexChip>
+            <div class="codex-connection-row">
+                <span class="text-xs text-foreground-400">Codex</span>
+                <LumexButton Color="@CodexStatusColor" Variant="@Variant.Flat" Size="@Size.Small" Disabled="@(_loading || _codexActionBusy)" OnClick="HandleCodexStatusActionAsync">
+                    <span class="connection-dot" aria-hidden="true"></span>
+                    @CodexStatusActionLabel
+                </LumexButton>
             </div>
             <LumexButton Variant="@Variant.Flat" Disabled="@_loading" FullWidth="@true" OnClick="RefreshAsync">
                 @(_loading ? "Refreshing…" : "Refresh data")
@@ -55,10 +66,6 @@
                 <p class="eyebrow">@SectionEyebrow</p>
                 <h1 class="text-3xl font-semibold tracking-tight text-foreground">@SectionTitle</h1>
                 <p class="mt-2 text-sm leading-6 text-foreground-500">@SectionDescription</p>
-            </div>
-            <div class="hidden items-center gap-2 sm:flex">
-                <LumexChip Variant="@ChipVariant.Flat" Size="@Size.Small">Internal</LumexChip>
-                <LumexChip Color="@ThemeColor.Success" Variant="@ChipVariant.Dot" Size="@Size.Small">Online</LumexChip>
             </div>
         </header>
 
@@ -81,7 +88,7 @@
             {
                 case AdminSection.Overview:
                     <div class="grid gap-6">
-                        <section class="metric-grid" aria-label="Gateway summary">
+                        <section class="metric-grid metric-grid-overview" aria-label="Gateway summary">
                             <LumexCard Class="metric-card">
                                 <LumexCardBody>
                                     <span class="metric-label">Projects</span>
@@ -103,27 +110,9 @@
                                     <span class="metric-caption">@_servers.Count(server => server.Enabled) available</span>
                                 </LumexCardBody>
                             </LumexCard>
-                            <LumexCard Class="metric-card metric-card-accent">
-                                <LumexCardBody>
-                                    <span class="metric-label">Codex</span>
-                                    <strong class="text-xl font-semibold text-foreground">@CodexStatusLabel</strong>
-                                    <span class="metric-caption">Run identity</span>
-                                </LumexCardBody>
-                            </LumexCard>
                         </section>
 
-                        <div class="overview-grid">
-                            <section aria-labelledby="codex-overview-heading">
-                                <div class="section-title-row">
-                                    <div>
-                                        <h2 id="codex-overview-heading">Codex account</h2>
-                                        <p>Authentication shared by isolated runs.</p>
-                                    </div>
-                                    <LumexButton Size="@Size.Small" Variant="@Variant.Light" OnClick="@(() => SelectSection(AdminSection.Codex))">Manage</LumexButton>
-                                </div>
-                                <CodexAccountCard Account="_account" Login="_login" LoadError="@_codexError" OnChanged="HandleCodexChangedAsync" />
-                            </section>
-
+                        <div class="overview-flow">
                             <LumexCard Class="border border-default-200/60 bg-surface1/80">
                                 <LumexCardHeader Class="flex-col items-start gap-1">
                                     <h2 class="text-lg font-semibold">Configuration flow</h2>

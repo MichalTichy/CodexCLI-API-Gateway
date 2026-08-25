@@ -25,6 +25,7 @@ public partial class AdminDashboard : AdminComponentBase
     private bool _loading;
     private bool _refreshRequested;
     private bool _showRefreshSuccess;
+    private bool _codexActionBusy;
     private Task? _refreshTask;
 
     private string SectionEyebrow => _selectedSection switch
@@ -49,7 +50,7 @@ public partial class AdminDashboard : AdminComponentBase
 
     private string SectionDescription => _selectedSection switch
     {
-        AdminSection.Overview => "Gateway health, access configuration, and run identity at a glance.",
+        AdminSection.Overview => "Gateway access and project configuration at a glance.",
         AdminSection.ApiKeys => "Create and revoke the global credentials consumers use to reach the gateway.",
         AdminSection.Projects => "Define project boundaries and grant each API key only the MCP tools it needs.",
         AdminSection.McpServers => "Manage the trusted HTTP and STDIO servers that projects can use.",
@@ -57,21 +58,23 @@ public partial class AdminDashboard : AdminComponentBase
         _ => string.Empty
     };
 
-    private string CodexStatusLabel => _codexError is not null
-        ? "Unavailable"
-        : _account?.Authenticated == true
-            ? "Authenticated"
-            : _login is { Status: DeviceLoginStatus.Pending }
-                ? "Login pending"
-                : "Not connected";
-
     private ThemeColor CodexStatusColor => _codexError is not null
         ? ThemeColor.Danger
         : _account?.Authenticated == true
             ? ThemeColor.Success
             : _login is { Status: DeviceLoginStatus.Pending }
                 ? ThemeColor.Warning
-                : ThemeColor.Default;
+                : ThemeColor.Primary;
+
+    private string CodexStatusActionLabel => _codexActionBusy
+        ? "Starting…"
+        : _codexError is not null
+            ? "Unavailable"
+            : _account?.Authenticated == true
+                ? "Connected"
+                : _login is { Status: DeviceLoginStatus.Pending }
+                    ? "View code"
+                    : "Connect";
 
     private ThemeColor StatusColor => StatusKind switch
     {
@@ -227,6 +230,42 @@ public partial class AdminDashboard : AdminComponentBase
         await RefreshAsync(showSuccess: false);
         SetStatus(message, _codexError is null ? AdminStatusKind.Success : AdminStatusKind.Error);
         StartPollingIfNeeded();
+    }
+
+    private async Task HandleCodexStatusActionAsync()
+    {
+        _selectedSection = AdminSection.Codex;
+        if (_account?.Authenticated == true ||
+            _login is { Status: DeviceLoginStatus.Pending } ||
+            _codexError is not null)
+        {
+            return;
+        }
+
+        _codexActionBusy = true;
+        try
+        {
+            await Sender.Send(new StartCodexDeviceLoginUseCase(), PageCancellationToken);
+            await RefreshAsync(showSuccess: false);
+            SetStatus("Codex device login started.", AdminStatusKind.Success);
+            StartPollingIfNeeded();
+        }
+        catch (OperationCanceledException) when (PageCancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            if (exception is not GatewayException)
+            {
+                Logger.LogError(exception, "Unexpected failure while starting Codex device login.");
+            }
+
+            SetStatus(AdminText.Describe(exception), AdminStatusKind.Error);
+        }
+        finally
+        {
+            _codexActionBusy = false;
+        }
     }
 
     private void SelectSection(AdminSection section) => _selectedSection = section;

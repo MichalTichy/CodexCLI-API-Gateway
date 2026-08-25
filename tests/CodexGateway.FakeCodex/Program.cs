@@ -55,9 +55,9 @@ async Task RunLoginAsync()
 
     await RecordInvocationAsync("device-login", string.Empty);
     Console.WriteLine("Open this URL in your browser:");
-    Console.WriteLine("https://example.test/device");
+    Console.WriteLine("\u001b[36mhttps://example.test/device\u001b[0m");
     Console.WriteLine("Enter this one-time code:");
-    Console.WriteLine("TEST-CODE");
+    Console.WriteLine("\u001b[1mTEST-CODE5\u001b[0m");
     await Console.Out.FlushAsync();
     if (File.Exists(Path.Combine(scenarioRoot, "hold-device-login")))
     {
