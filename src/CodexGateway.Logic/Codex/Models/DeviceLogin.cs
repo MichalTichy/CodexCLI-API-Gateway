@@ -8,4 +8,6 @@ public sealed record DeviceLogin(
     string VerificationUrl,
     string UserCode,
     DeviceLoginStatus Status,
-    string? Error = null);
+    string? Error = null,
+    DateTimeOffset? StartedAt = null,
+    DateTimeOffset? ExpiresAt = null);

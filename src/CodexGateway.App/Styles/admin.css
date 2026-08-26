@@ -12,19 +12,20 @@
 @layer base {
     html {
         min-width: 320px;
-        min-height: 100%;
+        min-height: 100dvh;
         background: #09090b;
     }
 
     body {
-        min-height: 100vh;
+        min-height: 100dvh;
+        width: 100%;
         margin: 0;
         background:
-            radial-gradient(circle at 12% -8%, rgb(99 102 241 / 18%), transparent 32rem),
-            radial-gradient(circle at 88% 0%, rgb(20 184 166 / 10%), transparent 28rem),
+            radial-gradient(circle at 16% -10%, rgb(99 102 241 / 17%), transparent 34rem),
             #09090b;
         color: #f4f4f5;
         font-family: var(--font-sans);
+        overflow-x: hidden;
     }
 
     button,
@@ -46,7 +47,7 @@
 
 @layer components {
     .login-layout {
-        @apply grid min-h-screen lg:grid-cols-[minmax(0,1.15fr)_minmax(28rem,.85fr)];
+        @apply grid min-h-[100dvh] w-full lg:grid-cols-[minmax(0,1.05fr)_minmax(28rem,.95fr)];
     }
 
     .login-brand {
@@ -61,7 +62,7 @@
     }
 
     .login-form-panel {
-        @apply flex min-h-screen flex-col items-center justify-center px-6 py-12;
+        @apply flex min-h-[100dvh] flex-col items-center justify-center px-6 py-12;
     }
 
     .brand-mark {
@@ -76,20 +77,113 @@
         @apply mb-2 text-[.7rem] font-bold tracking-[.16em] text-primary uppercase;
     }
 
-    .login-feature-list {
-        @apply relative z-10 flex flex-wrap gap-3 text-xs text-zinc-300;
+    .login-setup-preview {
+        @apply relative z-10 grid max-w-lg gap-3 text-sm text-zinc-300;
     }
 
-    .login-feature-list span {
-        @apply rounded-full border border-white/10 bg-white/5 px-3 py-2 backdrop-blur-sm;
+    .login-setup-preview > strong {
+        @apply text-xs font-bold tracking-[.12em] text-zinc-200 uppercase;
+    }
+
+    .login-setup-preview ol {
+        @apply grid gap-2;
+    }
+
+    .login-setup-preview li {
+        @apply flex items-center gap-3;
+    }
+
+    .login-setup-preview li span {
+        @apply grid size-6 shrink-0 place-items-center rounded-lg bg-indigo-500/15 text-xs font-bold text-indigo-200;
+    }
+
+    .password-field {
+        @apply relative;
+    }
+
+    .password-reveal {
+        @apply absolute right-2 bottom-1.5 z-10;
     }
 
     .admin-shell {
-        @apply grid min-h-screen w-full sm:grid-cols-[14rem_minmax(0,1fr)] lg:grid-cols-[16.5rem_minmax(0,1fr)];
+        @apply block min-h-[100dvh] w-full min-w-0 sm:grid sm:grid-cols-[14rem_minmax(0,1fr)] lg:grid-cols-[16.5rem_minmax(0,1fr)];
     }
 
     .admin-sidebar {
-        @apply flex flex-col border-b border-default-200/60 bg-surface1/70 p-4 backdrop-blur-xl sm:sticky sm:top-0 sm:h-screen sm:border-r sm:border-b-0;
+        @apply hidden border-default-200 bg-surface1/80 p-4 backdrop-blur-xl sm:sticky sm:top-0 sm:flex sm:h-[100dvh] sm:flex-col sm:border-r;
+    }
+
+    .mobile-topbar {
+        @apply sticky top-0 z-30 flex min-h-16 items-center justify-between gap-3 border-b border-default-200 bg-surface1/95 px-4 py-2 backdrop-blur-xl sm:hidden;
+    }
+
+    .mobile-topbar .sidebar-brand {
+        @apply min-w-0 p-0;
+    }
+
+    .mobile-topbar-actions {
+        @apply flex shrink-0 items-center gap-2;
+    }
+
+    .mobile-menu-trigger,
+    .mobile-menu-close {
+        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-default-300 bg-default-100 px-3 text-sm font-semibold text-foreground;
+    }
+
+    .mobile-menu-trigger svg {
+        @apply size-4;
+    }
+
+    .mobile-menu-backdrop {
+        @apply fixed inset-0 z-50 flex justify-end bg-black/70 backdrop-blur-sm sm:hidden;
+    }
+
+    .mobile-menu-drawer {
+        @apply flex h-full w-[min(22rem,90vw)] flex-col border-l border-default-200 bg-surface1 p-5 shadow-2xl shadow-black/50;
+    }
+
+    .mobile-menu-header {
+        @apply flex items-center justify-between gap-4 border-b border-default-200 pb-4 text-lg;
+    }
+
+    .mobile-menu-close {
+        @apply size-11 px-0 text-xl;
+    }
+
+    .mobile-menu-nav {
+        @apply mt-4 grid gap-2;
+    }
+
+    .mobile-menu-nav button {
+        @apply flex min-h-12 items-center justify-between gap-3 rounded-xl border-l-2 border-transparent px-4 text-left text-sm font-semibold text-foreground-500 transition hover:bg-default-100 hover:text-foreground;
+    }
+
+    .mobile-menu-nav button[aria-current="page"] {
+        @apply border-primary bg-primary/15 text-foreground;
+    }
+
+    .mobile-nav-label {
+        @apply flex min-w-0 items-center gap-3;
+    }
+
+    .mobile-nav-badge {
+        @apply inline-flex min-w-6 items-center justify-center rounded-full bg-default-200 px-2 py-0.5 text-[.68rem] font-bold text-foreground-600;
+    }
+
+    .mobile-nav-status {
+        @apply inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-foreground-500;
+    }
+
+    .mobile-menu-nav button[aria-current="page"] .mobile-nav-status {
+        @apply text-foreground-700;
+    }
+
+    .mobile-menu-footer {
+        @apply mt-auto border-t border-default-200 pt-4;
+    }
+
+    .mobile-menu-sign-out {
+        @apply flex min-h-12 w-full items-center justify-center rounded-xl px-4 text-sm font-semibold text-foreground-600 transition hover:bg-default-100 hover:text-foreground;
     }
 
     .sidebar-brand {
@@ -105,11 +199,11 @@
     }
 
     .nav-button {
-        @apply min-w-0 justify-start gap-3 px-3 text-foreground-500;
+        @apply min-w-0 justify-start gap-3 border-l-2 border-transparent px-3 text-foreground-500;
     }
 
     .nav-button-selected {
-        @apply bg-primary/15 text-primary-300;
+        @apply border-primary bg-primary/15 text-primary-300;
     }
 
     .nav-glyph {
@@ -137,11 +231,28 @@
     }
 
     .admin-content {
-        @apply min-w-0 px-5 py-7 sm:px-8 lg:px-10 lg:py-9 xl:px-14;
+        @apply min-w-0 w-full px-4 py-6 sm:px-8 lg:px-10 lg:py-9 xl:px-14;
     }
 
     .content-header {
         @apply mb-7 flex items-start justify-between gap-6;
+    }
+
+    .page-title:focus,
+    .page-title:focus-visible {
+        outline: none;
+    }
+
+    .page-title:focus-visible {
+        @apply border-l-2 border-primary pl-3;
+    }
+
+    .admin-toast {
+        @apply fixed top-5 right-5 z-40 flex max-w-md items-center gap-4 rounded-xl border border-default-300 bg-surface2 px-4 py-3 text-sm text-foreground shadow-2xl shadow-black/40;
+    }
+
+    .admin-toast button {
+        @apply grid size-8 shrink-0 place-items-center rounded-lg text-lg text-foreground-500 hover:bg-default-100 hover:text-foreground;
     }
 
     .content-section {
@@ -165,6 +276,51 @@
         @apply mt-1 text-sm leading-6 text-foreground-500;
     }
 
+    .concept-callout,
+    .mental-model {
+        @apply flex max-w-6xl items-start gap-3 rounded-2xl border border-primary/25 bg-primary/5 p-4;
+    }
+
+    .concept-callout strong,
+    .mental-model h2 {
+        @apply text-sm font-semibold text-foreground;
+    }
+
+    .concept-callout p,
+    .mental-model p {
+        @apply mt-1 text-sm leading-6 text-foreground-500;
+    }
+
+    .concept-icon {
+        @apply grid size-7 shrink-0 place-items-center rounded-lg bg-primary/15 text-xs font-bold text-primary-300;
+    }
+
+    .overview-layout {
+        @apply grid gap-6;
+    }
+
+    .overview-layout .mental-model {
+        @apply order-1;
+    }
+
+    .overview-layout .overview-metrics {
+        @apply order-3;
+    }
+
+    .overview-layout .setup-guide {
+        @apply order-2;
+    }
+
+    @media (min-width: 640px) {
+        .overview-layout.setup-complete .overview-metrics {
+            @apply order-2;
+        }
+
+        .overview-layout.setup-complete .setup-guide {
+            @apply order-3;
+        }
+    }
+
     .metric-grid {
         @apply grid gap-4 sm:grid-cols-2 xl:grid-cols-4;
     }
@@ -174,11 +330,23 @@
     }
 
     .metric-card {
-        @apply border border-default-200/60 bg-surface1/80 shadow-sm;
+        @apply border border-default-200 bg-surface1/80 shadow-sm;
     }
 
     .metric-card [data-slot="body"] {
         @apply gap-1 p-5;
+    }
+
+    .metric-card-link {
+        @apply flex min-h-32 items-end justify-between rounded-2xl p-5 text-left transition hover:border-primary/50 hover:bg-surface2;
+    }
+
+    .metric-card-link > span:first-child {
+        @apply grid gap-1;
+    }
+
+    .metric-manage {
+        @apply text-xs font-semibold text-primary-300;
     }
 
     .metric-label {
@@ -194,11 +362,11 @@
     }
 
     .overview-flow {
-        @apply max-w-3xl;
+        @apply max-w-4xl;
     }
 
     .flow-step {
-        @apply flex w-full items-start gap-3 rounded-xl border border-transparent p-2 text-left transition hover:border-default-200 hover:bg-default-50;
+        @apply grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 rounded-xl border border-transparent p-3 text-left transition hover:border-default-300 hover:bg-default-50;
     }
 
     .flow-step > span {
@@ -213,8 +381,20 @@
         @apply mt-1 text-xs leading-5 text-foreground-500;
     }
 
+    .flow-step em {
+        @apply self-center text-xs font-semibold text-primary-300 not-italic;
+    }
+
+    .flow-step-complete > span {
+        @apply bg-success/15 text-success;
+    }
+
+    .flow-step-complete em {
+        @apply text-foreground-500;
+    }
+
     .form-card {
-        @apply border border-default-200/60 bg-surface1/80 shadow-sm;
+        @apply border border-default-200 bg-surface1/80 shadow-sm;
     }
 
     .form-card h3 {
@@ -237,12 +417,56 @@
         @apply text-xs font-medium text-foreground-600;
     }
 
+    .field-label-row {
+        @apply mb-1.5 flex min-h-6 items-center justify-between gap-3;
+    }
+
+    .field-label-row label {
+        @apply text-xs font-medium text-foreground-600;
+    }
+
+    .field-label-row label span {
+        @apply font-normal text-foreground-500;
+    }
+
+    .field-help {
+        @apply mt-1 text-xs leading-5 text-foreground-500;
+    }
+
+    .context-help {
+        @apply relative shrink-0;
+    }
+
+    .context-help-trigger {
+        @apply grid size-6 min-h-0 cursor-pointer place-items-center rounded-full border border-default-300 bg-default-100 text-xs font-bold text-foreground-500 transition hover:border-primary/60 hover:text-primary-300;
+    }
+
+    .context-help-panel {
+        @apply absolute top-8 right-0 z-40 w-72 rounded-xl border border-default-300 bg-surface2 p-3 text-left text-xs leading-5 text-foreground-500 shadow-2xl shadow-black/50;
+    }
+
+    .context-help-panel strong {
+        @apply block text-sm text-foreground;
+    }
+
+    .context-help-panel p {
+        @apply mt-1;
+    }
+
+    .form-actions {
+        @apply flex justify-end;
+    }
+
     .native-select {
         @apply min-h-10 w-full rounded-xl border border-default-300 bg-default-100 px-3 text-sm text-foreground outline-none transition focus:border-primary;
     }
 
     .validation-message {
-        @apply mt-1 block text-xs text-danger;
+        @apply mt-1 block text-sm text-danger-300;
+    }
+
+    .unsaved-navigation-note {
+        @apply rounded-xl border border-warning-500/30 bg-warning-500/5 px-4 py-3 text-sm text-warning-300;
     }
 
     .key-list {
@@ -258,7 +482,7 @@
     }
 
     .empty-state {
-        @apply rounded-xl border border-dashed border-default-300 px-5 py-10 text-center text-sm text-foreground-400;
+        @apply rounded-xl border border-dashed border-default-300 px-5 py-10 text-center text-sm text-foreground-500;
     }
 
     .empty-state-compact {
@@ -283,6 +507,55 @@
 
     .confirmation-panel {
         @apply flex max-w-xl flex-wrap items-center justify-end gap-2 rounded-xl border border-danger/30 bg-danger/10 p-2 text-xs text-danger-300;
+    }
+
+    .secret-reveal {
+        @apply grid gap-4 rounded-2xl border border-warning/40 bg-warning/5 p-5;
+    }
+
+    .secret-reveal h3 {
+        @apply text-lg font-semibold text-foreground;
+    }
+
+    .secret-reveal p {
+        @apply mt-1 text-sm leading-6 text-foreground-500;
+    }
+
+    .secret-actions {
+        @apply flex flex-wrap gap-2;
+    }
+
+    .editor-toolbar {
+        @apply sticky top-0 z-20 border-b border-default-200 bg-surface1/95 backdrop-blur-xl;
+    }
+
+    .editor-toolbar-actions {
+        @apply flex flex-wrap items-center justify-end gap-2;
+    }
+
+    .save-state {
+        @apply mr-1 inline-flex items-center gap-1 text-xs font-semibold;
+    }
+
+    .save-state::before {
+        content: "";
+        @apply h-1.5 w-1.5 rounded-full bg-foreground-400;
+    }
+
+    .save-state-dirty {
+        @apply text-warning-500;
+    }
+
+    .save-state-dirty::before {
+        @apply bg-warning-500;
+    }
+
+    .save-state-saved {
+        @apply text-success-500;
+    }
+
+    .save-state-saved::before {
+        @apply bg-success-500;
     }
 
     .device-login-panel {
@@ -364,23 +637,174 @@
         @apply bg-default-100/70 text-[.65rem] font-semibold tracking-wider text-foreground-400 uppercase;
     }
 
-    @media (max-width: 639px) {
-        .sidebar-footer {
-            @apply grid-cols-2;
-        }
+    .tool-identity {
+        @apply grid min-w-0 gap-1;
+    }
 
-        .sidebar-footer > div {
-            @apply hidden;
-        }
+    .tool-identity > span,
+    .tool-metadata-note {
+        @apply text-xs leading-5 text-foreground-500;
+    }
+
+    .tool-discovery-time {
+        @apply text-right text-[0.7rem] text-foreground-400;
+    }
+
+    .tool-discovery-failed {
+        @apply text-danger-300;
+    }
+
+    .tool-metadata-note {
+        @apply rounded-lg border border-default-200/60 bg-surface2/45 px-3 py-2;
+    }
+
+    .tool-metadata-error {
+        @apply border-danger-500/30 text-danger-300;
+    }
+
+    .tool-metadata-warning {
+        @apply border-warning-500/30 bg-warning-500/5 text-warning-300;
+    }
+
+    .tool-metadata-stale {
+        @apply border-warning-500/30 bg-warning-500/5 text-warning-300;
+    }
+
+    .tool-availability-warning {
+        @apply text-xs font-semibold text-warning-300;
+    }
+
+    .tool-schema summary {
+        @apply w-fit cursor-pointer text-xs font-semibold text-primary-300;
+    }
+
+    .tool-schema pre {
+        @apply mt-2 max-h-48 overflow-auto rounded-lg border border-default-200/60 bg-background/80 p-3 text-[0.7rem] leading-5 text-foreground-400;
+    }
+
+    .setup-complete-summary {
+        @apply flex items-center gap-3 rounded-xl border border-success-500/25 bg-success-500/5 p-4;
+    }
+
+    .setup-complete-summary > span:nth-child(2) {
+        @apply grid flex-1 gap-0.5;
+    }
+
+    .setup-complete-summary small {
+        @apply text-xs text-foreground-500;
+    }
+
+    .setup-complete-summary button,
+    .setup-hide-details {
+        @apply rounded-lg px-3 py-2 text-xs font-semibold text-primary-300 hover:bg-primary-500/10;
+    }
+
+    .setup-complete-mark {
+        @apply grid h-8 w-8 place-items-center rounded-full bg-success-500/15 font-bold text-success-400;
+    }
+
+    .setup-hide-details {
+        @apply ml-auto;
+    }
+
+    .connection-test-panel {
+        @apply flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary-500/20 bg-primary-500/5 p-4;
+    }
+
+    .connection-test-panel > div {
+        @apply grid max-w-2xl gap-1;
+    }
+
+    .connection-test-panel p,
+    .form-action-note {
+        @apply text-xs leading-5 text-foreground-500;
+    }
+
+    .discovered-tool-list {
+        @apply grid gap-2 rounded-xl border border-default-200/70 bg-surface2/35 p-3;
+    }
+
+    .discovered-tool {
+        @apply flex cursor-pointer items-start gap-3 rounded-lg border border-default-200/60 bg-surface1/60 px-3 py-3 hover:border-primary-500/35;
+    }
+
+    .discovered-tool > input {
+        @apply mt-1 h-4 w-4 shrink-0 accent-primary-500;
+    }
+
+    .discovered-tool > span {
+        @apply grid min-w-0 gap-1;
+    }
+
+    .discovered-tool small {
+        @apply text-xs leading-5 text-foreground-500;
+    }
+
+    .verification-time {
+        @apply inline-flex items-center px-1 text-xs text-foreground-500;
+    }
+
+    .device-login-actions {
+        @apply flex flex-wrap items-center justify-end gap-2;
+    }
+
+    .tool-list-actions {
+        @apply flex flex-wrap items-center justify-between gap-3 text-xs text-foreground-500;
+    }
+
+    .tool-list-actions > span:last-child {
+        @apply flex gap-2;
+    }
+
+    .tool-list-actions button {
+        @apply rounded-lg px-2 py-1 font-semibold text-primary-300 hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40;
     }
 
     @media (max-width: 639px) {
-        .admin-sidebar {
-            @apply gap-2;
+        .content-header {
+            @apply gap-3;
         }
 
-        .sidebar-footer {
-            @apply grid-cols-2;
+        .content-header > div {
+            @apply min-w-0;
         }
+
+        .mobile-full-action {
+            @apply w-full;
+        }
+
+        .form-actions,
+        .secret-actions {
+            @apply grid w-full;
+        }
+
+        .form-actions > *,
+        .secret-actions > * {
+            @apply w-full;
+        }
+
+        .editor-toolbar {
+            @apply top-16;
+        }
+
+        .context-help-panel {
+            @apply fixed top-20 right-4 left-4 w-auto;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            min-height: 44px;
+        }
+    }
+}
+
+@layer utilities {
+    .admin-shell .text-foreground-400,
+    .admin-shell .text-foreground-500,
+    .login-layout .text-foreground-400,
+    .login-layout .text-foreground-500 {
+        color: rgb(180 180 190);
     }
 }

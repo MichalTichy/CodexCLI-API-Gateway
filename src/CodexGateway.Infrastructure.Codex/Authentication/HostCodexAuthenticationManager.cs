@@ -100,7 +100,11 @@ public sealed class HostCodexAuthenticationManager : ICodexAuthenticationManager
                 var startInfo = CreateStartInfo(["login", "--device-auth"]);
                 process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
                 var loginId = Guid.NewGuid().ToString("N");
-                var output = new DeviceLoginOutput(loginId);
+                var startedAt = DateTimeOffset.UtcNow;
+                var output = new DeviceLoginOutput(
+                    loginId,
+                    startedAt,
+                    startedAt.AddSeconds(_options.DeviceLoginTimeoutSeconds));
                 var loginReady = new TaskCompletionSource<DeviceLogin>(TaskCreationOptions.RunContinuationsAsynchronously);
                 process.OutputDataReceived += (_, eventArguments) =>
                     CaptureLoginOutput(process, output, eventArguments.Data, loginReady);
@@ -480,7 +484,10 @@ public sealed class HostCodexAuthenticationManager : ICodexAuthenticationManager
         }
     }
 
-    private sealed class DeviceLoginOutput(string loginId)
+    private sealed class DeviceLoginOutput(
+        string loginId,
+        DateTimeOffset startedAt,
+        DateTimeOffset expiresAt)
     {
         private readonly object _gate = new();
         private string? _verificationUrl;
@@ -515,7 +522,13 @@ public sealed class HostCodexAuthenticationManager : ICodexAuthenticationManager
 
         private DeviceLogin? CreateLogin() =>
             _verificationUrl is not null && _userCode is not null
-                ? new DeviceLogin(LoginId, _verificationUrl, _userCode, DeviceLoginStatus.Pending)
+                ? new DeviceLogin(
+                    LoginId,
+                    _verificationUrl,
+                    _userCode,
+                    DeviceLoginStatus.Pending,
+                    StartedAt: startedAt,
+                    ExpiresAt: expiresAt)
                 : null;
     }
 

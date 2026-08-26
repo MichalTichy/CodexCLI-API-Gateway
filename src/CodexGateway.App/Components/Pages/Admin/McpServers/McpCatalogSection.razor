@@ -2,12 +2,13 @@
 @inherits AdminComponentBase
 
 <section class="content-section" aria-labelledby="mcp-heading">
-    <div class="section-title-row">
+    <h2 id="mcp-heading" class="sr-only">MCP server management</h2>
+    <div class="concept-callout">
+        <span class="concept-icon" aria-hidden="true">i</span>
         <div>
-            <h2 id="mcp-heading">Trusted MCP catalog</h2>
-            <p>Only servers registered here can be assigned to projects.</p>
+            <strong>An MCP server provides tools.</strong>
+            <p>Register an HTTP or STDIO server here, then grant selected tools to API keys inside a project. Registration alone does not expose any tool to a client.</p>
         </div>
-        <LumexChip Variant="@ChipVariant.Flat">@Servers.Count configured</LumexChip>
     </div>
 
     <EditForm Model="_create" OnValidSubmit="CreateAsync" autocomplete="off">
@@ -21,35 +22,68 @@
                 <DataAnnotationsValidator />
                 <div class="form-grid-two">
                     <div>
-                        <LumexTextbox id="new-server-id" Behavior="@InputBehavior.OnInput" @bind-Value="_create.Id" Label="Identifier" Placeholder="docs" LabelPlacement="@LabelPlacement.Outside" Variant="@InputVariant.Outlined" />
+                        <div class="field-label-row">
+                            <label for="new-server-id">Server ID</label>
+                            <ContextHelp Title="Server ID">Unique, immutable ID used in project grants and MCP configuration. Use a stable lowercase value.</ContextHelp>
+                        </div>
+                        <LumexTextbox id="new-server-id" Behavior="@InputBehavior.OnInput" @bind-Value="_create.Id" aria-label="Server ID" aria-invalid="@(ServerIdValidationError is null ? null : "true")" aria-describedby="@(ServerIdValidationError is null ? null : "new-server-id-error")" Placeholder="e.g. internal-docs" Variant="@InputVariant.Outlined" />
+                        @if (ServerIdValidationError is not null)
+                        {
+                            <p id="new-server-id-error" class="validation-message">@ServerIdValidationError</p>
+                        }
                         <ValidationMessage For="() => _create.Id" />
                     </div>
                     <div>
-                        <LumexTextbox id="new-server-name" Behavior="@InputBehavior.OnInput" @bind-Value="_create.Name" Label="Display name" Placeholder="Documentation" LabelPlacement="@LabelPlacement.Outside" Variant="@InputVariant.Outlined" />
+                        <div class="field-label-row">
+                            <label for="new-server-name">Display name</label>
+                            <ContextHelp Title="Display name">Friendly name shown to gateway administrators and API consumers.</ContextHelp>
+                        </div>
+                        <LumexTextbox id="new-server-name" Behavior="@InputBehavior.OnInput" @bind-Value="_create.Name" aria-label="Display name" aria-invalid="@(DisplayNameValidationError is null ? null : "true")" aria-describedby="@(DisplayNameValidationError is null ? null : "new-server-name-error")" Placeholder="e.g. Internal documentation" Variant="@InputVariant.Outlined" />
+                        @if (DisplayNameValidationError is not null)
+                        {
+                            <p id="new-server-name-error" class="validation-message">@DisplayNameValidationError</p>
+                        }
                         <ValidationMessage For="() => _create.Name" />
                     </div>
                     <div class="native-field">
-                        <label for="new-server-transport">Transport</label>
+                        <div class="field-label-row">
+                            <label for="new-server-transport">Transport</label>
+                            <ContextHelp Title="MCP transport"><strong>HTTP</strong> connects to a remote MCP endpoint. <strong>STDIO</strong> starts an executable and communicates through its standard input and output.</ContextHelp>
+                        </div>
                         <InputSelect id="new-server-transport" class="native-select" @bind-Value="_create.IsHttp">
                             <option value="true">HTTP</option>
                             <option value="false">STDIO</option>
                         </InputSelect>
+                        <p class="field-help">@TransportHelp</p>
                     </div>
                     <div class="native-field">
-                        <label for="new-server-execution">Execution</label>
+                        <div class="field-label-row">
+                            <label for="new-server-execution">Execution location</label>
+                            <ContextHelp Title="Execution location"><strong>Gateway</strong> connects from the gateway process. <strong>Runner</strong> connects from each isolated project container and can access only that runner's filesystem and network.</ContextHelp>
+                        </div>
                         <InputSelect id="new-server-execution" class="native-select" @bind-Value="_create.ExecutionMode">
                             <option value="@McpExecutionMode.Gateway">Gateway</option>
                             <option value="@McpExecutionMode.Runner">Runner (advanced)</option>
                         </InputSelect>
+                        <p class="field-help">@ExecutionHelp</p>
                     </div>
                     <div class="sm:col-span-2">
+                        <div class="field-label-row">
+                            <label for="new-server-location">@(_create.IsHttp ? "MCP endpoint URL" : "Executable")</label>
+                            <ContextHelp Title="@(_create.IsHttp ? "MCP endpoint URL" : "STDIO executable")">@LocationHelp</ContextHelp>
+                        </div>
                         <LumexTextbox id="new-server-location"
                                       Behavior="@InputBehavior.OnInput"
                                       @bind-Value="_create.Location"
-                                      Label="@(_create.IsHttp ? "HTTP URL" : "Command")"
-                                      Placeholder="@(_create.IsHttp ? "https://mcp.internal.example" : "mcp-server")"
-                                      LabelPlacement="@LabelPlacement.Outside"
+                                      aria-label="@(_create.IsHttp ? "MCP endpoint URL" : "Executable")"
+                                      aria-invalid="@(LocationValidationError is null ? null : "true")"
+                                      aria-describedby="@(LocationValidationError is null ? null : "new-server-location-error")"
+                                      Placeholder="@(_create.IsHttp ? "e.g. https://mcp.internal.example" : "e.g. mcp-server")"
                                       Variant="@InputVariant.Outlined" />
+                        @if (LocationValidationError is not null)
+                        {
+                            <p id="new-server-location-error" class="validation-message">@LocationValidationError</p>
+                        }
                         <ValidationMessage For="() => _create.Location" />
                     </div>
                     @if (_create.IsHttp)
@@ -58,26 +92,80 @@
                                        Behavior="@InputBehavior.OnInput"
                                        @bind-Value="_create.EnvironmentHeaders"
                                        Label="HTTP headers from environment"
-                                       Description="One mapping per line. Each environment variable contains the complete header value."
+                                       aria-label="HTTP headers from environment"
+                                       Description="Header=ENVIRONMENT_VARIABLE, one per line. The gateway reads values at request time; secret values are never stored here."
                                        Placeholder="Authorization=MCP_AUTHORIZATION&#10;X-Api-Key=MCP_API_KEY"
                                        LabelPlacement="@LabelPlacement.Outside"
                                        Variant="@InputVariant.Outlined"
                                        MinRows="3"
                                        Class="sm:col-span-2" />
                     }
+                    else
+                    {
+                        <LumexTextarea id="new-server-arguments"
+                                       Behavior="@InputBehavior.OnInput"
+                                       @bind-Value="_create.Arguments"
+                                       Label="Arguments"
+                                       aria-label="Arguments"
+                                       Description="One argument per line. Each line is passed as one literal argument; no shell parsing occurs."
+                                       Placeholder="e.g. --port&#10;3000"
+                                       LabelPlacement="@LabelPlacement.Outside"
+                                       Variant="@InputVariant.Outlined"
+                                       MinRows="3" />
+                        <LumexTextarea id="new-server-environment"
+                                       Behavior="@InputBehavior.OnInput"
+                                       @bind-Value="_create.EnvironmentVariables"
+                                       Label="Forwarded environment variables"
+                                       aria-label="Forwarded environment variables"
+                                       Description="Optional. One existing environment-variable name per line; values are read at runtime and are not stored here."
+                                       Placeholder="e.g. MCP_API_KEY"
+                                       LabelPlacement="@LabelPlacement.Outside"
+                                       Variant="@InputVariant.Outlined"
+                                       MinRows="3" />
+                    }
                     <LumexTextarea id="new-server-tools"
                                    Behavior="@InputBehavior.OnInput"
                                    @bind-Value="_create.AvailableTools"
-                                   Label="Available tools"
-                                   Description="One tool name per line."
-                                   Placeholder="search&#10;open"
+                                   Label="Tool allowlist"
+                                   aria-label="Tool allowlist"
+                                   Description="Security allowlist, one exact tool name per line. Leave empty to expose no tools. Test the connection below to select verified names and review their descriptions."
+                                   Placeholder="e.g. search&#10;open"
                                    LabelPlacement="@LabelPlacement.Outside"
                                    Variant="@InputVariant.Outlined"
                                    MinRows="3"
                                    Class="sm:col-span-2" />
                 </div>
-                <div class="flex justify-end">
-                    <LumexButton Type="@ButtonType.Submit" Color="@ThemeColor.Primary" Disabled="@IsBusy">@(IsBusy ? "Adding…" : "Add trusted server")</LumexButton>
+
+                <div class="connection-test-panel">
+                    <div>
+                        <strong>Verify before trusting</strong>
+                        <p>The gateway connects now and reads the server-provided tool names, descriptions, and input schemas.</p>
+                    </div>
+                    <LumexButton Type="@ButtonType.Button" Variant="@Variant.Flat" Disabled="@(_testingConnection || IsBusy)" OnClick="TestConnectionAsync">@(_testingConnection ? "Testing connection…" : "Test connection & discover tools")</LumexButton>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(CurrentTestStatus))
+                {
+                    <LumexAlert Color="@(CurrentTestStatusKind == "error" ? ThemeColor.Danger : CurrentTestStatusKind == "success" ? ThemeColor.Success : CurrentTestStatusKind == "warning" ? ThemeColor.Warning : ThemeColor.Default)" Description="@CurrentTestStatus" />
+                }
+                @if (ConnectionVerified && _discoveredTools.Count > 0)
+                {
+                    <div class="discovered-tool-list" aria-label="Discovered MCP tools">
+                        @foreach (var tool in _discoveredTools)
+                        {
+                            <label class="discovered-tool" for="@($"new-tool-{tool.Name}")">
+                                <input id="@($"new-tool-{tool.Name}")" type="checkbox" checked="@IsToolSelected(tool.Name)" @onchange="args => ToggleDiscoveredTool(tool.Name, args)" />
+                                <span>
+                                    <code>@tool.Name</code>
+                                    <small>@(string.IsNullOrWhiteSpace(tool.Description) ? "This MCP server did not provide a description." : tool.Description)</small>
+                                    <details class="tool-schema"><summary>Input schema</summary><pre>@FormatJson(tool.InputSchema)</pre></details>
+                                </span>
+                            </label>
+                        }
+                    </div>
+                }
+                <div class="form-actions">
+                    <span class="form-action-note">@(ConnectionVerified ? "Connection verified for the current settings." : "Test the current connection settings first.")</span>
+                    <LumexButton Type="@ButtonType.Submit" Color="@ThemeColor.Primary" Disabled="@(IsBusy || !ConnectionVerified)" Class="mobile-full-action">@(IsBusy ? "Adding…" : "Add trusted server")</LumexButton>
                 </div>
                 @if (!string.IsNullOrWhiteSpace(Status))
                 {

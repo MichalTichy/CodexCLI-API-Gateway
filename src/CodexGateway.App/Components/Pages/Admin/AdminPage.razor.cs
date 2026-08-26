@@ -5,6 +5,8 @@ namespace CodexGateway.App.Components.Pages.Admin;
 
 public partial class AdminPage : ComponentBase
 {
+    private bool _showPassword;
+
     [Inject]
     private IOptions<AdminUiOptions> AdminOptions { get; set; } = null!;
 
@@ -13,4 +15,6 @@ public partial class AdminPage : ComponentBase
 
     [SupplyParameterFromQuery(Name = "logout")]
     public string? LogoutStatus { get; set; }
+
+    private void TogglePasswordVisibility() => _showPassword = !_showPassword;
 }

@@ -1,12 +1,13 @@
 @namespace CodexGateway.App.Components.Pages.Admin.Projects
 
 <section class="content-section" aria-labelledby="projects-heading">
-    <div class="section-title-row">
+    <h2 id="projects-heading" class="sr-only">Project management</h2>
+    <div class="concept-callout">
+        <span class="concept-icon" aria-hidden="true">i</span>
         <div>
-            <h2 id="projects-heading">Projects</h2>
-            <p>Isolated workspaces with key-specific MCP access.</p>
+            <strong>A project is an isolated execution boundary.</strong>
+            <p>Its ID identifies API requests. Each granted API key can access only the MCP servers and tools selected inside that project.</p>
         </div>
-        <LumexChip Variant="@ChipVariant.Flat">@Projects.Count configured</LumexChip>
     </div>
 
     <EditForm Model="_create" OnValidSubmit="CreateAsync" autocomplete="off">
@@ -20,16 +21,25 @@
                 <DataAnnotationsValidator />
                 <div class="form-grid-two">
                     <div>
-                        <LumexTextbox id="new-project-id" Behavior="@InputBehavior.OnInput" @bind-Value="_create.Id" Label="Identifier" Placeholder="customer-support" Description="Used in the API path and project header." LabelPlacement="@LabelPlacement.Outside" Variant="@InputVariant.Outlined" />
+                        <div class="field-label-row">
+                            <label for="new-project-id">Project ID</label>
+                            <ContextHelp Title="Project ID">Unique and immutable. Clients send this value in the API path or project header to select the isolation boundary.</ContextHelp>
+                        </div>
+                        <LumexTextbox id="new-project-id" Behavior="@InputBehavior.OnInput" @bind-Value="_create.Id" aria-label="Project ID" Placeholder="e.g. customer-support" Variant="@InputVariant.Outlined" />
+                        <p class="field-help">Used in the API path and project header.</p>
                         <ValidationMessage For="() => _create.Id" />
                     </div>
                     <div>
-                        <LumexTextbox id="new-project-name" Behavior="@InputBehavior.OnInput" @bind-Value="_create.Name" Label="Display name" Placeholder="Customer support" LabelPlacement="@LabelPlacement.Outside" Variant="@InputVariant.Outlined" />
+                        <div class="field-label-row">
+                            <label for="new-project-name">Display name</label>
+                            <ContextHelp Title="Display name">Friendly name shown in this administration UI. It does not change the Project ID used by clients.</ContextHelp>
+                        </div>
+                        <LumexTextbox id="new-project-name" Behavior="@InputBehavior.OnInput" @bind-Value="_create.Name" aria-label="Display name" Placeholder="e.g. Customer support" Variant="@InputVariant.Outlined" />
                         <ValidationMessage For="() => _create.Name" />
                     </div>
                 </div>
-                <div class="flex justify-end">
-                    <LumexButton Type="@ButtonType.Submit" Color="@ThemeColor.Primary" Disabled="@_busy">@(_busy ? "Creating…" : "Create project")</LumexButton>
+                <div class="form-actions">
+                    <LumexButton Type="@ButtonType.Submit" Color="@ThemeColor.Primary" Disabled="@_busy" Class="mobile-full-action">@(_busy ? "Creating…" : "Create project")</LumexButton>
                 </div>
                 @if (!string.IsNullOrWhiteSpace(_status))
                 {

@@ -2,10 +2,12 @@
 @inherits AdminComponentBase
 
 <section class="content-section" aria-labelledby="keys-heading">
-    <div class="section-title-row">
+    <h2 id="keys-heading" class="sr-only">API key management</h2>
+    <div class="concept-callout">
+        <span class="concept-icon" aria-hidden="true">i</span>
         <div>
-            <h2 id="keys-heading">API keys</h2>
-            <p>Create a credential here, then grant it access inside a project.</p>
+            <strong>API keys authenticate gateway clients.</strong>
+            <p>A new key has no project access until you assign it inside a project. Its secret is shown only once.</p>
         </div>
     </div>
 
@@ -13,37 +15,43 @@
         <LumexCard Class="form-card">
             <LumexCardHeader Class="flex-col items-start gap-1">
                 <h3>Create API key</h3>
-                <p>Choose a stable identifier that explains who or what will use this credential.</p>
+                <p>Name the client or integration that will use this credential.</p>
             </LumexCardHeader>
             <LumexDivider />
             <LumexCardBody Class="gap-5">
                 <DataAnnotationsValidator />
                 <div class="form-grid-two">
                     <div>
+                        <div class="field-label-row">
+                            <label for="new-api-key-id">Key ID</label>
+                            <ContextHelp Title="Key ID">Unique, immutable ID used in project configuration. Use a stable value such as <code>samwise-prod</code>.</ContextHelp>
+                        </div>
                         <LumexTextbox id="new-api-key-id"
                                       Behavior="@InputBehavior.OnInput"
                                       @bind-Value="_create.Id"
-                                      Label="Identifier"
-                                      Placeholder="automation"
-                                      Description="Lowercase identifier used in project grants."
-                                      LabelPlacement="@LabelPlacement.Outside"
+                                      aria-label="Key ID"
+                                      Placeholder="e.g. samwise-prod"
                                       Variant="@InputVariant.Outlined" />
+                        <p id="new-api-key-id-help" class="field-help">Lowercase ID shown in project grants.</p>
                         <ValidationMessage For="() => _create.Id" />
                     </div>
                     <div>
+                        <div class="field-label-row">
+                            <label for="new-api-key-name">Display name</label>
+                            <ContextHelp Title="Display name">Friendly name shown only in this administration UI. You can change it later without changing the credential.</ContextHelp>
+                        </div>
                         <LumexTextbox id="new-api-key-name"
                                       Behavior="@InputBehavior.OnInput"
                                       @bind-Value="_create.Name"
-                                      Label="Display name"
-                                      Placeholder="Automation"
-                                      Description="Human-readable name shown throughout the UI."
-                                      LabelPlacement="@LabelPlacement.Outside"
+                                      aria-label="Display name"
+                                      Placeholder="e.g. Samwise production"
                                       Variant="@InputVariant.Outlined" />
+                        <p class="field-help">Friendly name shown to gateway administrators.</p>
                         <ValidationMessage For="() => _create.Name" />
                     </div>
                 </div>
-                <div class="flex justify-end">
-                    <LumexButton Type="@ButtonType.Submit" Color="@ThemeColor.Primary" Disabled="@IsBusy">
+                <div class="form-actions">
+                    <LumexButton Type="@ButtonType.Submit" Color="@ThemeColor.Primary" Disabled="@IsBusy" Class="mobile-full-action">
                         @(IsBusy ? "Creating…" : "Create API key")
                     </LumexButton>
                 </div>
@@ -57,20 +65,25 @@
 
     @if (_createdApiKey is not null)
     {
-        <LumexAlert Color="@ThemeColor.Warning" Title="Copy API key now" role="status" aria-live="polite">
-            <DescriptionContent>
-                <div class="grid gap-3">
-                    <p>This is the only time the secret for <strong>@_createdApiKey.Name</strong> will be shown.</p>
-                    <LumexTextbox id="created-api-key-secret"
-                                  Value="@_createdApiKey.Key"
-                                  Label="Secret"
-                                  ReadOnly="@true"
-                                  LabelPlacement="@LabelPlacement.Outside"
-                                  Variant="@InputVariant.Outlined"
-                                  Class="font-mono" />
-                </div>
-            </DescriptionContent>
-        </LumexAlert>
+        <section class="secret-reveal" role="status" aria-live="polite" aria-labelledby="created-key-heading">
+            <div>
+                <p class="eyebrow">One-time secret</p>
+                <h3 id="created-key-heading">Save this API key now</h3>
+                <p>This is the only time the secret for <strong>@_createdApiKey.Name</strong> will be shown.</p>
+            </div>
+            <LumexTextbox id="created-api-key-secret"
+                          Value="@_createdApiKey.Key"
+                          Type="@(_revealCreatedSecret ? InputType.Text : InputType.Password)"
+                          aria-label="Created API key secret"
+                          ReadOnly="@true"
+                          Variant="@InputVariant.Outlined"
+                          Class="font-mono" />
+            <div class="secret-actions">
+                <LumexButton Variant="@Variant.Light" OnClick="ToggleCreatedSecret">@(_revealCreatedSecret ? "Hide secret" : "Reveal secret")</LumexButton>
+                <LumexButton Color="@ThemeColor.Primary" OnClick="CopyCreatedSecretAsync">@(_secretCopied ? "Copied" : "Copy secret")</LumexButton>
+                <LumexButton Variant="@Variant.Light" OnClick="DismissCreatedSecret">I’ve saved this key</LumexButton>
+            </div>
+        </section>
     }
 
     <LumexCard Class="form-card">
@@ -97,14 +110,33 @@
                                 <div class="list-avatar" aria-hidden="true">@key.Name[..1].ToUpperInvariant()</div>
                                 <div class="min-w-0">
                                     <strong class="block truncate text-sm text-foreground">@key.Name</strong>
-                                    <span class="block truncate font-mono text-xs text-foreground-400">@key.Id</span>
+                                    <span class="block truncate text-xs text-foreground-500">Key ID: <code>@key.Id</code> · @ProjectGrantSummary(key.Id)</span>
                                 </div>
                             </div>
-                            <LumexButton Color="@ThemeColor.Danger" Variant="@Variant.Light" Size="@Size.Small" Disabled="@IsBusy" OnClick="@(() => DeleteAsync(key.Id))">Revoke</LumexButton>
+                            <LumexButton Color="@ThemeColor.Danger" Variant="@Variant.Light" Size="@Size.Small" Disabled="@IsBusy" OnClick="@(() => AskToRevoke(key.Id))">Revoke</LumexButton>
                         </div>
                     }
                 </div>
             }
         </LumexCardBody>
     </LumexCard>
+
+    <LumexModal @bind-Open="_revokeDialogOpen">
+        <LumexModalContent>
+            <LumexModalHeader>@(RevokeTarget is null ? "Revoke API key?" : $"Revoke “{RevokeTarget.Name}”?")</LumexModalHeader>
+            <LumexModalBody>
+                @if (RevokeTarget is not null)
+                {
+                    <div class="grid gap-3 text-sm text-foreground-600">
+                        <p>Key ID: <code>@RevokeTarget.Id</code></p>
+                        <p>Clients using this key will immediately stop working. @ProjectGrantImpact(RevokeTarget.Id)</p>
+                    </div>
+                }
+            </LumexModalBody>
+            <LumexModalFooter>
+                <LumexButton Variant="@Variant.Light" OnClick="CancelRevoke">Cancel</LumexButton>
+                <LumexButton Color="@ThemeColor.Danger" Disabled="@IsBusy" OnClick="ConfirmRevokeAsync">Revoke API key</LumexButton>
+            </LumexModalFooter>
+        </LumexModalContent>
+    </LumexModal>
 </section>

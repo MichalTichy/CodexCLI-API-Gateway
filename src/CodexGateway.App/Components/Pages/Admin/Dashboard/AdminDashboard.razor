@@ -2,7 +2,62 @@
 @inherits AdminComponentBase
 
 <main class="admin-shell" data-testid="admin-dashboard" aria-busy="@_loading.ToString().ToLowerInvariant()">
-    <aside class="admin-sidebar">
+    <header class="mobile-topbar" inert="@(_mobileMenuOpen ? string.Empty : null)" aria-hidden="@(_mobileMenuOpen ? "true" : null)">
+        <div class="sidebar-brand">
+            <div class="brand-mark brand-mark-small" aria-hidden="true">CG</div>
+            <div>
+                <strong class="block text-sm text-foreground">Codex Gateway</strong>
+                <span class="text-xs text-foreground-500">Control plane</span>
+            </div>
+        </div>
+        <div class="mobile-topbar-actions">
+            <LumexButton Color="@CodexStatusColor" Variant="@Variant.Flat" Size="@Size.Small" Disabled="@(_loading || _codexActionBusy)" OnClick="HandleCodexStatusActionAsync">
+                <span class="connection-dot" aria-hidden="true"></span>
+                @CodexStatusActionLabel
+            </LumexButton>
+            <button @ref="_mobileMenuTrigger" type="button" class="mobile-menu-trigger" aria-expanded="@_mobileMenuOpen.ToString().ToLowerInvariant()" aria-controls="mobile-admin-menu" @onclick="OpenMobileMenu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+                <span>Menu</span>
+            </button>
+        </div>
+    </header>
+
+    @if (_mobileMenuOpen)
+    {
+        <div class="mobile-menu-backdrop" @onclick="CloseMobileMenu">
+            <aside id="mobile-admin-menu" class="mobile-menu-drawer" role="dialog" aria-modal="true" aria-label="Administration menu" data-focus-trap @onclick:stopPropagation @onkeydown="HandleMobileMenuKeyDown">
+                <div class="mobile-menu-header">
+                    <strong>Administration</strong>
+                    <button @ref="_mobileMenuClose" type="button" class="mobile-menu-close" aria-label="Close administration menu" @onclick="CloseMobileMenu">×</button>
+                </div>
+                <nav class="mobile-menu-nav" aria-label="Administration sections">
+                    <button type="button" aria-current="@(_selectedSection == AdminSection.Overview ? "page" : null)" @onclick="@(() => SelectSectionAsync(AdminSection.Overview))">
+                        <span class="mobile-nav-label"><span class="nav-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10.8 12 3l9 7.8"/><path d="M5.5 9.5V21h13V9.5M9.5 21v-6h5v6"/></svg></span><span>Overview</span></span>
+                    </button>
+                    <button type="button" aria-current="@(_selectedSection == AdminSection.ApiKeys ? "page" : null)" @onclick="@(() => SelectSectionAsync(AdminSection.ApiKeys))">
+                        <span class="mobile-nav-label"><span class="nav-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="15" r="4"/><path d="m11 12 8-8m-3 3 3 3m-6 0 2 2"/></svg></span><span>API keys</span></span><span class="mobile-nav-badge" aria-label="@CountLabel(_apiKeys.Count, "API key")">@_apiKeys.Count</span>
+                    </button>
+                    <button type="button" aria-current="@(_selectedSection == AdminSection.Projects ? "page" : null)" @onclick="@(() => SelectSectionAsync(AdminSection.Projects))">
+                        <span class="mobile-nav-label"><span class="nav-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3.5 6.5h6l2 2h9v10.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z"/><path d="M3.5 9h17"/></svg></span><span>Projects</span></span><span class="mobile-nav-badge" aria-label="@CountLabel(_projects.Count, "project")">@_projects.Count</span>
+                    </button>
+                    <button type="button" aria-current="@(_selectedSection == AdminSection.McpServers ? "page" : null)" @onclick="@(() => SelectSectionAsync(AdminSection.McpServers))">
+                        <span class="mobile-nav-label"><span class="nav-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="6" rx="2"/><rect x="4" y="14" width="16" height="6" rx="2"/><path d="M8 7h.01M8 17h.01M12 7h5M12 17h5"/></svg></span><span>MCP servers</span></span><span class="mobile-nav-badge" aria-label="@CountLabel(_servers.Count, "MCP server")">@_servers.Count</span>
+                    </button>
+                    <button type="button" aria-current="@(_selectedSection == AdminSection.Codex ? "page" : null)" @onclick="@(() => SelectSectionAsync(AdminSection.Codex))">
+                        <span class="mobile-nav-label"><span class="nav-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m7 9 3 3-3 3m5 0h5"/></svg></span><span>Codex account</span></span><span class="mobile-nav-status"><span class="connection-dot" aria-hidden="true"></span>@CodexNavigationStatusLabel</span>
+                    </button>
+                </nav>
+                <div class="mobile-menu-footer">
+                    <form action="/admin/logout" method="post">
+                        <AntiforgeryToken />
+                        <button type="submit" class="mobile-menu-sign-out">Sign out of admin</button>
+                    </form>
+                </div>
+            </aside>
+        </div>
+    }
+
+    <aside class="admin-sidebar" inert="@(_mobileMenuOpen ? string.Empty : null)" aria-hidden="@(_mobileMenuOpen ? "true" : null)">
         <div class="sidebar-brand">
             <div class="brand-mark brand-mark-small" aria-hidden="true">CG</div>
             <div>
@@ -13,29 +68,29 @@
 
         <nav class="sidebar-nav" aria-label="Administration sections">
             <p class="nav-label">Workspace</p>
-            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.Overview)" OnClick="@(() => SelectSection(AdminSection.Overview))">
+            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.Overview)" aria-current="@(_selectedSection == AdminSection.Overview ? "page" : null)" OnClick="@(() => SelectSectionAsync(AdminSection.Overview))">
                 <span class="nav-glyph" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10.8 12 3l9 7.8"/><path d="M5.5 9.5V21h13V9.5M9.5 21v-6h5v6"/></svg>
                 </span><span>Overview</span>
             </LumexButton>
-            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.ApiKeys)" OnClick="@(() => SelectSection(AdminSection.ApiKeys))">
+            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.ApiKeys)" aria-current="@(_selectedSection == AdminSection.ApiKeys ? "page" : null)" OnClick="@(() => SelectSectionAsync(AdminSection.ApiKeys))">
                 <span class="nav-glyph" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="15" r="4"/><path d="m11 12 8-8m-3 3 3 3m-6 0 2 2"/></svg>
                 </span><span>API keys</span><span class="nav-count">@_apiKeys.Count</span>
             </LumexButton>
-            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.Projects)" OnClick="@(() => SelectSection(AdminSection.Projects))">
+            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.Projects)" aria-current="@(_selectedSection == AdminSection.Projects ? "page" : null)" OnClick="@(() => SelectSectionAsync(AdminSection.Projects))">
                 <span class="nav-glyph" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3.5 6.5h6l2 2h9v10.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z"/><path d="M3.5 9h17"/></svg>
                 </span><span>Projects</span><span class="nav-count">@_projects.Count</span>
             </LumexButton>
-            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.McpServers)" OnClick="@(() => SelectSection(AdminSection.McpServers))">
+            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.McpServers)" aria-current="@(_selectedSection == AdminSection.McpServers ? "page" : null)" OnClick="@(() => SelectSectionAsync(AdminSection.McpServers))">
                 <span class="nav-glyph" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="6" rx="2"/><rect x="4" y="14" width="16" height="6" rx="2"/><path d="M8 7h.01M8 17h.01M12 7h5M12 17h5"/></svg>
                 </span><span>MCP servers</span><span class="nav-count">@_servers.Count</span>
             </LumexButton>
 
             <p class="nav-label mt-5">Runtime</p>
-            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.Codex)" OnClick="@(() => SelectSection(AdminSection.Codex))">
+            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.Codex)" aria-current="@(_selectedSection == AdminSection.Codex ? "page" : null)" OnClick="@(() => SelectSectionAsync(AdminSection.Codex))">
                 <span class="nav-glyph" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m7 9 3 3-3 3m5 0h5"/></svg>
                 </span><span>Codex account</span>
@@ -50,28 +105,34 @@
                     @CodexStatusActionLabel
                 </LumexButton>
             </div>
-            <LumexButton Variant="@Variant.Flat" Disabled="@_loading" FullWidth="@true" OnClick="RefreshAsync">
-                @(_loading ? "Refreshing…" : "Refresh data")
-            </LumexButton>
             <form action="/admin/logout" method="post">
                 <AntiforgeryToken />
-                <LumexButton Type="@ButtonType.Submit" Variant="@Variant.Light" FullWidth="@true">Log out</LumexButton>
+                <LumexButton Type="@ButtonType.Submit" Variant="@Variant.Light" FullWidth="@true">Sign out of admin</LumexButton>
             </form>
         </div>
     </aside>
 
-    <section class="admin-content">
+    <section class="admin-content" inert="@(_mobileMenuOpen ? string.Empty : null)" aria-hidden="@(_mobileMenuOpen ? "true" : null)">
         <header class="content-header">
             <div>
                 <p class="eyebrow">@SectionEyebrow</p>
-                <h1 class="text-3xl font-semibold tracking-tight text-foreground">@SectionTitle</h1>
+                <h1 @ref="_pageTitle" tabindex="-1" class="page-title text-3xl font-semibold tracking-tight text-foreground">@SectionTitle</h1>
                 <p class="mt-2 text-sm leading-6 text-foreground-500">@SectionDescription</p>
             </div>
+            @if (_selectedSection != AdminSection.Codex)
+            {
+                <LumexButton Variant="@Variant.Light" Size="@Size.Small" Disabled="@_loading" OnClick="RefreshAsync" aria-label="Refresh gateway data">
+                    @(_loading ? "Refreshing…" : "Refresh")
+                </LumexButton>
+            }
         </header>
 
         @if (!string.IsNullOrWhiteSpace(Status))
         {
-            <LumexAlert Color="@StatusColor" Description="@Status" Class="mb-5" />
+            <div class="admin-toast" role="@(StatusKind == AdminStatusKind.Error ? "alert" : "status")" aria-live="@(StatusKind == AdminStatusKind.Error ? "assertive" : "polite")">
+                <span>@Status</span>
+                <button type="button" aria-label="Dismiss notification" @onclick="DismissStatus">×</button>
+            </div>
         }
 
         @if (!_initialized)
@@ -87,55 +148,86 @@
             @switch (_selectedSection)
             {
                 case AdminSection.Overview:
-                    <div class="grid gap-6">
-                        <section class="metric-grid metric-grid-overview" aria-label="Gateway summary">
-                            <LumexCard Class="metric-card">
-                                <LumexCardBody>
+                    <div class="overview-layout @(SetupComplete ? "setup-complete" : "setup-incomplete")">
+                        <section class="mental-model" aria-labelledby="mental-model-heading">
+                            <div>
+                                <span class="concept-icon" aria-hidden="true">i</span>
+                            </div>
+                            <div>
+                                <h2 id="mental-model-heading">How the gateway fits together</h2>
+                                <p><strong>API keys</strong> authenticate clients. <strong>Projects</strong> isolate runs and decide which keys and MCP tools are allowed. The shared <strong>Codex account</strong> executes requests inside project containers.</p>
+                            </div>
+                        </section>
+
+                        <section class="metric-grid metric-grid-overview overview-metrics" aria-label="Gateway summary">
+                            <button type="button" class="metric-card metric-card-link" @onclick="@(() => SelectSectionAsync(AdminSection.Projects))">
+                                <span>
                                     <span class="metric-label">Projects</span>
                                     <strong class="metric-value">@_projects.Count</strong>
                                     <span class="metric-caption">@_projects.Count(project => project.Enabled) enabled</span>
-                                </LumexCardBody>
-                            </LumexCard>
-                            <LumexCard Class="metric-card">
-                                <LumexCardBody>
+                                </span><span class="metric-manage">Manage →</span>
+                            </button>
+                            <button type="button" class="metric-card metric-card-link" @onclick="@(() => SelectSectionAsync(AdminSection.ApiKeys))">
+                                <span>
                                     <span class="metric-label">API keys</span>
                                     <strong class="metric-value">@_apiKeys.Count</strong>
                                     <span class="metric-caption">Global credentials</span>
-                                </LumexCardBody>
-                            </LumexCard>
-                            <LumexCard Class="metric-card">
-                                <LumexCardBody>
+                                </span><span class="metric-manage">Manage →</span>
+                            </button>
+                            <button type="button" class="metric-card metric-card-link" @onclick="@(() => SelectSectionAsync(AdminSection.McpServers))">
+                                <span>
                                     <span class="metric-label">MCP servers</span>
                                     <strong class="metric-value">@_servers.Count</strong>
                                     <span class="metric-caption">@_servers.Count(server => server.Enabled) available</span>
-                                </LumexCardBody>
-                            </LumexCard>
+                                </span><span class="metric-manage">Manage →</span>
+                            </button>
                         </section>
 
-                        <div class="overview-flow">
+                        <div class="overview-flow setup-guide">
                             <LumexCard Class="border border-default-200/60 bg-surface1/80">
-                                <LumexCardHeader Class="flex-col items-start gap-1">
-                                    <h2 class="text-lg font-semibold">Configuration flow</h2>
-                                    <p class="text-sm text-foreground-500">The shortest path to a working project.</p>
+                                <LumexCardHeader Class="responsive-row">
+                                    <div>
+                                        <h2 class="text-lg font-semibold">Setup checklist</h2>
+                                        <p class="text-sm text-foreground-500">Follow these steps for a working client connection.</p>
+                                    </div>
+                                    <LumexChip Variant="@ChipVariant.Flat" Size="@Size.Small">@CompletedSetupSteps of 4 complete</LumexChip>
                                 </LumexCardHeader>
                                 <LumexDivider />
-                                <LumexCardBody Class="gap-5">
-                                    <button type="button" class="flow-step" @onclick="() => SelectSection(AdminSection.ApiKeys)">
-                                        <span>1</span><div><strong>Create an API key</strong><p>The generated secret is shown once.</p></div>
+                                <LumexCardBody Class="gap-3">
+                                    @if (SetupComplete && !_showCompletedSetupSteps)
+                                    {
+                                        <div class="setup-complete-summary">
+                                            <span class="setup-complete-mark" aria-hidden="true">✓</span>
+                                            <span><strong>Gateway setup is complete</strong><small>Manage credentials, project access, and tools from the sections above.</small></span>
+                                            <button type="button" @onclick="ToggleCompletedSetupSteps">Show details</button>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                    <button type="button" class="flow-step @SetupStepClass(_account?.Authenticated == true)" @onclick="@(() => SelectSectionAsync(AdminSection.Codex))">
+                                        <span>@SetupStepMarker(_account?.Authenticated == true, 1)</span><div><strong>Connect the Codex account</strong><p>All isolated runs share this login.</p></div><em>@(_account?.Authenticated == true ? "Manage" : "Connect")</em>
                                     </button>
-                                    <button type="button" class="flow-step" @onclick="() => SelectSection(AdminSection.McpServers)">
-                                        <span>2</span><div><strong>Trust MCP servers</strong><p>Define transports and available tools.</p></div>
+                                    <button type="button" class="flow-step @SetupStepClass(_apiKeys.Count > 0)" @onclick="@(() => SelectSectionAsync(AdminSection.ApiKeys))">
+                                        <span>@SetupStepMarker(_apiKeys.Count > 0, 2)</span><div><strong>Create an API key</strong><p>The client secret is shown once, then granted to a project.</p></div><em>@SetupStepAction(_apiKeys.Count > 0)</em>
                                     </button>
-                                    <button type="button" class="flow-step" @onclick="() => SelectSection(AdminSection.Projects)">
-                                        <span>3</span><div><strong>Grant project access</strong><p>Connect keys to only the tools they need.</p></div>
+                                    <button type="button" class="flow-step @SetupStepClass(_projects.Count > 0)" @onclick="@(() => SelectSectionAsync(AdminSection.Projects))">
+                                        <span>@SetupStepMarker(_projects.Count > 0, 3)</span><div><strong>Create a project</strong><p>Projects isolate runs and define which API keys may enter.</p></div><em>@SetupStepAction(_projects.Count > 0)</em>
                                     </button>
+                                    <button type="button" class="flow-step @SetupStepClass(_servers.Count > 0)" @onclick="@(() => SelectSectionAsync(AdminSection.McpServers))">
+                                        <span>@SetupStepMarker(_servers.Count > 0, 4)</span><div><strong>Add and assign MCP tools</strong><p>Optional when a project does not need external tools.</p></div><em>@SetupStepAction(_servers.Count > 0)</em>
+                                    </button>
+                                        @if (SetupComplete)
+                                        {
+                                            <button type="button" class="setup-hide-details" @onclick="ToggleCompletedSetupSteps">Hide setup details</button>
+                                        }
+                                    }
                                 </LumexCardBody>
                             </LumexCard>
                         </div>
                     </div>
                     break;
                 case AdminSection.ApiKeys:
-                    <ApiKeyList ApiKeys="_apiKeys" OnChanged="HandleChangedAsync" />
+                    <ApiKeyList ApiKeys="_apiKeys" Projects="_projects" OnChanged="HandleChangedAsync" />
                     break;
                 case AdminSection.Projects:
                     <ProjectsSection Projects="_projects" ApiKeys="_apiKeys" Servers="_servers" OnChanged="HandleChangedAsync" />
@@ -148,10 +240,10 @@
                         <div class="section-title-row">
                             <div>
                                 <h2 id="codex-heading">Run identity</h2>
-                                <p>The dedicated Codex account mounted into every isolated execution container.</p>
+                                <p>All projects use this one Codex login. The gateway mounts its authentication directory into each isolated execution container; project files remain isolated, while account usage and limits are shared.</p>
                             </div>
                         </div>
-                        <CodexAccountCard Account="_account" Login="_login" LoadError="@_codexError" OnChanged="HandleCodexChangedAsync" />
+                        <CodexAccountCard Account="_account" Login="_login" LoadError="@_codexError" LastVerifiedAt="_codexVerifiedAt" OnChanged="HandleCodexChangedAsync" />
                     </section>
                     break;
             }

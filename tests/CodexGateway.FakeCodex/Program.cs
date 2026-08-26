@@ -345,6 +345,67 @@ object ListMcpServerStatus(JsonElement request, IReadOnlySet<string> configuredM
         cursor = "tools-page-2";
     }
 
+    if (cursor is null && File.Exists(Path.Combine(scenarioRoot, "generic-mcp-metadata")))
+    {
+        return new
+        {
+            data = configuredMcpServers
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .Select(name => new
+                {
+                    name,
+                    serverInfo = new
+                    {
+                        name = $"{name}-runtime",
+                        title = $"{name} test server",
+                        version = "1.0.0",
+                        description = "Deterministic MCP metadata for live administration UI testing."
+                    },
+                    tools = CreateGenericMcpTools(
+                        File.Exists(Path.Combine(scenarioRoot, "mcp-missing-search")))
+                })
+                .ToArray()
+        };
+    }
+
+    Dictionary<string, JsonElement> CreateGenericMcpTools(bool omitSearch)
+    {
+        var tools = new Dictionary<string, JsonElement>(StringComparer.Ordinal)
+        {
+            ["open"] = ParseJson(
+                            """
+                            {
+                              "name": "open",
+                              "title": "Open document",
+                              "description": "Opens a document by its stable identifier.",
+                              "inputSchema": {
+                                "type": "object",
+                                "properties": { "id": { "type": "string" } },
+                                "required": ["id"]
+                              }
+                            }
+                            """)
+        };
+        if (!omitSearch)
+        {
+            tools["search"] = ParseJson(
+                            """
+                            {
+                              "name": "search",
+                              "title": "Search documents",
+                              "description": "Searches documents using a plain-text query.",
+                              "inputSchema": {
+                                "type": "object",
+                                "properties": { "query": { "type": "string", "minLength": 1 } },
+                                "required": ["query"]
+                              }
+                            }
+                            """);
+        }
+
+        return tools;
+    }
+
     if (cursor is null)
     {
         return new

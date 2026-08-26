@@ -442,7 +442,7 @@ public sealed class GatewayApiTests : IDisposable
 
         var started = await codex.StartDeviceLoginAsync(CancellationToken.None);
         Assert.Equal(DeviceLoginStatus.Pending, started.Status);
-        Assert.Equal("TEST-CODE", started.UserCode);
+        Assert.Equal("TEST-CODE5", started.UserCode);
 
         var blockedRun = await SendChatAsync("/v1/chat/completions", "while login is pending");
         Assert.Equal(HttpStatusCode.ServiceUnavailable, blockedRun.StatusCode);

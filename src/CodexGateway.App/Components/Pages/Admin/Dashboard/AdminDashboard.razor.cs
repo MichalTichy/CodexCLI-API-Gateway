@@ -6,6 +6,7 @@ using CodexGateway.Logic.UseCases.CodexAuthentication;
 using CodexGateway.Models;
 using MediatR;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using LumexUI.Common;
 using Shared.Infrastructure.Persistence.Repositories;
 
@@ -18,6 +19,7 @@ public partial class AdminDashboard : AdminComponentBase
     private IReadOnlyList<McpServerDefinition> _servers = [];
     private IReadOnlyList<ApiKeyIdentity> _apiKeys = [];
     private CodexAccountStatus? _account;
+    private DateTimeOffset? _codexVerifiedAt;
     private DeviceLogin? _login;
     private Task? _pollTask;
     private string? _codexError;
@@ -26,7 +28,16 @@ public partial class AdminDashboard : AdminComponentBase
     private bool _refreshRequested;
     private bool _showRefreshSuccess;
     private bool _codexActionBusy;
+    private bool _mobileMenuOpen;
+    private bool _showCompletedSetupSteps;
+    private bool _focusPageTitle;
+    private bool _focusMobileMenu;
+    private bool _restoreMobileMenuTriggerFocus;
     private Task? _refreshTask;
+    private ElementReference _pageTitle;
+    private ElementReference _mobileMenuTrigger;
+    private ElementReference _mobileMenuClose;
+    private CancellationTokenSource? _statusDismissal;
 
     private string SectionEyebrow => _selectedSection switch
     {
@@ -76,6 +87,14 @@ public partial class AdminDashboard : AdminComponentBase
                     ? "View code"
                     : "Connect";
 
+    private string CodexNavigationStatusLabel => _codexError is not null
+        ? "Unavailable"
+        : _account?.Authenticated == true
+            ? "Connected"
+            : _login is { Status: DeviceLoginStatus.Pending }
+                ? "Code ready"
+                : "Not connected";
+
     private ThemeColor StatusColor => StatusKind switch
     {
         AdminStatusKind.Success => ThemeColor.Success,
@@ -83,6 +102,18 @@ public partial class AdminDashboard : AdminComponentBase
         AdminStatusKind.Error => ThemeColor.Danger,
         _ => ThemeColor.Default
     };
+
+    private bool SetupComplete =>
+        _account?.Authenticated == true &&
+        _apiKeys.Count > 0 &&
+        _projects.Count > 0 &&
+        _servers.Count > 0;
+
+    private int CompletedSetupSteps =>
+        (_account?.Authenticated == true ? 1 : 0) +
+        (_apiKeys.Count > 0 ? 1 : 0) +
+        (_projects.Count > 0 ? 1 : 0) +
+        (_servers.Count > 0 ? 1 : 0);
 
     [Inject]
     private ISender Sender { get; set; } = null!;
@@ -98,6 +129,26 @@ public partial class AdminDashboard : AdminComponentBase
         if (RendererInfo.IsInteractive)
         {
             await RefreshAsync(showSuccess: false);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusMobileMenu)
+        {
+            _focusMobileMenu = false;
+            await _mobileMenuClose.FocusAsync();
+        }
+        else if (_restoreMobileMenuTriggerFocus)
+        {
+            _restoreMobileMenuTriggerFocus = false;
+            await _mobileMenuTrigger.FocusAsync();
+        }
+
+        if (_focusPageTitle)
+        {
+            _focusPageTitle = false;
+            await _pageTitle.FocusAsync();
         }
     }
 
@@ -158,6 +209,7 @@ public partial class AdminDashboard : AdminComponentBase
             if (showSuccess && _codexError is null)
             {
                 SetStatus("Up to date.", AdminStatusKind.Success);
+                ScheduleStatusDismissal();
             }
             else if (_codexError is not null)
             {
@@ -191,12 +243,14 @@ public partial class AdminDashboard : AdminComponentBase
 
     private async Task LoadCodexAsync(CancellationToken cancellationToken)
     {
+        var pendingLogin = _login is { Status: DeviceLoginStatus.Pending } ? _login : null;
         try
         {
             var codex = await Sender.Send(
                 new GetCodexAuthenticationStateUseCase(),
                 cancellationToken);
             _account = codex.Account;
+            _codexVerifiedAt = codex.Account.Authenticated ? DateTimeOffset.Now : null;
             _login = codex.Login;
             _codexError = null;
         }
@@ -207,14 +261,16 @@ public partial class AdminDashboard : AdminComponentBase
         catch (GatewayException exception)
         {
             _account = null;
-            _login = null;
+            _codexVerifiedAt = null;
+            _login = pendingLogin;
             _codexError = AdminText.Describe(exception);
         }
         catch (Exception exception)
         {
             Logger.LogError(exception, "Unexpected failure while loading the Codex authentication state.");
             _account = null;
-            _login = null;
+            _codexVerifiedAt = null;
+            _login = pendingLogin;
             _codexError = AdminText.Describe(exception);
         }
     }
@@ -223,18 +279,23 @@ public partial class AdminDashboard : AdminComponentBase
     {
         await RefreshAsync(showSuccess: false);
         SetStatus(message, AdminStatusKind.Success);
+        ScheduleStatusDismissal();
     }
 
     private async Task HandleCodexChangedAsync(string message)
     {
         await RefreshAsync(showSuccess: false);
         SetStatus(message, _codexError is null ? AdminStatusKind.Success : AdminStatusKind.Error);
+        if (_codexError is null)
+        {
+            ScheduleStatusDismissal();
+        }
         StartPollingIfNeeded();
     }
 
     private async Task HandleCodexStatusActionAsync()
     {
-        _selectedSection = AdminSection.Codex;
+        await SelectSectionAsync(AdminSection.Codex);
         if (_account?.Authenticated == true ||
             _login is { Status: DeviceLoginStatus.Pending } ||
             _codexError is not null)
@@ -247,7 +308,6 @@ public partial class AdminDashboard : AdminComponentBase
         {
             await Sender.Send(new StartCodexDeviceLoginUseCase(), PageCancellationToken);
             await RefreshAsync(showSuccess: false);
-            SetStatus("Codex device login started.", AdminStatusKind.Success);
             StartPollingIfNeeded();
         }
         catch (OperationCanceledException) when (PageCancellationToken.IsCancellationRequested)
@@ -268,7 +328,77 @@ public partial class AdminDashboard : AdminComponentBase
         }
     }
 
-    private void SelectSection(AdminSection section) => _selectedSection = section;
+    private Task SelectSectionAsync(AdminSection section)
+    {
+        _selectedSection = section;
+        _mobileMenuOpen = false;
+        DismissStatus();
+        _focusPageTitle = true;
+        return Task.CompletedTask;
+    }
+
+    private void OpenMobileMenu()
+    {
+        _mobileMenuOpen = true;
+        _focusMobileMenu = true;
+    }
+
+    private void CloseMobileMenu()
+    {
+        _mobileMenuOpen = false;
+        _restoreMobileMenuTriggerFocus = true;
+    }
+
+    private void HandleMobileMenuKeyDown(KeyboardEventArgs args)
+    {
+        if (string.Equals(args.Key, "Escape", StringComparison.Ordinal))
+        {
+            CloseMobileMenu();
+        }
+    }
+
+    private static string CountLabel(int count, string item) =>
+        $"{count} {item}{(count == 1 ? string.Empty : "s")}";
+
+    private static string SetupStepClass(bool complete) => complete ? "flow-step-complete" : "flow-step-next";
+
+    private static string SetupStepMarker(bool complete, int step) => complete ? "✓" : step.ToString();
+
+    private static string SetupStepAction(bool complete) => complete ? "Manage" : "Set up";
+
+    private void ToggleCompletedSetupSteps() => _showCompletedSetupSteps = !_showCompletedSetupSteps;
+
+    private void ScheduleStatusDismissal()
+    {
+        _statusDismissal?.Cancel();
+        _statusDismissal?.Dispose();
+        _statusDismissal = CancellationTokenSource.CreateLinkedTokenSource(PageCancellationToken);
+        _ = DismissStatusAfterDelayAsync(_statusDismissal.Token);
+    }
+
+    private async Task DismissStatusAfterDelayAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+            await InvokeAsync(() =>
+            {
+                SetStatus(string.Empty);
+                StateHasChanged();
+            });
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+    }
+
+    private void DismissStatus()
+    {
+        _statusDismissal?.Cancel();
+        _statusDismissal?.Dispose();
+        _statusDismissal = null;
+        SetStatus(string.Empty);
+    }
 
     private string NavButtonClass(AdminSection section) =>
         section == _selectedSection
@@ -307,6 +437,13 @@ public partial class AdminDashboard : AdminComponentBase
         catch (OperationCanceledException) when (PageCancellationToken.IsCancellationRequested)
         {
         }
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        _statusDismissal?.Cancel();
+        _statusDismissal?.Dispose();
+        await base.DisposeAsync();
     }
 
     private enum AdminSection

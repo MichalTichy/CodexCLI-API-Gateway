@@ -1,0 +1,14 @@
+@namespace CodexGateway.App.Components.Pages.Admin.Shared
+
+<span class="context-help">
+    <button type="button" class="context-help-trigger" aria-label="@($"Help: {Title}")" aria-expanded="@_open.ToString().ToLowerInvariant()" @onclick="Toggle">
+        <span aria-hidden="true">?</span>
+    </button>
+    @if (_open)
+    {
+        <span class="context-help-panel" role="note">
+            <strong>@Title</strong>
+            <span>@ChildContent</span>
+        </span>
+    }
+</span>

@@ -3,7 +3,7 @@
 <article aria-busy="@_busy.ToString().ToLowerInvariant()">
     <EditForm Model="_editor" OnValidSubmit="SaveAsync" autocomplete="off">
         <LumexCard Class="form-card">
-            <LumexCardHeader Class="responsive-row">
+            <LumexCardHeader Class="responsive-row editor-toolbar">
                 <div>
                     <h3>@Project.Name</h3>
                     <div class="mt-2 flex flex-wrap items-center gap-2">
@@ -11,20 +11,10 @@
                         <span class="font-mono text-xs text-foreground-400">@Project.Id</span>
                     </div>
                 </div>
-                <div class="flex flex-wrap justify-end gap-2">
-                    <LumexButton Type="@ButtonType.Submit" Color="@ThemeColor.Primary" Disabled="@_busy">@(_busy ? "Saving…" : "Save project")</LumexButton>
-                    @if (_confirmDelete)
-                    {
-                        <div class="confirmation-panel" role="group" aria-label="Confirm project deletion">
-                            <span>Delete the project and its stored artifacts?</span>
-                            <LumexButton Color="@ThemeColor.Danger" Size="@Size.Small" Disabled="@_busy" OnClick="DeleteAsync">Confirm</LumexButton>
-                            <LumexButton Variant="@Variant.Light" Size="@Size.Small" Disabled="@_busy" OnClick="CancelDelete">Cancel</LumexButton>
-                        </div>
-                    }
-                    else
-                    {
-                        <LumexButton Color="@ThemeColor.Danger" Variant="@Variant.Light" Disabled="@_busy" OnClick="ConfirmDelete">Delete</LumexButton>
-                    }
+                <div class="editor-toolbar-actions">
+                    <span class="save-state @SaveStateClass" role="status">@SaveState</span>
+                    <LumexButton Type="@ButtonType.Submit" Color="@ThemeColor.Primary" Disabled="@(_busy || !IsDirty)">Save changes</LumexButton>
+                    <LumexButton Color="@ThemeColor.Danger" Variant="@Variant.Light" Disabled="@_busy" OnClick="ConfirmDelete">Delete</LumexButton>
                 </div>
             </LumexCardHeader>
             <LumexDivider />
@@ -32,22 +22,25 @@
                 <DataAnnotationsValidator />
                 <div class="form-grid-two">
                     <div>
-                        <LumexTextbox id="@($"project-name-{Project.Id}")" Behavior="@InputBehavior.OnInput" @bind-Value="_editor.Name" Label="Project name" LabelPlacement="@LabelPlacement.Outside" Variant="@InputVariant.Outlined" />
+                        <LumexTextbox id="@($"project-name-{Project.Id}")" Behavior="@InputBehavior.OnInput" @bind-Value="_editor.Name" Label="Project name" aria-label="Project name" LabelPlacement="@LabelPlacement.Outside" Variant="@InputVariant.Outlined" />
                         <ValidationMessage For="() => _editor.Name" />
                     </div>
                     <label class="toggle-field" for="@($"project-enabled-{Project.Id}")">
                         <InputCheckbox id="@($"project-enabled-{Project.Id}")" @bind-Value="_editor.Enabled" />
-                        <span><strong>Enabled</strong><small>Accept requests for this project</small></span>
+                        <span><strong>Accept API requests</strong><small>Turn off to block new requests for this project.</small></span>
                     </label>
                     <div class="sm:col-span-2">
+                        <div class="field-label-row">
+                            <label for="@($"project-runner-image-{Project.Id}")">Runner container image <span>(optional)</span></label>
+                            <ContextHelp Title="Runner container image">OCI image used for this project's isolated Codex runs. Leave blank to use the gateway default. The image must contain the Codex CLI; changes apply to future runs.</ContextHelp>
+                        </div>
                         <LumexTextbox id="@($"project-runner-image-{Project.Id}")"
                                       Behavior="@InputBehavior.OnInput"
                                       @bind-Value="_editor.RunnerImage"
-                                      Label="Runner image"
-                                      Placeholder="Use the default runner image"
-                                      Description="Optional container image override for this project's runs."
-                                      LabelPlacement="@LabelPlacement.Outside"
+                                      aria-label="Runner container image"
+                                      Placeholder="e.g. registry.example/codex-runner:1.0"
                                       Variant="@InputVariant.Outlined" />
+                        <p class="field-help">Leave blank to use the configured default for future runs.</p>
                         <ValidationMessage For="() => _editor.RunnerImage" />
                     </div>
                 </div>
@@ -56,9 +49,9 @@
                 <div class="section-title-row">
                     <div>
                         <h4>API-key access</h4>
-                        <p>Grant project access first, then select the MCP servers and individual tools.</p>
+                        <p>API key → project access → MCP server → individual tools. A disabled parent makes its child permissions inactive.</p>
                     </div>
-                    <LumexChip Variant="@ChipVariant.Flat" Size="@Size.Small">@_editor.ApiKeys.Count keys</LumexChip>
+                    <LumexChip Variant="@ChipVariant.Flat" Size="@Size.Small">@Pluralize(GrantedApiKeyCount, "key") · @Pluralize(GrantedServerCount, "server") · @Pluralize(EnabledToolCount, "tool")</LumexChip>
                 </div>
 
                 @if (_editor.ApiKeys.Count == 0)
@@ -74,7 +67,7 @@
                                 <header class="access-card-header">
                                     <label class="toggle-field toggle-field-compact" for="@($"access-{Project.Id}-{access.Id}")">
                                         <input id="@($"access-{Project.Id}-{access.Id}")" type="checkbox" @bind="access.HasProjectAccess" />
-                                        <span><strong>@access.Name</strong><small class="font-mono">@access.Id</small></span>
+                                        <span><strong>@access.Name</strong><small>Key ID: <span class="font-mono">@access.Id</span> · Can access this project</small></span>
                                     </label>
                                     <LumexChip Color="@(access.HasProjectAccess ? ThemeColor.Success : ThemeColor.Default)" Variant="@ChipVariant.Dot" Size="@Size.Small">
                                         @(access.HasProjectAccess ? "Project access" : "No access")
@@ -96,16 +89,17 @@
                                                 <header class="server-grant-header">
                                                     <label class="toggle-field toggle-field-compact" for="@($"grant-{Project.Id}-{access.Id}-{server.Id}")">
                                                         <input id="@($"grant-{Project.Id}-{access.Id}-{server.Id}")" type="checkbox" @bind="server.Granted" disabled="@(!serverAvailable)" />
-                                                        <span><strong>@server.Name</strong><small>MCP server</small></span>
+                                                        <span><strong>@server.Name</strong><small>Can use this MCP server</small></span>
                                                     </label>
                                                     <div class="flex flex-wrap items-center justify-end gap-2">
-                                                        <LumexChip Color="@(server.CatalogEnabled ? ThemeColor.Success : ThemeColor.Default)" Variant="@ChipVariant.Dot" Size="@Size.Small">
-                                                            @(server.CatalogEnabled ? "Catalog enabled" : "Catalog disabled")
+                                                        <LumexChip Color="@(server.CatalogEnabled && server.UnavailableToolCount > 0 ? ThemeColor.Warning : server.CatalogEnabled ? ThemeColor.Success : ThemeColor.Default)" Variant="@ChipVariant.Dot" Size="@Size.Small">
+                                                            @(server.CatalogEnabled && server.UnavailableToolCount > 0 ? $"{server.AvailableToolCount} of {server.Tools.Count} tools available" : server.CatalogEnabled ? $"{Pluralize(server.Tools.Count, "tool name")} configured" : "Server unavailable")
                                                         </LumexChip>
                                                         <label class="inline-check" for="@($"required-{Project.Id}-{access.Id}-{server.Id}")">
                                                             <input id="@($"required-{Project.Id}-{access.Id}-{server.Id}")" type="checkbox" @bind="server.Required" disabled="@(!toolsAvailable)" />
-                                                            <span>Required</span>
+                                                            <span>Fail run if unavailable</span>
                                                         </label>
+                                                        <ContextHelp Title="Required MCP server">When selected, a run fails before starting if this MCP server cannot connect or initialize.</ContextHelp>
                                                     </div>
                                                 </header>
 
@@ -115,15 +109,69 @@
                                                 }
                                                 else
                                                 {
+                                                    <div class="tool-list-actions">
+                                                        <span>Choose which tools this API key may call.</span>
+                                                        <span>
+                                                            <button type="button" disabled="@(!serverAvailable || server.MetadataLoading)" @onclick="() => DiscoverToolDetailsAsync(server.Id)">@(server.MetadataLoading ? "Discovering…" : server.MetadataLoaded ? "Refresh tool details" : "Discover tool details")</button>
+                                                            <button type="button" disabled="@(!toolsAvailable)" @onclick="() => SetAllTools(server, true)">Select all</button>
+                                                            <button type="button" disabled="@(!toolsAvailable)" @onclick="() => SetAllTools(server, false)">Clear all</button>
+                                                        </span>
+                                                    </div>
+                                                    @if (!server.MetadataLoaded && string.IsNullOrWhiteSpace(server.MetadataError))
+                                                    {
+                                                        <p class="tool-metadata-note">Descriptions are not stored in gateway configuration. Discover live details before granting a tool, or verify it in the MCP server documentation.</p>
+                                                    }
+                                                    else if (!string.IsNullOrWhiteSpace(server.MetadataError))
+                                                    {
+                                                        <p class="tool-metadata-note tool-metadata-error" role="alert">Could not discover tool details: @server.MetadataError</p>
+                                                    }
+                                                    @if (server.MetadataDiscoveredAt is not null)
+                                                    {
+                                                        <p class="tool-discovery-time" title="@server.MetadataDiscoveredAt.Value.ToLocalTime().ToString("F")">Last successful discovery at @server.MetadataDiscoveredAt.Value.ToLocalTime().ToString("HH:mm:ss")</p>
+                                                    }
+                                                    @if (!string.IsNullOrWhiteSpace(server.MetadataError) && server.MetadataAttemptedAt is not null)
+                                                    {
+                                                        <p class="tool-discovery-time tool-discovery-failed" title="@server.MetadataAttemptedAt.Value.ToLocalTime().ToString("F")">Last attempt failed just now</p>
+                                                    }
+                                                    @if (!string.IsNullOrWhiteSpace(server.MetadataError) && server.MetadataLoaded)
+                                                    {
+                                                        <p class="tool-metadata-note tool-metadata-stale">Showing previously discovered details.</p>
+                                                    }
+                                                    @if (!string.IsNullOrWhiteSpace(server.MetadataWarning))
+                                                    {
+                                                        <p class="tool-metadata-note tool-metadata-warning" role="alert">@server.MetadataWarning</p>
+                                                    }
                                                     <div class="tool-table">
                                                         <div class="tool-row tool-row-header" aria-hidden="true"><span>Tool</span><span>Access</span></div>
                                                         @foreach (var tool in server.Tools)
                                                         {
                                                             <div class="tool-row" @key="tool.Name">
-                                                                <code>@tool.Name</code>
+                                                                <div class="tool-identity">
+                                                                    <code>@tool.Name</code>
+                                                                    @if (server.MetadataLoaded)
+                                                                    {
+                                                                        <span>@(string.IsNullOrWhiteSpace(tool.Description) ? "This MCP server did not provide a description." : tool.Description)</span>
+                                                                        @if (tool.AvailableInDiscovery == false)
+                                                                        {
+                                                                            <strong class="tool-availability-warning">Unavailable in latest discovery; stored grant preserved.</strong>
+                                                                        }
+                                                                        else if (tool.SchemaChanged)
+                                                                        {
+                                                                            <strong class="tool-availability-warning">Input schema changed; review before use.</strong>
+                                                                        }
+                                                                        @if (!string.IsNullOrWhiteSpace(tool.InputSchema))
+                                                                        {
+                                                                            <details class="tool-schema"><summary>Input schema</summary><pre>@tool.InputSchema</pre></details>
+                                                                        }
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <span>Description not loaded.</span>
+                                                                    }
+                                                                </div>
                                                                 <label class="inline-check">
-                                                                    <InputCheckbox @bind-Value="tool.Enabled" disabled="@(!toolsAvailable)" />
-                                                                    <span>Allow</span>
+                                                                    <InputCheckbox @bind-Value="tool.Enabled" disabled="@(!toolsAvailable)" aria-label="@($"Allow tool {tool.Name} for API key {access.Id}")" />
+                                                                    <span class="sr-only">Allow @tool.Name</span>
                                                                 </label>
                                                             </div>
                                                         }
@@ -145,4 +193,17 @@
             </LumexCardBody>
         </LumexCard>
     </EditForm>
+
+    <LumexModal @bind-Open="_confirmDelete">
+        <LumexModalContent>
+            <LumexModalHeader>Delete project @Project.Name?</LumexModalHeader>
+            <LumexModalBody>
+                <p class="text-sm leading-6 text-foreground-600">This permanently removes project <code>@Project.Id</code>, its access configuration, and its stored artifacts. New requests will stop working immediately.</p>
+            </LumexModalBody>
+            <LumexModalFooter>
+                <LumexButton Variant="@Variant.Light" OnClick="CancelDelete">Cancel</LumexButton>
+                <LumexButton Color="@ThemeColor.Danger" Disabled="@_busy" OnClick="DeleteAsync">Delete project</LumexButton>
+            </LumexModalFooter>
+        </LumexModalContent>
+    </LumexModal>
 </article>

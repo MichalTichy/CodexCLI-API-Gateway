@@ -6,10 +6,10 @@ namespace CodexGateway.App.Components.Pages.Admin.McpServers.Models;
 
 internal sealed class McpServerEditorModel
 {
-    [Required]
+    [Required(ErrorMessage = "Enter a server ID.")]
     public string Id { get; set; } = string.Empty;
 
-    [Required]
+    [Required(ErrorMessage = "Enter a display name.")]
     [MaxLength(128)]
     public string Name { get; set; } = string.Empty;
 

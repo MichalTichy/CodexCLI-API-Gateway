@@ -14,7 +14,25 @@ internal sealed class McpGrantEditorModel
 
     public bool Required { get; set; }
 
+    public bool MetadataLoading { get; set; }
+
+    public bool MetadataLoaded { get; set; }
+
+    public string? MetadataError { get; set; }
+
+    public DateTimeOffset? MetadataDiscoveredAt { get; set; }
+
+    public DateTimeOffset? MetadataAttemptedAt { get; set; }
+
+    public string? MetadataWarning { get; set; }
+
     public List<ToolGrantEditorModel> Tools { get; init; } = [];
+
+    public int DescribedToolCount => Tools.Count(tool => !string.IsNullOrWhiteSpace(tool.Description));
+
+    public int UnavailableToolCount => Tools.Count(tool => tool.AvailableInDiscovery == false);
+
+    public int AvailableToolCount => Tools.Count - UnavailableToolCount;
 
     public static McpGrantEditorModel From(
         McpServerDefinition server,

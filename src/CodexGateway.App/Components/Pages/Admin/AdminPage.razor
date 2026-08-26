@@ -27,22 +27,26 @@ else
                     <div class="brand-mark" aria-hidden="true">CG</div>
                     <div>
                         <p class="eyebrow">Internal control plane</p>
-                        <h1 class="max-w-xl text-4xl font-semibold tracking-tight text-white sm:text-5xl">A clear view of every gateway connection.</h1>
-                        <p class="mt-5 max-w-lg text-base leading-7 text-zinc-300">Manage API access, isolated projects, trusted MCP servers, and the Codex account used by every run.</p>
+                        <h1 class="max-w-xl text-4xl font-semibold tracking-tight text-white xl:text-5xl">Control which clients can use each project and tool.</h1>
+                        <p class="mt-5 max-w-lg text-base leading-7 text-zinc-300">Codex Gateway authenticates API clients, isolates project runs, and forwards only the MCP tools you explicitly allow.</p>
                     </div>
-                    <div class="login-feature-list" aria-label="Gateway capabilities">
-                        <span>Project-scoped API access</span>
-                        <span>Isolated Codex execution</span>
-                        <span>Controlled MCP forwarding</span>
+                    <div class="login-setup-preview" aria-label="After signing in">
+                        <strong>After signing in</strong>
+                        <ol>
+                            <li><span>1</span>Connect the shared Codex account</li>
+                            <li><span>2</span>Create an API key for a client</li>
+                            <li><span>3</span>Add trusted MCP servers <em>(optional)</em></li>
+                            <li><span>4</span>Create a project and grant key/tool access</li>
+                        </ol>
                     </div>
                 </section>
 
                 <section class="login-form-panel">
                     <LumexCard Class="w-full max-w-md border border-default-200/70 bg-surface1/95 shadow-2xl shadow-black/30">
                         <LumexCardHeader Class="flex-col items-start gap-2 px-7 pt-7">
-                            <LumexChip Color="@ThemeColor.Primary" Variant="@ChipVariant.Flat" Size="@Size.Small">Administrator</LumexChip>
+                            <LumexChip Color="@ThemeColor.Primary" Variant="@ChipVariant.Flat" Size="@Size.Small">Codex Gateway</LumexChip>
                             <h2 id="login-heading" class="text-2xl font-semibold tracking-tight text-foreground">Admin login</h2>
-                            <p class="text-sm leading-6 text-foreground-500">Sign in to manage this gateway instance.</p>
+                            <p class="text-sm leading-6 text-foreground-500">Sign in to configure access, projects, tools, and the shared Codex account.</p>
                         </LumexCardHeader>
                         <LumexCardBody Class="gap-5 px-7 pb-7">
                             @if (string.Equals(LoginError, "invalid_credentials", StringComparison.Ordinal))
@@ -62,6 +66,7 @@ else
                                 <AntiforgeryToken />
                                 <LumexTextbox id="username"
                                               name="username"
+                                              aria-label="Username"
                                               Label="Username"
                                               Placeholder="Enter your username"
                                               LabelPlacement="@LabelPlacement.Outside"
@@ -69,15 +74,26 @@ else
                                               Required="@true"
                                               Autofocus="@true"
                                               autocomplete="username" />
-                                <LumexTextbox id="password"
-                                              name="password"
-                                              Type="@InputType.Password"
-                                              Label="Password"
-                                              Placeholder="Enter your password"
-                                              LabelPlacement="@LabelPlacement.Outside"
-                                              Variant="@InputVariant.Outlined"
-                                              Required="@true"
-                                              autocomplete="current-password" />
+                                <div class="password-field">
+                                    <LumexTextbox id="password"
+                                                  name="password"
+                                                  aria-label="Password"
+                                                  Type="@(_showPassword ? InputType.Text : InputType.Password)"
+                                                  Label="Password"
+                                                  Placeholder="Enter your password"
+                                                  LabelPlacement="@LabelPlacement.Outside"
+                                                  Variant="@InputVariant.Outlined"
+                                                  Required="@true"
+                                                  autocomplete="current-password" />
+                                    <LumexButton Type="@ButtonType.Button"
+                                                 Variant="@Variant.Light"
+                                                 Size="@Size.Small"
+                                                 Class="password-reveal"
+                                                 aria-pressed="@_showPassword.ToString().ToLowerInvariant()"
+                                                 OnClick="TogglePasswordVisibility">
+                                        @(_showPassword ? "Hide" : "Show")
+                                    </LumexButton>
+                                </div>
                                 <LumexButton Type="@ButtonType.Submit"
                                              Color="@ThemeColor.Primary"
                                              FullWidth="@true"
@@ -87,7 +103,6 @@ else
                             </form>
                         </LumexCardBody>
                     </LumexCard>
-                    <p class="mt-5 text-center text-xs text-foreground-400">Codex Gateway · Internal administration</p>
                 </section>
             </main>
         </NotAuthorized>

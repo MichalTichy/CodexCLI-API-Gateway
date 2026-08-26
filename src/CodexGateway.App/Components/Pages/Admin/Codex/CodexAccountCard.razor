@@ -3,7 +3,7 @@
 
 <LumexCard Class="form-card" aria-busy="@IsBusy.ToString().ToLowerInvariant()">
     <LumexCardBody Class="gap-5">
-        @if (!string.IsNullOrWhiteSpace(LoadError))
+        @if (!string.IsNullOrWhiteSpace(LoadError) && Login is not { Status: DeviceLoginStatus.Pending })
         {
             <div class="responsive-row">
                 <div class="flex items-start gap-4">
@@ -22,28 +22,21 @@
                 <div class="flex items-center gap-4">
                     <div class="status-orb status-orb-success" aria-hidden="true">✓</div>
                     <div>
-                        <h3>@(Account.Email ?? "Authenticated account")</h3>
+                        <h3>@(Account.Email ?? "Signed in with ChatGPT")</h3>
+                        @if (string.IsNullOrWhiteSpace(Account.Email))
+                        {
+                            <p class="mt-1 text-sm text-foreground-500">Codex CLI does not expose which ChatGPT account is connected.</p>
+                        }
                         <div class="mt-2 flex flex-wrap gap-2">
-                            <LumexChip Color="@ThemeColor.Success" Variant="@ChipVariant.Dot" Size="@Size.Small">Authenticated</LumexChip>
-                            @if (!string.IsNullOrWhiteSpace(Account.AccountType))
-                            {
-                                <LumexChip Variant="@ChipVariant.Flat" Size="@Size.Small">@Account.AccountType</LumexChip>
-                            }
+                            <LumexChip Color="@ThemeColor.Success" Variant="@ChipVariant.Dot" Size="@Size.Small">Connection verified</LumexChip>
+                            <span class="verification-time">@LastVerifiedLabel</span>
                         </div>
                     </div>
                 </div>
-                @if (_confirmLogout)
-                {
-                    <div class="confirmation-panel" role="group" aria-label="Confirm Codex logout">
-                        <span>New runs will fail until you sign in again.</span>
-                        <LumexButton Color="@ThemeColor.Danger" Size="@Size.Small" Disabled="@IsBusy" OnClick="LogoutAsync">Confirm logout</LumexButton>
-                        <LumexButton Variant="@Variant.Light" Size="@Size.Small" Disabled="@IsBusy" OnClick="CancelLogout">Cancel</LumexButton>
-                    </div>
-                }
-                else
-                {
+                <div class="flex flex-wrap justify-end gap-2">
+                    <LumexButton Variant="@Variant.Light" Disabled="@IsBusy" OnClick="RetryAsync">Check connection</LumexButton>
                     <LumexButton Color="@ThemeColor.Danger" Variant="@Variant.Light" Disabled="@IsBusy" OnClick="ConfirmLogout">Log out of Codex</LumexButton>
-                }
+                </div>
             </div>
         }
         else if (Login is { Status: DeviceLoginStatus.Pending })
@@ -54,18 +47,32 @@
                         <div class="status-orb status-orb-warning" aria-hidden="true">→</div>
                         <div>
                             <h3>Complete device login</h3>
-                            <p class="mt-1 text-sm text-foreground-500">Open the verification page and enter the code below.</p>
+                            <p class="mt-1 text-sm text-foreground-500">Open the verification page, enter the code below, and return here. This page checks the connection automatically.</p>
                         </div>
                     </div>
-                    <LumexButton Variant="@Variant.Light" Disabled="@IsBusy" OnClick="CancelLoginAsync">Cancel login</LumexButton>
+                    <div class="flex flex-wrap justify-end gap-2">
+                        @if (!string.IsNullOrWhiteSpace(LoadError))
+                        {
+                            <LumexButton Variant="@Variant.Light" Disabled="@IsBusy" OnClick="RetryAsync">Retry status</LumexButton>
+                        }
+                        <LumexButton Variant="@Variant.Light" Disabled="@IsBusy" OnClick="CancelLoginAsync">Cancel login</LumexButton>
+                    </div>
                 </div>
                 <div class="device-login-panel">
                     <div>
                         <span class="block text-xs font-semibold uppercase tracking-wider text-foreground-400">Device code</span>
-                        <code class="device-code">@Login.UserCode</code>
+                        <code class="device-code" aria-label="Codex device code">@Login.UserCode</code>
+                        <span class="mt-2 block text-xs text-foreground-500">@LoginExpiryLabel Do not share this code with anyone else.</span>
                     </div>
-                    <LumexButton As="a" href="@Login.VerificationUrl" target="_blank" rel="noopener noreferrer" Color="@ThemeColor.Primary">Open verification page</LumexButton>
+                    <div class="device-login-actions">
+                        <LumexButton Type="@ButtonType.Button" Variant="@Variant.Flat" OnClick="CopyCodeAsync">@(_codeCopied ? "Copied" : "Copy code")</LumexButton>
+                        <LumexButton As="a" href="@Login.VerificationUrl" target="_blank" rel="noopener noreferrer" Color="@ThemeColor.Primary">Open verification page</LumexButton>
+                    </div>
                 </div>
+                @if (!string.IsNullOrWhiteSpace(LoadError))
+                {
+                    <LumexAlert Color="@ThemeColor.Warning" Description="Unable to check the current login status. The code remains valid; retry the status check or continue on the verification page." />
+                }
                 @if (!string.IsNullOrWhiteSpace(Login.Error))
                 {
                     <LumexAlert Color="@ThemeColor.Danger" Description="@Login.Error" />
@@ -78,8 +85,8 @@
                 <div class="flex items-center gap-4">
                     <div class="status-orb" aria-hidden="true">○</div>
                     <div>
-                        <h3>Not authenticated</h3>
-                        <p class="mt-1 text-sm text-foreground-500">Connect a dedicated Codex account before running requests.</p>
+                        <h3>@(Login is { Status: DeviceLoginStatus.Failed } && Login.Error?.Contains("expired", StringComparison.OrdinalIgnoreCase) == true ? "Device code expired" : "Codex is not connected")</h3>
+                        <p class="mt-1 text-sm text-foreground-500">@(Login is { Status: DeviceLoginStatus.Failed } && Login.Error?.Contains("expired", StringComparison.OrdinalIgnoreCase) == true ? "Generate a new device code to continue." : "Connect the shared Codex account before running requests. Projects remain isolated, but they all use this login.")</p>
                         @if (Login is not null && !string.IsNullOrWhiteSpace(Login.Error))
                         {
                             <p class="mt-2 text-sm text-danger" role="alert">@Login.Error</p>
@@ -87,7 +94,7 @@
                     </div>
                 </div>
                 <LumexButton Color="@ThemeColor.Primary" Disabled="@IsBusy" OnClick="StartLoginAsync">
-                    @(IsBusy ? "Working…" : "Start device login")
+                    @(IsBusy ? "Starting device login…" : Login is { Status: DeviceLoginStatus.Failed } && Login.Error?.Contains("expired", StringComparison.OrdinalIgnoreCase) == true ? "Generate new code" : "Connect Codex")
                 </LumexButton>
             </div>
         }
@@ -98,3 +105,19 @@
         }
     </LumexCardBody>
 </LumexCard>
+
+<LumexModal @bind-Open="_confirmLogout" ShowCloseButton="@false">
+    <LumexModalContent>
+        <LumexModalHeader>Log out of Codex?</LumexModalHeader>
+        <LumexModalBody>
+            <div class="grid gap-3 text-sm leading-6 text-foreground-600">
+                <p>New runs will fail until an administrator connects Codex again. Running containers are not interrupted, but any later Codex request may fail after their current credentials expire.</p>
+                <p>The gateway removes the shared Codex authentication from its host directory.</p>
+            </div>
+        </LumexModalBody>
+        <LumexModalFooter>
+            <LumexButton Variant="@Variant.Light" autofocus OnClick="CancelLogout">Cancel</LumexButton>
+            <LumexButton Color="@ThemeColor.Danger" Disabled="@IsBusy" OnClick="LogoutAsync">Log out of Codex</LumexButton>
+        </LumexModalFooter>
+    </LumexModalContent>
+</LumexModal>
