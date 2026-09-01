@@ -46,7 +46,7 @@ RUN dotnet publish src/CodexGateway.App/CodexGateway.App.csproj \
     --configuration Release \
     --no-restore \
     --output /app/publish \
-    /p:UseAppHost=false
+    /p:UseAppHost=true
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0.9-noble AS codex-runtime
 ARG CODEX_VERSION
@@ -99,7 +99,8 @@ WORKDIR /app
 COPY --from=docker-cli /usr/local/bin/docker /usr/local/bin/docker
 COPY --from=build --chown=gateway:gateway /app/publish .
 
-RUN mkdir -p /app/data /app/.codex-home \
+RUN chmod 0555 /app/CodexGateway.App \
+    && mkdir -p /app/data /app/.codex-home \
     && chown -R gateway:gateway /app
 
 ENV ASPNETCORE_URLS=http://+:8080 \
@@ -112,4 +113,4 @@ ENV ASPNETCORE_URLS=http://+:8080 \
 VOLUME ["/app/data", "/app/.codex-home"]
 EXPOSE 8080
 USER 10001:10001
-ENTRYPOINT ["dotnet", "CodexGateway.App.dll"]
+ENTRYPOINT ["/app/CodexGateway.App"]

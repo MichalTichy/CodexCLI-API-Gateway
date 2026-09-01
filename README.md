@@ -150,7 +150,7 @@ $env:GATEWAY_DB_PASSWORD = 'a-different-database-password'
 docker compose up --build
 ```
 
-The API is at `http://localhost:5050`; the UI is at `http://localhost:5050/admin`. Compose runs PostgreSQL and the gateway, and builds both Dockerfile targets. Its `runner-image` helper exits after ensuring `codex-gateway-runner:0.148.0` exists. The fixed database, data, and auth volumes survive container replacement. If a reverse proxy is placed in front of the gateway, enable WebSocket forwarding for the Blazor circuit.
+The API is at `http://localhost:5050`; the UI is at `http://localhost:5050/admin`. Compose runs PostgreSQL and the gateway, and builds both Dockerfile targets. Its `runner-image` helper exits after ensuring `codex-gateway-runner:0.148.0` exists. The Gateway image starts through its framework-dependent native app host instead of executing `/usr/bin/dotnet`, which keeps the control plane compatible with hosts that restrict that executable path. The fixed database, data, and auth volumes survive container replacement. If a reverse proxy is placed in front of the gateway, enable WebSocket forwarding for the Blazor circuit.
 
 The gateway stays non-root and receives the Docker socket through a supplementary group. Docker Desktop commonly uses group `0`; on Linux set `DOCKER_GID` to the socket group before starting Compose:
 
