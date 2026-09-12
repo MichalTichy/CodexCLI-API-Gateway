@@ -34,6 +34,8 @@ app.MapStaticAssets();
 
 if (app.Services.GetRequiredService<IOptions<AdminUiOptions>>().Value.Enabled)
 {
+    app.MapGet("/", () => Results.Redirect("/admin"))
+        .ExcludeFromDescription();
     app.MapAdminAuthenticationRoutes();
     app.MapRazorComponents<App>()
         .AddInteractiveServerRenderMode();

@@ -14,6 +14,16 @@ public sealed class AdminBlazorUiTests : IDisposable
     private readonly GatewayFactory _factory = new();
 
     [Fact]
+    public async Task Root_redirects_to_the_admin_ui()
+    {
+        using var client = CreateClient(handleCookies: false);
+
+        using var response = await client.GetAsync("/");
+
+        AssertRedirectsTo(response, "/admin");
+    }
+
+    [Fact]
     public async Task Anonymous_admin_page_renders_the_normal_login_form()
     {
         using var client = CreateClient(handleCookies: false);
@@ -257,6 +267,7 @@ public sealed class AdminBlazorUiTests : IDisposable
             });
             disabledClient.DefaultRequestHeaders.Add("Cookie", cookie);
 
+            Assert.Equal(HttpStatusCode.NotFound, (await disabledClient.GetAsync("/")).StatusCode);
             Assert.Equal(HttpStatusCode.NotFound, (await disabledClient.GetAsync("/admin")).StatusCode);
             AssertUnavailable(await disabledClient.PostAsync("/admin/login", null));
             AssertUnavailable(await disabledClient.PostAsync("/admin/logout", null));
