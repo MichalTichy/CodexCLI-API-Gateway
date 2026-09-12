@@ -62,7 +62,7 @@ public sealed class ContainerCommandBuilderTests
         AssertArgumentPair(arguments, "--cpus", "2");
         AssertArgumentPair(arguments, "--pids-limit", "256");
         AssertArgumentPair(arguments, "--cap-drop", "ALL");
-        AssertArgumentPair(arguments, "--security-opt", "no-new-privileges");
+        Assert.DoesNotContain("no-new-privileges", arguments);
         AssertArgumentPair(arguments, "--security-opt", "seccomp=unconfined");
         AssertArgumentPair(arguments, "--user", "10001:10001");
         Assert.Contains("--read-only", arguments);

@@ -146,7 +146,6 @@ internal static class ContainerCommandBuilder
             "--pids-limit", options.PidsLimit.ToString(CultureInfo.InvariantCulture),
             "--tmpfs", $"/tmp:rw,nosuid,nodev,noexec,size={options.TmpfsMegabytes.ToString(CultureInfo.InvariantCulture)}m",
             "--cap-drop", "ALL",
-            "--security-opt", "no-new-privileges",
             "--security-opt", "seccomp=unconfined"
         };
         if (!string.IsNullOrWhiteSpace(containerUser))
