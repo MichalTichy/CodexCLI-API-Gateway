@@ -439,7 +439,11 @@ internal static class ContainerCommandBuilder
             {
                 gatewayConnections.TryGetValue(server.Definition.Id, out connection);
             }
-            ContainerCodexRunner.AddMcpConfiguration(arguments, server, connection);
+            ContainerCodexRunner.AddMcpConfiguration(
+                arguments,
+                server,
+                connection,
+                includeToolFilter: false);
         }
     }
 
