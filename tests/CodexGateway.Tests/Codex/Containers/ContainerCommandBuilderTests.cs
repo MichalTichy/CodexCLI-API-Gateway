@@ -90,6 +90,38 @@ public sealed class ContainerCommandBuilderTests
     }
 
     [Fact]
+    public void Run_command_can_omit_no_new_privileges_for_incompatible_hosts()
+    {
+        var storageRoot = Path.GetFullPath(Path.Combine("test-data", "gateway-data"));
+        var workspaceRoot = Path.Combine(storageRoot, "runs", "run_compatibility");
+        var options = new CodexContainerOptions
+        {
+            EngineExecutablePath = "docker-test",
+            Image = "runner:test",
+            Network = "mcp-network",
+            NoNewPrivileges = false
+        };
+
+        var startInfo = ContainerCommandBuilder.CreateRunStartInfo(
+            options,
+            storageRoot,
+            Path.Combine(storageRoot, "auth"),
+            storageRoot,
+            CreateRequest(workspaceRoot),
+            "codex-gateway-run-compatibility",
+            "0123456789abcdef0123456789abcdef",
+            [],
+            new Dictionary<string, string?>(),
+            "10001:10001");
+        var arguments = startInfo.ArgumentList.ToArray();
+
+        Assert.DoesNotContain("no-new-privileges", arguments);
+        AssertArgumentPair(arguments, "--security-opt", "seccomp=unconfined");
+        AssertArgumentPair(arguments, "--cap-drop", "ALL");
+        Assert.Contains("--read-only", arguments);
+    }
+
+    [Fact]
     public void Structured_run_passes_only_the_fixed_staged_schema_path_to_codex()
     {
         var storageRoot = Path.GetFullPath(Path.Combine("test-data", "gateway-data"));

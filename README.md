@@ -81,7 +81,7 @@ flowchart LR
 
 Every request starts exactly one sibling container from the pinned `codex-gateway-runner:0.148.0` image unless its project selects a trusted runner-image override in the admin UI. A project run first copies persistent artifacts into a private run snapshot. Only that snapshot is mounted at `/workspace`; the live project artifact directory is never mounted. A successful run is checked and atomically committed, while failed, cancelled, and timed-out runs are discarded.
 
-The outer container has a read-only root filesystem, no Linux capabilities, `no-new-privileges`, CPU/memory/PID limits, a bounded tmpfs, a non-root UID, Docker init for descendant reaping, and two labelled mounts. The inner Bubblewrap sandbox gives model-generated commands a private PID view, so `/proc/1/root` cannot be used to reach the outer auth mount.
+The outer container has a read-only root filesystem, no Linux capabilities, CPU/memory/PID limits, a bounded tmpfs, a non-root UID, Docker init for descendant reaping, and two labelled mounts. It also enables `no-new-privileges` by default; incompatible container hosts can disable that option without removing the remaining controls. The inner Bubblewrap sandbox gives model-generated commands a private PID view, so `/proc/1/root` cannot be used to reach the outer auth mount.
 
 The dedicated auth volume is mounted at `/codex-home` because the Codex process needs it, but a named inner Codex permission profile grants model-generated commands only minimal runtime reads plus write access to `/workspace` and the bounded `/tmp` tmpfs. Those commands cannot read `/codex-home`; direct command networking is also disabled by the inner sandbox. The container retains its configured network for Codex model/auth traffic and HTTP MCP servers. User configuration/rules/apps/plugins are ignored, and only the MCP servers and tools granted to the authenticated API key in the selected project are injected.
 
@@ -489,6 +489,7 @@ All settings can be supplied through `appsettings.json` or normal ASP.NET Core e
 | `Codex:Container:MemoryMegabytes` | `2048` | Per-run outer memory limit |
 | `Codex:Container:CpuLimit` | `2` | Per-run CPU limit |
 | `Codex:Container:PidsLimit` | `256` | Per-run PID limit |
+| `Codex:Container:NoNewPrivileges` | `true` | Adds `no-new-privileges` to generated containers; disable only for incompatible container hosts |
 | `Codex:Container:TmpfsMegabytes` | `256` | Size of the per-run temporary filesystem |
 | `Codex:AuthenticationCommandTimeoutSeconds` | `30` | Timeout for short-lived login-status and logout commands |
 | `Codex:McpDiscoveryTimeoutSeconds` | `30` | Timeout for MCP metadata discovery; separate from agent-run execution |
