@@ -308,7 +308,9 @@ public sealed class ContainerCommandBuilderTests
         Assert.Contains("--strict-config", arguments);
         Assert.Contains("--read-only", arguments);
         Assert.Contains("mcp_servers={}", arguments);
-        Assert.Contains("mcp_servers.metadata_mcp.enabled_tools=[\"lookup\"]", arguments);
+        Assert.DoesNotContain(
+            arguments,
+            argument => argument.StartsWith("mcp_servers.metadata_mcp.enabled_tools=", StringComparison.Ordinal));
         Assert.Contains(
             "mcp_servers.metadata_mcp.env_http_headers={\"X-Api-Key\"=\"MCP_TOKEN\"}",
             arguments);

@@ -180,7 +180,11 @@ public sealed class ContainerCodexRunner(
         return new CodexRunResult(lastCompletedAgentMessage, usage);
     }
 
-    internal static void AddMcpConfiguration(ICollection<string> arguments, ResolvedMcpServer resolved, GatewayMcpRunnerConnection? connection = null)
+    internal static void AddMcpConfiguration(
+        ICollection<string> arguments,
+        ResolvedMcpServer resolved,
+        GatewayMcpRunnerConnection? connection = null,
+        bool includeToolFilter = true)
     {
         var server = resolved.Definition;
         var key = "mcp_servers." + server.Id.Replace('-', '_');
@@ -219,7 +223,10 @@ public sealed class ContainerCodexRunner(
             throw new InvalidOperationException($"MCP server '{server.Id}' has an unsupported transport.");
         }
 
-        ContainerCommandBuilder.AddConfig(arguments, $"{key}.enabled_tools={TomlArray(resolved.EnabledTools)}");
+        if (includeToolFilter)
+        {
+            ContainerCommandBuilder.AddConfig(arguments, $"{key}.enabled_tools={TomlArray(resolved.EnabledTools)}");
+        }
     }
 
     internal static string TomlString(string value) => JsonSerializer.Serialize(value);
