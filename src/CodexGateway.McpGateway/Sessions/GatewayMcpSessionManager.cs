@@ -51,6 +51,7 @@ public sealed class GatewayMcpSessionManager(
                 var session = new GatewayMcpSession(
                     token,
                     DateTimeOffset.UtcNow.AddMinutes(options.Value.SessionLifetimeMinutes),
+                    server.EnabledTools.ToHashSet(StringComparer.Ordinal),
                     upstream);
                 if (!_sessions.TryAdd(sessionId, session))
                 {
@@ -107,6 +108,14 @@ public sealed class GatewayMcpSessionManager(
         context.Response.Headers.CacheControl = "no-store";
         try
         {
+            if (HttpMethods.IsPost(context.Request.Method))
+            {
+                var body = await GatewayMcpRequestBody.ReadAsync(context.Request, cancellationToken);
+                GatewayMcpToolCallAuthorizer.EnsureAllowed(body, session.EnabledTools);
+                context.Request.Body = new MemoryStream(body, writable: false);
+                context.Request.ContentLength = body.Length;
+            }
+
             await session.Upstream.ForwardAsync(context.Request, context.Response, cancellationToken);
         }
         catch (GatewayMcpRequestException exception)
@@ -223,5 +232,6 @@ public sealed class GatewayMcpSessionManager(
     private sealed record GatewayMcpSession(
         string Token,
         DateTimeOffset ExpiresAt,
+        IReadOnlySet<string> EnabledTools,
         IGatewayMcpUpstream Upstream);
 }
