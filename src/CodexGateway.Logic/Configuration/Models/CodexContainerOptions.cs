@@ -50,12 +50,6 @@ public sealed class CodexContainerOptions
     public int PidsLimit { get; set; } = 256;
 
     /// <summary>
-    /// Adds the OCI <c>no-new-privileges</c> security option to generated run containers.
-    /// Disable this only when the container host cannot execute the runner with that option.
-    /// </summary>
-    public bool NoNewPrivileges { get; set; } = true;
-
-    /// <summary>
     /// Size, in megabytes, of the in-memory temporary filesystem mounted at <c>/tmp</c>.
     /// It also sizes the temporary Codex home mount used when no persistent authentication volume is required.
     /// </summary>

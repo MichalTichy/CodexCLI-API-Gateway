@@ -148,12 +148,6 @@ internal static class ContainerCommandBuilder
             "--cap-drop", "ALL",
             "--security-opt", "seccomp=unconfined"
         };
-        if (options.NoNewPrivileges)
-        {
-            arguments.Add("--security-opt");
-            arguments.Add("no-new-privileges");
-        }
-
         if (!string.IsNullOrWhiteSpace(containerUser))
         {
             arguments.Add("--user");

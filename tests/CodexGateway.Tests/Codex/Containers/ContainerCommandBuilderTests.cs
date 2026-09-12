@@ -62,7 +62,7 @@ public sealed class ContainerCommandBuilderTests
         AssertArgumentPair(arguments, "--cpus", "2");
         AssertArgumentPair(arguments, "--pids-limit", "256");
         AssertArgumentPair(arguments, "--cap-drop", "ALL");
-        AssertArgumentPair(arguments, "--security-opt", "no-new-privileges");
+        Assert.DoesNotContain("no-new-privileges", arguments);
         AssertArgumentPair(arguments, "--security-opt", "seccomp=unconfined");
         AssertArgumentPair(arguments, "--user", "10001:10001");
         Assert.Contains("--read-only", arguments);
@@ -87,38 +87,6 @@ public sealed class ContainerCommandBuilderTests
         Assert.False(startInfo.Environment.ContainsKey("ConnectionStrings__Gateway"));
         Assert.False(startInfo.Environment.ContainsKey("OPENAI_API_KEY"));
         Assert.False(startInfo.Environment.ContainsKey("UNRELATED_SECRET"));
-    }
-
-    [Fact]
-    public void Run_command_can_omit_no_new_privileges_for_incompatible_hosts()
-    {
-        var storageRoot = Path.GetFullPath(Path.Combine("test-data", "gateway-data"));
-        var workspaceRoot = Path.Combine(storageRoot, "runs", "run_compatibility");
-        var options = new CodexContainerOptions
-        {
-            EngineExecutablePath = "docker-test",
-            Image = "runner:test",
-            Network = "mcp-network",
-            NoNewPrivileges = false
-        };
-
-        var startInfo = ContainerCommandBuilder.CreateRunStartInfo(
-            options,
-            storageRoot,
-            Path.Combine(storageRoot, "auth"),
-            storageRoot,
-            CreateRequest(workspaceRoot),
-            "codex-gateway-run-compatibility",
-            "0123456789abcdef0123456789abcdef",
-            [],
-            new Dictionary<string, string?>(),
-            "10001:10001");
-        var arguments = startInfo.ArgumentList.ToArray();
-
-        Assert.DoesNotContain("no-new-privileges", arguments);
-        AssertArgumentPair(arguments, "--security-opt", "seccomp=unconfined");
-        AssertArgumentPair(arguments, "--cap-drop", "ALL");
-        Assert.Contains("--read-only", arguments);
     }
 
     [Fact]
