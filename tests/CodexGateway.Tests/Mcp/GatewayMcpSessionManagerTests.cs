@@ -111,6 +111,109 @@ public sealed class GatewayMcpSessionManagerTests
     }
 
     [Fact]
+    public async Task Http_session_rejects_a_tool_call_not_enabled_for_the_project_api_key()
+    {
+        const string secretVariable = "CODEX_GATEWAY_MCP_TOOL_DENIED_TEST_SECRET";
+        var previousValue = Environment.GetEnvironmentVariable(secretVariable);
+        Environment.SetEnvironmentVariable(secretVariable, "upstream-api-key");
+        try
+        {
+            var upstream = new RecordingHttpMessageHandler();
+            var sessions = CreateManager(upstream);
+            var server = CreateHttpServer(secretVariable);
+            await using var lease = await sessions.CreateAsync(
+                Path.GetTempPath(),
+                [new ResolvedMcpServer(server, ["get_emails"], false)],
+                CancellationToken.None);
+            var connection = Assert.Single(lease.Connections).Value!;
+            var context = CreateRequest(
+                connection.Url!,
+                connection.SessionToken!,
+                """{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"send_email","arguments":{}}}""");
+
+            await sessions.HandleAsync(
+                context,
+                new Uri(connection.Url!).Segments.Last().TrimEnd('/'),
+                CancellationToken.None);
+
+            Assert.Equal(StatusCodes.Status403Forbidden, context.Response.StatusCode);
+            Assert.Null(upstream.Body);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(secretVariable, previousValue);
+        }
+    }
+
+    [Fact]
+    public async Task Http_session_forwards_an_enabled_tool_call()
+    {
+        const string secretVariable = "CODEX_GATEWAY_MCP_TOOL_ALLOWED_TEST_SECRET";
+        var previousValue = Environment.GetEnvironmentVariable(secretVariable);
+        Environment.SetEnvironmentVariable(secretVariable, "upstream-api-key");
+        try
+        {
+            var upstream = new RecordingHttpMessageHandler();
+            var sessions = CreateManager(upstream);
+            var server = CreateHttpServer(secretVariable);
+            await using var lease = await sessions.CreateAsync(
+                Path.GetTempPath(),
+                [new ResolvedMcpServer(server, ["send_email"], false)],
+                CancellationToken.None);
+            var connection = Assert.Single(lease.Connections).Value!;
+            const string request =
+                """{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"send_email","arguments":{}}}""";
+            var context = CreateRequest(connection.Url!, connection.SessionToken!, request);
+
+            await sessions.HandleAsync(
+                context,
+                new Uri(connection.Url!).Segments.Last().TrimEnd('/'),
+                CancellationToken.None);
+
+            Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+            Assert.Equal(request, upstream.Body);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(secretVariable, previousValue);
+        }
+    }
+
+    [Fact]
+    public async Task Http_session_rejects_a_denied_tool_hidden_in_a_json_rpc_batch()
+    {
+        const string secretVariable = "CODEX_GATEWAY_MCP_BATCH_DENIED_TEST_SECRET";
+        var previousValue = Environment.GetEnvironmentVariable(secretVariable);
+        Environment.SetEnvironmentVariable(secretVariable, "upstream-api-key");
+        try
+        {
+            var upstream = new RecordingHttpMessageHandler();
+            var sessions = CreateManager(upstream);
+            await using var lease = await sessions.CreateAsync(
+                Path.GetTempPath(),
+                [new ResolvedMcpServer(CreateHttpServer(secretVariable), ["get_emails"], false)],
+                CancellationToken.None);
+            var connection = Assert.Single(lease.Connections).Value!;
+            var context = CreateRequest(
+                connection.Url!,
+                connection.SessionToken!,
+                """[{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_emails","arguments":{}}},{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"send_email","arguments":{}}}]""");
+
+            await sessions.HandleAsync(
+                context,
+                new Uri(connection.Url!).Segments.Last().TrimEnd('/'),
+                CancellationToken.None);
+
+            Assert.Equal(StatusCodes.Status403Forbidden, context.Response.StatusCode);
+            Assert.Null(upstream.Body);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(secretVariable, previousValue);
+        }
+    }
+
+    [Fact]
     public async Task Local_stdio_session_relays_json_rpc_to_the_gateway_process()
     {
         var workspace = Path.Combine(Path.GetTempPath(), "codex-gateway-mcp-" + Guid.NewGuid().ToString("N"));
@@ -170,6 +273,18 @@ public sealed class GatewayMcpSessionManagerTests
                 SessionLifetimeMinutes = 60
             }),
             NullLogger<GatewayMcpSessionManager>.Instance);
+
+    private static HttpMcpServerDefinition CreateHttpServer(string secretVariable) => new()
+    {
+        Id = "remote-tools",
+        Name = "Remote tools",
+        ExecutionMode = McpExecutionMode.Gateway,
+        Url = "https://mcp.example.test/stream",
+        EnvironmentHeaders = new Dictionary<string, string>
+        {
+            ["X-Api-Key"] = secretVariable
+        }
+    };
 
     private static DefaultHttpContext CreateRequest(string url, string token, string body)
     {
