@@ -92,6 +92,25 @@ public sealed class ContainerRuntime
             gatewayConnections);
     }
 
+    internal ProcessStartInfo CreateModelDiscoveryStartInfo(
+        RunWorkspace workspace,
+        string containerName)
+    {
+        ValidateGatewayIdentity();
+        Directory.CreateDirectory(_codexHome);
+        Directory.CreateDirectory(Path.Combine(_codexHome, ".cache"));
+        return ContainerCommandBuilder.CreateModelDiscoveryStartInfo(
+            _options.Container,
+            _paths.Root,
+            _codexHome,
+            _contentRoot,
+            workspace,
+            containerName,
+            GetInstanceId(),
+            GetEnvironmentSnapshot(),
+            UnixIdentity.GetContainerUser());
+    }
+
     internal async Task PreflightAsync(CancellationToken cancellationToken)
     {
         ContainerCommandBuilder.ValidateConfiguration(

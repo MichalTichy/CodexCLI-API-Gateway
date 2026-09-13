@@ -27,7 +27,9 @@ public sealed class ContainerIsolationTests
         }
 
         var runs = await harness.WaitForInvocationsAsync(
-            invocation => invocation.Mode == "container-engine" && invocation.Arguments.FirstOrDefault() == "run",
+            invocation => invocation.Mode == "container-engine" &&
+                          invocation.Arguments.FirstOrDefault() == "run" &&
+                          invocation.Arguments.Contains("exec", StringComparer.Ordinal),
             expectedCount: 2,
             deadline.Token);
         var execs = await harness.WaitForInvocationsAsync(

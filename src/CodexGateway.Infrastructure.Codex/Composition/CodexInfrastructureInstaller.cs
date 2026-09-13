@@ -19,16 +19,6 @@ public sealed class CodexInfrastructureInstaller : IHighPriorityInstaller
         services.AddOptions<CodexOptions>()
             .Bind(configuration.GetSection(CodexOptions.SectionName))
             .ValidateDataAnnotations()
-            .Validate(
-                options => options.Models.Length > 0 &&
-                           options.Models.All(model =>
-                               !string.IsNullOrWhiteSpace(model.Id) &&
-                               !string.IsNullOrWhiteSpace(model.Name) &&
-                               model.SupportedReasoningEfforts.Length > 0 &&
-                               model.SupportedReasoningEfforts.All(effort => !string.IsNullOrWhiteSpace(effort)) &&
-                               model.SupportedReasoningEfforts.Contains(model.DefaultReasoningEffort, StringComparer.Ordinal)) &&
-                           options.Models.Select(model => model.Id).Distinct(StringComparer.Ordinal).Count() == options.Models.Length,
-                "Codex models must have unique IDs, names, reasoning efforts, and a supported default reasoning effort.")
             .ValidateOnStart();
 
         services.TryAddSingleton<ContainerRuntime>();
@@ -40,9 +30,9 @@ public sealed class CodexInfrastructureInstaller : IHighPriorityInstaller
         services.TryAddSingleton<IMcpMetadataDiscoveryService>(provider =>
             provider.GetRequiredService<McpMetadataDiscoveryService>());
 
-        services.TryAddSingleton<ConfiguredCodexModelCatalog>();
+        services.TryAddSingleton<CodexModelCatalog>();
         services.TryAddSingleton<ICodexModelCatalog>(provider =>
-            provider.GetRequiredService<ConfiguredCodexModelCatalog>());
+            provider.GetRequiredService<CodexModelCatalog>());
 
         services.TryAddSingleton<HostCodexAuthenticationManager>();
         services.TryAddSingleton<ICodexAuthenticationManager>(provider =>

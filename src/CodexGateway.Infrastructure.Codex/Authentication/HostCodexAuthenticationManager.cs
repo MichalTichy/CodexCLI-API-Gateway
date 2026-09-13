@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 using CodexGateway.Infrastructure.Codex.Containers;
+using CodexGateway.Infrastructure.Codex.Models;
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.Configuration;
 using CodexGateway.Logic.Errors;
@@ -25,6 +26,7 @@ public sealed class HostCodexAuthenticationManager : ICodexAuthenticationManager
     private readonly CodexOptions _options;
     private readonly string _codexHome;
     private readonly RunCoordinator _runs;
+    private readonly CodexModelCatalog _models;
     private readonly ILogger<HostCodexAuthenticationManager> _logger;
     private readonly SemaphoreSlim _operationGate = new(1, 1);
     private readonly object _stateGate = new();
@@ -38,10 +40,12 @@ public sealed class HostCodexAuthenticationManager : ICodexAuthenticationManager
         IOptions<CodexOptions> options,
         IHostEnvironment environment,
         RunCoordinator runs,
+        CodexModelCatalog models,
         ILogger<HostCodexAuthenticationManager> logger)
     {
         _options = options.Value;
         _runs = runs;
+        _models = models;
         _logger = logger;
         _codexHome = Path.GetFullPath(Path.IsPathRooted(_options.HomePath)
             ? _options.HomePath
@@ -236,6 +240,7 @@ public sealed class HostCodexAuthenticationManager : ICodexAuthenticationManager
                 throw new CodexUnavailableException("Codex logout failed.");
             }
 
+            _models.Invalidate();
             lock (_stateGate)
             {
                 _login = null;
@@ -385,6 +390,11 @@ public sealed class HostCodexAuthenticationManager : ICodexAuthenticationManager
 
         lifetime.Dispose();
         process.Dispose();
+        if (terminalLogin.Status == DeviceLoginStatus.Completed)
+        {
+            _models.Invalidate();
+        }
+
         _runs.EndAuthenticationChange(generation);
         _logger.LogInformation("Codex device login finished with status {Status}.", terminalLogin.Status);
     }

@@ -70,7 +70,8 @@ public sealed class GenerateAssistantResponseUseCaseHandler(
             throw new CodexUnavailableException("The gateway Codex identity is not authenticated.");
         }
 
-        var model = models.GetModels().SingleOrDefault(candidate => candidate.Id == modelId)
+        var model = (await models.GetModelsAsync(cancellationToken))
+            .SingleOrDefault(candidate => candidate.Id == modelId)
             ?? throw GatewayException.InvalidRequest(
                 $"Model '{modelId}' is not available.",
                 "model_not_found",

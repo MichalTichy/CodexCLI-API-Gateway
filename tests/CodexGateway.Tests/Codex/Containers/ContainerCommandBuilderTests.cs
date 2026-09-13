@@ -335,6 +335,56 @@ public sealed class ContainerCommandBuilderTests
     }
 
     [Fact]
+    public void Model_discovery_uses_the_pinned_runner_shared_auth_and_no_application_secrets()
+    {
+        var storageRoot = Path.GetFullPath(Path.Combine("test-data", "gateway-data"));
+        var workspaceRoot = Path.Combine(storageRoot, "runs", "run_models");
+        var codexHome = Path.Combine(storageRoot, "auth");
+        var source = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["PATH"] = "/safe/bin",
+            ["HTTP_PROXY"] = "http://proxy.test",
+            ["MCP_TOKEN"] = "mcp-secret",
+            ["ConnectionStrings__Gateway"] = "gateway-secret"
+        };
+
+        var startInfo = ContainerCommandBuilder.CreateModelDiscoveryStartInfo(
+            new CodexContainerOptions
+            {
+                EngineExecutablePath = "docker-test",
+                Image = "runner:test",
+                Network = "model-network"
+            },
+            storageRoot,
+            codexHome,
+            storageRoot,
+            new RunWorkspace(workspaceRoot, Path.Combine(workspaceRoot, "artifacts"), null),
+            "codex-gateway-run-models",
+            "0123456789abcdef0123456789abcdef",
+            source,
+            "10001:10001");
+        var arguments = startInfo.ArgumentList.ToArray();
+
+        Assert.Contains($"type=bind,source={workspaceRoot},target=/workspace,readonly", arguments);
+        Assert.Contains($"type=bind,source={codexHome},target=/codex-home", arguments);
+        AssertArgumentPair(arguments, "--network", "model-network");
+        AssertArgumentPair(arguments, "--user", "10001:10001");
+        AssertArgumentPair(arguments, "--entrypoint", "codex");
+        Assert.Contains("runner:test", arguments);
+        Assert.Contains("app-server", arguments);
+        AssertArgumentPair(arguments, "--listen", "stdio://");
+        Assert.Contains("--strict-config", arguments);
+        Assert.Contains("mcp_servers={}", arguments);
+        Assert.Contains("cli_auth_credentials_store=\"file\"", arguments);
+        Assert.Contains("HTTP_PROXY", startInfo.Environment.Keys, StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain("MCP_TOKEN", startInfo.Environment.Keys, StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ConnectionStrings__Gateway", startInfo.Environment.Keys, StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain(arguments, argument =>
+            argument.Contains("mcp-secret", StringComparison.Ordinal) ||
+            argument.Contains("gateway-secret", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Named_workspace_volume_uses_storage_relative_volume_subpath()
     {
         var storageRoot = Path.GetFullPath(Path.Combine("test-data", "gateway-data"));
