@@ -7,10 +7,12 @@ namespace CodexGateway.Logic.UseCases.ModelCatalog;
 
 public sealed record ListModelsUseCase(GatewayRequestContext Context) : IRequest<IReadOnlyList<CodexModel>>;
 
-public sealed class ListModelsUseCaseHandler(ICodexModelCatalog models)
+public sealed class ListModelsUseCaseHandler(
+    ICodexAuthenticationManager authentication,
+    ICodexModelCatalog models)
     : IRequestHandler<ListModelsUseCase, IReadOnlyList<CodexModel>>
 {
-    public Task<IReadOnlyList<CodexModel>> Handle(
+    public async Task<IReadOnlyList<CodexModel>> Handle(
         ListModelsUseCase request,
         CancellationToken cancellationToken)
     {
@@ -20,6 +22,17 @@ public sealed class ListModelsUseCaseHandler(ICodexModelCatalog models)
             throw new InvalidApiKeyException();
         }
 
-        return Task.FromResult(models.GetModels());
+        if (await authentication.GetDeviceLoginAsync(cancellationToken) is { Status: DeviceLoginStatus.Pending })
+        {
+            throw new CodexUnavailableException(
+                "Codex authentication is being updated. Try again after device login completes.");
+        }
+
+        if (!(await authentication.GetAccountAsync(cancellationToken)).Authenticated)
+        {
+            throw new CodexUnavailableException("The gateway Codex identity is not authenticated.");
+        }
+
+        return await models.GetModelsAsync(cancellationToken);
     }
 }

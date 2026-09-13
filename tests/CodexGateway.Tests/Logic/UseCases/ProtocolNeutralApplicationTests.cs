@@ -57,13 +57,13 @@ public sealed class ProtocolNeutralApplicationTests
     }
 
     [Fact]
-    public async Task List_models_use_case_returns_the_configured_catalog()
+    public async Task List_models_use_case_returns_the_authenticated_codex_catalog()
     {
         var controlPlane = new StubControlPlane
         {
             Models = [new CodexModel("gpt-test", "Test", ["low", "high"], "high")]
         };
-        var listed = await new ListModelsUseCaseHandler(controlPlane).Handle(
+        var listed = await new ListModelsUseCaseHandler(controlPlane, controlPlane).Handle(
             new ListModelsUseCase(new GatewayRequestContext("default", null)),
             CancellationToken.None);
 
@@ -393,7 +393,8 @@ public sealed class ProtocolNeutralApplicationTests
 
         public DeviceLogin? Login { get; init; }
 
-        public IReadOnlyList<CodexModel> GetModels() => Models;
+        public Task<IReadOnlyList<CodexModel>> GetModelsAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(Models);
 
         public Task<CodexAccountStatus> GetAccountAsync(CancellationToken cancellationToken) =>
             Task.FromResult(Account);

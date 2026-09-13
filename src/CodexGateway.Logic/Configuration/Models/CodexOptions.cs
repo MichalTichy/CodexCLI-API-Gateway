@@ -33,13 +33,6 @@ public sealed class CodexOptions
     public CodexContainerOptions Container { get; set; } = new();
 
     /// <summary>
-    /// Models exposed by the OpenAI-compatible model catalog and accepted for agent runs.
-    /// Changing this configuration requires an application restart.
-    /// </summary>
-    [MinLength(1)]
-    public CodexModelOptions[] Models { get; set; } = [];
-
-    /// <summary>
     /// Maximum time to wait for the short-lived Codex login-status and logout commands.
     /// It does not limit device login or agent execution.
     /// </summary>
@@ -52,6 +45,21 @@ public sealed class CodexOptions
     /// </summary>
     [Range(1, 300)]
     public int McpDiscoveryTimeoutSeconds { get; set; } = 30;
+
+    /// <summary>
+    /// Maximum time to wait while asking the pinned Codex runner for the models available to the authenticated account.
+    /// On expiry, model listing and requests that need to refresh the catalog fail as temporarily unavailable.
+    /// </summary>
+    [Range(1, 300)]
+    public int ModelDiscoveryTimeoutSeconds { get; set; } = 30;
+
+    /// <summary>
+    /// Number of seconds a successfully discovered model catalog may be reused.
+    /// After this interval, the next model listing or agent request asks Codex for a fresh account-specific catalog.
+    /// A failed refresh is reported as unavailable rather than serving stale model permissions.
+    /// </summary>
+    [Range(1, 3600)]
+    public int ModelCatalogRefreshSeconds { get; set; } = 300;
 
     /// <summary>
     /// Maximum lifetime of a pending device-login attempt.

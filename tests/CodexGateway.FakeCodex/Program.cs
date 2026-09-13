@@ -316,12 +316,83 @@ async Task RunAppServerAsync(IReadOnlySet<string> configuredMcpServers)
         object result = method switch
         {
             "initialize" => new { userAgent = "fake-codex" },
+            "model/list" => ListModels(root),
             "mcpServerStatus/list" => ListMcpServerStatus(root, configuredMcpServers),
             _ => new { }
         };
         Console.WriteLine(JsonSerializer.Serialize(new { id = id.GetInt64(), result }));
         await Console.Out.FlushAsync();
     }
+}
+
+object ListModels(JsonElement request)
+{
+    if (!request.TryGetProperty("params", out var parameters) ||
+        !parameters.TryGetProperty("includeHidden", out var includeHidden) ||
+        includeHidden.ValueKind != JsonValueKind.False ||
+        !parameters.TryGetProperty("limit", out var limit) ||
+        limit.GetInt32() != 100)
+    {
+        throw new InvalidOperationException(
+            "Fake model discovery requires includeHidden=false and limit=100.");
+    }
+
+    var cursor = parameters.TryGetProperty("cursor", out var cursorElement) &&
+                 cursorElement.ValueKind == JsonValueKind.String
+        ? cursorElement.GetString()
+        : null;
+    if (cursor is null)
+    {
+        return new
+        {
+            data = new[]
+            {
+                new
+                {
+                    id = "gpt-test-sol",
+                    model = "gpt-test-sol",
+                    displayName = "GPT Test Sol",
+                    hidden = false,
+                    supportedReasoningEfforts = new[]
+                    {
+                        new { reasoningEffort = "low", description = "Low" },
+                        new { reasoningEffort = "medium", description = "Medium" },
+                        new { reasoningEffort = "high", description = "High" },
+                        new { reasoningEffort = "xhigh", description = "Extra high" },
+                        new { reasoningEffort = "max", description = "Maximum" },
+                        new { reasoningEffort = "ultra", description = "Automatic delegation" }
+                    },
+                    defaultReasoningEffort = "medium"
+                }
+            },
+            nextCursor = "model-page-2"
+        };
+    }
+
+    if (cursor == "model-page-2")
+    {
+        return new
+        {
+            data = new[]
+            {
+                new
+                {
+                    id = "gpt-test-terra",
+                    model = "gpt-test-terra",
+                    displayName = "GPT Test Terra",
+                    hidden = false,
+                    supportedReasoningEfforts = new[]
+                    {
+                        new { reasoningEffort = "high", description = "High" }
+                    },
+                    defaultReasoningEffort = "high"
+                }
+            },
+            nextCursor = (string?)null
+        };
+    }
+
+    throw new InvalidOperationException("Fake model discovery received an unknown cursor.");
 }
 
 object ListMcpServerStatus(JsonElement request, IReadOnlySet<string> configuredMcpServers)

@@ -40,7 +40,9 @@ public sealed class GatewayApiTests : IDisposable
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         var model = json.GetProperty("data").EnumerateArray().Single(item => item.GetProperty("id").GetString() == "gpt-test-sol");
         Assert.Equal("medium", model.GetProperty("default_reasoning_effort").GetString());
-        Assert.Equal(["low", "medium", "high"], model.GetProperty("supported_reasoning_efforts").EnumerateArray().Select(value => value.GetString()));
+        Assert.Equal(
+            ["low", "medium", "high", "xhigh", "max", "ultra"],
+            model.GetProperty("supported_reasoning_efforts").EnumerateArray().Select(value => value.GetString()));
     }
 
     [Fact]
@@ -260,7 +262,7 @@ public sealed class GatewayApiTests : IDisposable
         var invalid = await _client.PostAsJsonAsync("/v1/chat/completions", new
         {
             model = "gpt-test-sol",
-            reasoning_effort = "ultra",
+            reasoning_effort = "unsupported",
             messages = new[] { new { role = "user", content = "hello" } }
         });
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);

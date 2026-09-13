@@ -9,7 +9,7 @@ namespace CodexGateway.EndToEndTests.Authentication;
 public sealed class HostCliAuthLifecycleTests
 {
     [Fact]
-    public async Task Model_catalog_comes_from_configuration_without_starting_a_host_app_server()
+    public async Task Model_catalog_comes_from_the_authenticated_runner_account()
     {
         await using var harness = new AuthenticationHarness();
 
@@ -22,7 +22,7 @@ public sealed class HostCliAuthLifecycleTests
             document.RootElement.GetProperty("data").EnumerateArray()
                 .Select(model => model.GetProperty("id").GetString()!)
                 .ToArray());
-        Assert.DoesNotContain(
+        Assert.Contains(
             await harness.ReadInvocationModesAsync(),
             mode => mode == "app-server");
     }

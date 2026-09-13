@@ -93,6 +93,36 @@ internal static class ContainerCommandBuilder
             image: options.Image);
     }
 
+    internal static ProcessStartInfo CreateModelDiscoveryStartInfo(
+        CodexContainerOptions options,
+        string storageRoot,
+        string codexHome,
+        string engineWorkingDirectory,
+        RunWorkspace workspace,
+        string containerName,
+        string instanceId,
+        IReadOnlyDictionary<string, string?> sourceEnvironment,
+        string? containerUser)
+    {
+        return CreateContainerStartInfo(
+            options,
+            storageRoot,
+            codexHome,
+            engineWorkingDirectory,
+            workspace.RootPath,
+            containerName,
+            instanceId,
+            [],
+            sourceEnvironment,
+            containerUser,
+            gatewayConnections: null,
+            mountCodexHome: true,
+            workspaceReadOnly: true,
+            CodexHomeTarget,
+            AddModelDiscoveryArguments,
+            image: options.Image);
+    }
+
     private static ProcessStartInfo CreateContainerStartInfo(
         CodexContainerOptions options,
         string storageRoot,
@@ -444,6 +474,20 @@ internal static class ContainerCommandBuilder
                 connection,
                 includeToolFilter: false);
         }
+    }
+
+    private static void AddModelDiscoveryArguments(ICollection<string> arguments)
+    {
+        arguments.Add("app-server");
+        arguments.Add("--listen");
+        arguments.Add("stdio://");
+        arguments.Add("--strict-config");
+        arguments.Add("--disable");
+        arguments.Add("apps");
+        arguments.Add("--disable");
+        arguments.Add("plugins");
+        AddConfig(arguments, "mcp_servers={}");
+        AddConfig(arguments, "cli_auth_credentials_store=\"file\"");
     }
 
     internal static void AddConfig(ICollection<string> arguments, string value)
