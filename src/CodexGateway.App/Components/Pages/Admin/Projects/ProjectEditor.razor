@@ -46,12 +46,21 @@
                 </div>
 
                 <LumexDivider />
-                <div class="section-title-row">
+                <div class="section-title-row permission-heading">
                     <div>
                         <h4>API-key access</h4>
-                        <p>API key → project access → MCP server → individual tools. A disabled parent makes its child permissions inactive.</p>
+                        <p>Choose who can enter this project, then reveal only the servers and tools that key needs.</p>
                     </div>
-                    <LumexChip Variant="@ChipVariant.Flat" Size="@Size.Small">@Pluralize(GrantedApiKeyCount, "key") · @Pluralize(GrantedServerCount, "server") · @Pluralize(EnabledToolCount, "tool")</LumexChip>
+                    <div class="permission-heading-actions">
+                        <LumexChip Variant="@ChipVariant.Flat" Size="@Size.Small">@Pluralize(GrantedApiKeyCount, "key") · @Pluralize(GrantedServerCount, "server") · @Pluralize(EnabledToolCount, "tool")</LumexChip>
+                        @if (_editor.ApiKeys.Count > 0)
+                        {
+                            <div class="bulk-actions" role="group" aria-label="API key access bulk actions">
+                                <button type="button" @onclick="() => SetAllApiKeys(true)">Select all keys</button>
+                                <button type="button" @onclick="() => SetAllApiKeys(false)">Clear all keys</button>
+                            </div>
+                        }
+                    </div>
                 </div>
 
                 @if (_editor.ApiKeys.Count == 0)
@@ -60,21 +69,34 @@
                 }
                 else
                 {
-                    <div class="grid gap-3">
+                    <div class="permission-list">
                         @foreach (var access in _editor.ApiKeys)
                         {
                             <section class="access-card @(!access.HasProjectAccess ? "access-card-disabled" : null)" @key="access.Id">
                                 <header class="access-card-header">
                                     <label class="toggle-field toggle-field-compact" for="@($"access-{Project.Id}-{access.Id}")">
                                         <input id="@($"access-{Project.Id}-{access.Id}")" type="checkbox" @bind="access.HasProjectAccess" />
-                                        <span><strong>@access.Name</strong><small>Key ID: <span class="font-mono">@access.Id</span> · Can access this project</small></span>
+                                        <span><strong>@access.Name</strong><small><span class="font-mono">@access.Id</span> · Project access</small></span>
                                     </label>
-                                    <LumexChip Color="@(access.HasProjectAccess ? ThemeColor.Success : ThemeColor.Default)" Variant="@ChipVariant.Dot" Size="@Size.Small">
-                                        @(access.HasProjectAccess ? "Project access" : "No access")
-                                    </LumexChip>
+                                    <div class="access-card-actions">
+                                        <LumexChip Color="@(access.HasProjectAccess ? ThemeColor.Success : ThemeColor.Default)" Variant="@ChipVariant.Dot" Size="@Size.Small">
+                                            @(access.HasProjectAccess ? "Allowed" : "No access")
+                                        </LumexChip>
+                                        @if (access.Servers.Count > 0)
+                                        {
+                                            <div class="bulk-actions" role="group" aria-label="@($"MCP server access for {access.Name}")">
+                                                <button type="button" disabled="@(!access.HasProjectAccess)" @onclick="() => SetAllServers(access, true)">Select all servers</button>
+                                                <button type="button" disabled="@(!access.HasProjectAccess)" @onclick="() => SetAllServers(access, false)">Clear all servers</button>
+                                            </div>
+                                        }
+                                    </div>
                                 </header>
 
-                                @if (access.Servers.Count == 0)
+                                @if (!access.HasProjectAccess)
+                                {
+                                    <p class="hierarchy-hint">Enable project access to configure MCP servers and tools for this key.</p>
+                                }
+                                else if (access.Servers.Count == 0)
                                 {
                                     <div class="empty-state empty-state-compact">No MCP servers are configured.</div>
                                 }
@@ -85,15 +107,15 @@
                                         {
                                             var serverAvailable = access.HasProjectAccess && server.CatalogEnabled;
                                             var toolsAvailable = serverAvailable && server.Granted;
-                                            <section class="server-grant" @key="server.Id">
+                                            <section class="server-grant @(server.Granted ? "server-grant-enabled" : null) @(!server.CatalogEnabled ? "server-grant-disabled" : null)" @key="server.Id">
                                                 <header class="server-grant-header">
                                                     <label class="toggle-field toggle-field-compact" for="@($"grant-{Project.Id}-{access.Id}-{server.Id}")">
                                                         <input id="@($"grant-{Project.Id}-{access.Id}-{server.Id}")" type="checkbox" @bind="server.Granted" disabled="@(!serverAvailable)" />
-                                                        <span><strong>@server.Name</strong><small>Can use this MCP server</small></span>
+                                                        <span><strong>@server.Name</strong><small><span class="font-mono">@server.Id</span> · MCP server access</small></span>
                                                     </label>
-                                                    <div class="flex flex-wrap items-center justify-end gap-2">
+                                                    <div class="server-grant-actions">
                                                         <LumexChip Color="@(server.CatalogEnabled && server.UnavailableToolCount > 0 ? ThemeColor.Warning : server.CatalogEnabled ? ThemeColor.Success : ThemeColor.Default)" Variant="@ChipVariant.Dot" Size="@Size.Small">
-                                                            @(server.CatalogEnabled && server.UnavailableToolCount > 0 ? $"{server.AvailableToolCount} of {server.Tools.Count} tools available" : server.CatalogEnabled ? $"{Pluralize(server.Tools.Count, "tool name")} configured" : "Server unavailable")
+                                                            @(server.CatalogEnabled && server.UnavailableToolCount > 0 ? $"{server.AvailableToolCount} of {server.Tools.Count} tools available" : server.CatalogEnabled ? $"{Pluralize(server.Tools.Count, "tool")} available" : "Unavailable")
                                                         </LumexChip>
                                                         <label class="inline-check" for="@($"required-{Project.Id}-{access.Id}-{server.Id}")">
                                                             <input id="@($"required-{Project.Id}-{access.Id}-{server.Id}")" type="checkbox" @bind="server.Required" disabled="@(!toolsAvailable)" />
@@ -103,18 +125,26 @@
                                                     </div>
                                                 </header>
 
-                                                @if (server.Tools.Count == 0)
+                                                @if (!server.CatalogEnabled)
                                                 {
-                                                    <span class="text-xs text-foreground-400">No catalog tools</span>
+                                                    <p class="hierarchy-hint">This server is disabled in the trusted MCP catalog.</p>
+                                                }
+                                                else if (!server.Granted)
+                                                {
+                                                    <p class="hierarchy-hint">Enable this server to choose its tools.</p>
+                                                }
+                                                else if (server.Tools.Count == 0)
+                                                {
+                                                    <p class="hierarchy-hint">No tools are available in the server catalog.</p>
                                                 }
                                                 else
                                                 {
                                                     <div class="tool-list-actions">
-                                                        <span>Choose which tools this API key may call.</span>
-                                                        <span>
+                                                        <span><strong>Tool access</strong><small>Choose which tools this API key may call.</small></span>
+                                                        <span class="bulk-actions">
                                                             <button type="button" disabled="@(!serverAvailable || server.MetadataLoading)" @onclick="() => DiscoverToolDetailsAsync(server.Id)">@(server.MetadataLoading ? "Discovering…" : server.MetadataLoaded ? "Refresh tool details" : "Discover tool details")</button>
-                                                            <button type="button" disabled="@(!toolsAvailable)" @onclick="() => SetAllTools(server, true)">Select all</button>
-                                                            <button type="button" disabled="@(!toolsAvailable)" @onclick="() => SetAllTools(server, false)">Clear all</button>
+                                                            <button type="button" disabled="@(!toolsAvailable)" @onclick="() => SetAllTools(server, true)">Select all tools</button>
+                                                            <button type="button" disabled="@(!toolsAvailable)" @onclick="() => SetAllTools(server, false)">Clear all tools</button>
                                                         </span>
                                                     </div>
                                                     @if (!server.MetadataLoaded && string.IsNullOrWhiteSpace(server.MetadataError))

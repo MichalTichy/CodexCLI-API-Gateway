@@ -67,34 +67,46 @@
         </div>
 
         <nav class="sidebar-nav" aria-label="Administration sections">
-            <p class="nav-label">Workspace</p>
-            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.Overview)" aria-current="@(_selectedSection == AdminSection.Overview ? "page" : null)" OnClick="@(() => SelectSectionAsync(AdminSection.Overview))">
-                <span class="nav-glyph" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10.8 12 3l9 7.8"/><path d="M5.5 9.5V21h13V9.5M9.5 21v-6h5v6"/></svg>
-                </span><span>Overview</span>
-            </LumexButton>
-            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.ApiKeys)" aria-current="@(_selectedSection == AdminSection.ApiKeys ? "page" : null)" OnClick="@(() => SelectSectionAsync(AdminSection.ApiKeys))">
-                <span class="nav-glyph" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="15" r="4"/><path d="m11 12 8-8m-3 3 3 3m-6 0 2 2"/></svg>
-                </span><span>API keys</span><span class="nav-count">@_apiKeys.Count</span>
-            </LumexButton>
-            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.Projects)" aria-current="@(_selectedSection == AdminSection.Projects ? "page" : null)" OnClick="@(() => SelectSectionAsync(AdminSection.Projects))">
-                <span class="nav-glyph" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3.5 6.5h6l2 2h9v10.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z"/><path d="M3.5 9h17"/></svg>
-                </span><span>Projects</span><span class="nav-count">@_projects.Count</span>
-            </LumexButton>
-            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.McpServers)" aria-current="@(_selectedSection == AdminSection.McpServers ? "page" : null)" OnClick="@(() => SelectSectionAsync(AdminSection.McpServers))">
-                <span class="nav-glyph" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="6" rx="2"/><rect x="4" y="14" width="16" height="6" rx="2"/><path d="M8 7h.01M8 17h.01M12 7h5M12 17h5"/></svg>
-                </span><span>MCP servers</span><span class="nav-count">@_servers.Count</span>
-            </LumexButton>
+            <div class="sidebar-nav-group">
+                <p class="nav-label">Gateway</p>
+                <button type="button" class="@NavButtonClass(AdminSection.Overview)" aria-current="@(_selectedSection == AdminSection.Overview ? "page" : null)" @onclick="@(() => SelectSectionAsync(AdminSection.Overview))">
+                    <span class="nav-glyph" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10.8 12 3l9 7.8"/><path d="M5.5 9.5V21h13V9.5M9.5 21v-6h5v6"/></svg>
+                    </span>
+                    <span class="nav-copy"><strong>Overview</strong><small>Status and setup</small></span>
+                </button>
+                <button type="button" class="@NavButtonClass(AdminSection.ApiKeys)" aria-current="@(_selectedSection == AdminSection.ApiKeys ? "page" : null)" @onclick="@(() => SelectSectionAsync(AdminSection.ApiKeys))">
+                    <span class="nav-glyph" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="15" r="4"/><path d="m11 12 8-8m-3 3 3 3m-6 0 2 2"/></svg>
+                    </span>
+                    <span class="nav-copy"><strong>API keys</strong><small>Client credentials</small></span>
+                    <span class="nav-count" aria-label="@CountLabel(_apiKeys.Count, "API key")">@_apiKeys.Count</span>
+                </button>
+                <button type="button" class="@NavButtonClass(AdminSection.Projects)" aria-current="@(_selectedSection == AdminSection.Projects ? "page" : null)" @onclick="@(() => SelectSectionAsync(AdminSection.Projects))">
+                    <span class="nav-glyph" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3.5 6.5h6l2 2h9v10.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z"/><path d="M3.5 9h17"/></svg>
+                    </span>
+                    <span class="nav-copy"><strong>Projects</strong><small>Access boundaries</small></span>
+                    <span class="nav-count" aria-label="@CountLabel(_projects.Count, "project")">@_projects.Count</span>
+                </button>
+                <button type="button" class="@NavButtonClass(AdminSection.McpServers)" aria-current="@(_selectedSection == AdminSection.McpServers ? "page" : null)" @onclick="@(() => SelectSectionAsync(AdminSection.McpServers))">
+                    <span class="nav-glyph" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="6" rx="2"/><rect x="4" y="14" width="16" height="6" rx="2"/><path d="M8 7h.01M8 17h.01M12 7h5M12 17h5"/></svg>
+                    </span>
+                    <span class="nav-copy"><strong>MCP servers</strong><small>Trusted tools</small></span>
+                    <span class="nav-count" aria-label="@CountLabel(_servers.Count, "MCP server")">@_servers.Count</span>
+                </button>
+            </div>
 
-            <p class="nav-label mt-5">Runtime</p>
-            <LumexButton Variant="@Variant.Light" Class="@NavButtonClass(AdminSection.Codex)" aria-current="@(_selectedSection == AdminSection.Codex ? "page" : null)" OnClick="@(() => SelectSectionAsync(AdminSection.Codex))">
-                <span class="nav-glyph" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m7 9 3 3-3 3m5 0h5"/></svg>
-                </span><span>Codex account</span>
-            </LumexButton>
+            <div class="sidebar-nav-group">
+                <p class="nav-label">Runtime</p>
+                <button type="button" class="@NavButtonClass(AdminSection.Codex)" aria-current="@(_selectedSection == AdminSection.Codex ? "page" : null)" @onclick="@(() => SelectSectionAsync(AdminSection.Codex))">
+                    <span class="nav-glyph" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m7 9 3 3-3 3m5 0h5"/></svg>
+                    </span>
+                    <span class="nav-copy"><strong>Codex account</strong><small>@CodexNavigationStatusLabel</small></span>
+                </button>
+            </div>
         </nav>
 
         <div class="sidebar-footer">
