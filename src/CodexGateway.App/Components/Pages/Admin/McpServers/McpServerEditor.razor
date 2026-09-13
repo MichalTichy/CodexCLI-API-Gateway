@@ -85,6 +85,13 @@
                 </div>
                 @if (ConnectionVerified && _discoveredTools.Count > 0)
                 {
+                    <div class="discovered-tools-toolbar">
+                        <span><strong>Discovered tools</strong><small>@SelectedDiscoveredToolCount of @_discoveredTools.Count selected</small></span>
+                        <div class="bulk-actions" role="group" aria-label="Discovered tool bulk actions">
+                            <button type="button" @onclick="() => SetAllDiscoveredTools(true)">Select all</button>
+                            <button type="button" @onclick="() => SetAllDiscoveredTools(false)">Clear all</button>
+                        </div>
+                    </div>
                     <div class="discovered-tool-list" aria-label="Discovered MCP tools">
                         @foreach (var tool in _discoveredTools)
                         {

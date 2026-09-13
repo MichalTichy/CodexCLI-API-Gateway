@@ -106,11 +106,12 @@
     }
 
     .admin-shell {
-        @apply block min-h-[100dvh] w-full min-w-0 sm:grid sm:grid-cols-[14rem_minmax(0,1fr)] lg:grid-cols-[16.5rem_minmax(0,1fr)];
+        @apply block min-h-[100dvh] w-full min-w-0 sm:grid sm:grid-cols-[15.5rem_minmax(0,1fr)];
     }
 
     .admin-sidebar {
-        @apply hidden border-default-200 bg-surface1/80 p-4 backdrop-blur-xl sm:sticky sm:top-0 sm:flex sm:h-[100dvh] sm:flex-col sm:border-r;
+        @apply hidden border-default-200 bg-surface1 p-3 sm:sticky sm:top-0 sm:z-20 sm:flex sm:h-[100dvh] sm:flex-col sm:border-r;
+        box-shadow: 12px 0 32px rgb(0 0 0 / 10%);
     }
 
     .mobile-topbar {
@@ -118,7 +119,7 @@
     }
 
     .mobile-topbar .sidebar-brand {
-        @apply min-w-0 p-0;
+        @apply min-w-0 border-0 p-0;
     }
 
     .mobile-topbar-actions {
@@ -187,23 +188,32 @@
     }
 
     .sidebar-brand {
-        @apply flex items-center gap-3 px-2 py-2;
+        @apply flex items-center gap-3 border-b border-default-200/70 px-2 pt-2 pb-4;
     }
 
     .sidebar-nav {
-        @apply mt-5 grid grid-cols-2 gap-1 sm:grid-cols-1;
+        @apply mt-4 grid gap-5;
+    }
+
+    .sidebar-nav-group {
+        @apply grid gap-1;
     }
 
     .nav-label {
-        @apply hidden px-3 pb-1 text-[.66rem] font-bold tracking-[.14em] text-foreground-400 uppercase sm:block;
+        @apply px-3 pb-1.5 text-[.65rem] font-bold tracking-[.14em] text-foreground-400 uppercase;
     }
 
     .nav-button {
-        @apply min-w-0 justify-start gap-3 border-l-2 border-transparent px-3 text-foreground-500;
+        @apply relative flex min-h-12 w-full min-w-0 items-center gap-3 rounded-xl border border-transparent px-3 py-2 text-left text-foreground-500 transition hover:bg-default-100 hover:text-foreground;
     }
 
     .nav-button-selected {
-        @apply border-primary bg-primary/15 text-primary-300;
+        @apply border-primary/25 bg-primary/10 text-foreground shadow-sm;
+    }
+
+    .nav-button-selected::before {
+        content: "";
+        @apply absolute top-2 bottom-2 left-0 w-0.5 rounded-full bg-primary;
     }
 
     .nav-glyph {
@@ -214,8 +224,24 @@
         @apply size-[1.1rem];
     }
 
+    .nav-copy {
+        @apply grid min-w-0 flex-1 gap-0.5;
+    }
+
+    .nav-copy strong {
+        @apply truncate text-sm font-semibold text-inherit;
+    }
+
+    .nav-copy small {
+        @apply truncate text-[.68rem] leading-4 text-foreground-400;
+    }
+
     .nav-count {
-        @apply ml-auto hidden rounded-full bg-default-100 px-2 py-0.5 text-[.65rem] text-foreground-400 sm:inline-flex;
+        @apply ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-default-100 px-2 py-0.5 text-[.65rem] font-semibold text-foreground-400;
+    }
+
+    .nav-button-selected .nav-count {
+        @apply bg-primary/15 text-primary-300;
     }
 
     .sidebar-footer {
@@ -533,6 +559,24 @@
         @apply flex flex-wrap items-center justify-end gap-2;
     }
 
+    .permission-heading {
+        @apply items-start;
+    }
+
+    .permission-heading-actions,
+    .access-card-actions,
+    .server-grant-actions {
+        @apply flex flex-wrap items-center justify-end gap-2;
+    }
+
+    .bulk-actions {
+        @apply flex flex-wrap items-center gap-1;
+    }
+
+    .bulk-actions button {
+        @apply rounded-lg px-2.5 py-1.5 text-xs font-semibold text-primary-300 transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40;
+    }
+
     .save-state {
         @apply mr-1 inline-flex items-center gap-1 text-xs font-semibold;
     }
@@ -600,25 +644,44 @@
         @apply cursor-not-allowed opacity-50;
     }
 
+    .permission-list {
+        @apply overflow-hidden rounded-2xl border border-default-200/70 bg-surface1/40;
+    }
+
     .access-card {
-        @apply rounded-2xl border border-default-200/70 bg-default-50/40 p-4 transition;
+        @apply border-t border-default-200/70 first:border-t-0;
     }
 
-    .access-card-disabled .grant-list {
-        @apply opacity-50;
+    .access-card-disabled .access-card-header {
+        @apply bg-default-50/25;
     }
 
-    .access-card-header,
+    .access-card-header {
+        @apply flex flex-col items-stretch justify-between gap-3 bg-surface1/80 p-4 sm:flex-row sm:items-center;
+    }
+
     .server-grant-header {
         @apply flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center;
     }
 
     .grant-list {
-        @apply mt-4 grid gap-3;
+        @apply grid border-t border-default-200/60 bg-default-50/35;
     }
 
     .server-grant {
-        @apply grid gap-4 rounded-xl border border-default-200/60 bg-surface1/70 p-4;
+        @apply ml-5 grid gap-4 border-t border-l-2 border-default-200/60 px-4 py-4 first:border-t-0 sm:ml-7 sm:px-5;
+    }
+
+    .server-grant-enabled {
+        @apply border-l-primary/45;
+    }
+
+    .server-grant-disabled {
+        @apply opacity-65;
+    }
+
+    .hierarchy-hint {
+        @apply border-t border-default-200/60 bg-default-50/25 px-4 py-3 text-xs leading-5 text-foreground-400;
     }
 
     .tool-table {
@@ -752,12 +815,32 @@
         @apply flex flex-wrap items-center justify-between gap-3 text-xs text-foreground-500;
     }
 
-    .tool-list-actions > span:last-child {
-        @apply flex gap-2;
+    .tool-list-actions > span:first-child {
+        @apply grid gap-0.5;
     }
 
-    .tool-list-actions button {
-        @apply rounded-lg px-2 py-1 font-semibold text-primary-300 hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40;
+    .tool-list-actions strong {
+        @apply text-sm font-semibold text-foreground;
+    }
+
+    .tool-list-actions small {
+        @apply text-xs leading-5 text-foreground-500;
+    }
+
+    .discovered-tools-toolbar {
+        @apply flex flex-wrap items-center justify-between gap-3 rounded-xl border border-default-200/70 bg-default-50/40 px-4 py-3;
+    }
+
+    .discovered-tools-toolbar > span {
+        @apply grid gap-0.5;
+    }
+
+    .discovered-tools-toolbar strong {
+        @apply text-sm font-semibold text-foreground;
+    }
+
+    .discovered-tools-toolbar small {
+        @apply text-xs text-foreground-500;
     }
 
     @media (max-width: 639px) {

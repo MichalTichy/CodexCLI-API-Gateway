@@ -30,6 +30,8 @@ public partial class McpCatalogSection : AdminComponentBase
         ConnectionFingerprint(_create),
         StringComparison.Ordinal);
 
+    private int SelectedDiscoveredToolCount => _discoveredTools.Count(tool => IsToolSelected(tool.Name));
+
     private string CurrentTestStatus
     {
         get
@@ -221,6 +223,11 @@ public partial class McpCatalogSection : AdminComponentBase
 
     private bool IsToolSelected(string toolName) =>
         AdminText.Lines(_create.AvailableTools).Contains(toolName, StringComparer.Ordinal);
+
+    private void SetAllDiscoveredTools(bool selected) =>
+        _create.AvailableTools = selected
+            ? string.Join(Environment.NewLine, _discoveredTools.Select(tool => tool.Name).OrderBy(name => name, StringComparer.Ordinal))
+            : string.Empty;
 
     private void ToggleDiscoveredTool(string toolName, ChangeEventArgs args)
     {

@@ -108,6 +108,22 @@ public partial class ProjectEditor : ComponentBase
 
     private void CancelDelete() => _confirmDelete = false;
 
+    private void SetAllApiKeys(bool enabled)
+    {
+        foreach (var access in _editor.ApiKeys)
+        {
+            access.HasProjectAccess = enabled;
+        }
+    }
+
+    private static void SetAllServers(ApiKeyAccessEditorModel access, bool enabled)
+    {
+        foreach (var server in access.Servers)
+        {
+            server.Granted = enabled && server.CatalogEnabled;
+        }
+    }
+
     private static void SetAllTools(McpGrantEditorModel server, bool enabled)
     {
         foreach (var tool in server.Tools)

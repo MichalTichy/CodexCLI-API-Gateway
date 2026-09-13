@@ -29,6 +29,8 @@ public partial class McpServerEditor : ComponentBase
         ConnectionFingerprint(_editor),
         StringComparison.Ordinal);
 
+    private int SelectedDiscoveredToolCount => _discoveredTools.Count(tool => IsToolSelected(tool.Name));
+
     private bool ConnectionSettingsChanged => !string.Equals(
         _savedConnectionFingerprint,
         ConnectionFingerprint(_editor),
@@ -167,6 +169,11 @@ public partial class McpServerEditor : ComponentBase
 
     private bool IsToolSelected(string toolName) =>
         AdminText.Lines(_editor.AvailableTools).Contains(toolName, StringComparer.Ordinal);
+
+    private void SetAllDiscoveredTools(bool selected) =>
+        _editor.AvailableTools = selected
+            ? string.Join(Environment.NewLine, _discoveredTools.Select(tool => tool.Name).OrderBy(name => name, StringComparer.Ordinal))
+            : string.Empty;
 
     private void ToggleDiscoveredTool(string toolName, ChangeEventArgs args)
     {
