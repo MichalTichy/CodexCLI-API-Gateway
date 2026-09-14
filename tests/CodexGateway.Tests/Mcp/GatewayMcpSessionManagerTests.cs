@@ -13,6 +13,20 @@ namespace CodexGateway.Tests.Mcp;
 
 public sealed class GatewayMcpSessionManagerTests
 {
+    [Theory]
+    [InlineData("ms-teams", "GCJMOM6-example", "CODEX_GATEWAY_MCP_MS_TEAMS_GCJMOM6_")]
+    [InlineData("server.with spaces", "ab_cd-12example", "CODEX_GATEWAY_MCP_SERVER_WITH_SPACES_AB_CD_12")]
+    public void Runner_token_environment_variable_is_always_environment_safe(
+        string serverId,
+        string sessionId,
+        string expected)
+    {
+        var variable = GatewayMcpSessionManager.CreateTokenEnvironmentVariable(serverId, sessionId);
+
+        Assert.Equal(expected, variable);
+        Assert.Matches("^[A-Za-z_][A-Za-z0-9_]*$", variable);
+    }
+
     [Fact]
     public async Task Http_session_replaces_runner_token_with_environment_backed_upstream_headers()
     {

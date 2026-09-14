@@ -178,13 +178,17 @@ public sealed class GatewayMcpSessionManager(
         return new Uri(baseUri.ToString().TrimEnd('/') + "/");
     }
 
-    private static string CreateTokenEnvironmentVariable(string serverId, string sessionId)
+    internal static string CreateTokenEnvironmentVariable(string serverId, string sessionId)
     {
         var normalizedServerId = new string(
             serverId.Select(character => char.IsAsciiLetterOrDigit(character)
                 ? char.ToUpperInvariant(character)
                 : '_').ToArray());
-        return $"CODEX_GATEWAY_MCP_{normalizedServerId}_{sessionId[..8].ToUpperInvariant()}";
+        var normalizedSessionId = new string(
+            sessionId[..8].Select(character => char.IsAsciiLetterOrDigit(character)
+                ? char.ToUpperInvariant(character)
+                : '_').ToArray());
+        return $"CODEX_GATEWAY_MCP_{normalizedServerId}_{normalizedSessionId}";
     }
 
     private static bool HasValidBearerToken(HttpRequest request, string expectedToken)
