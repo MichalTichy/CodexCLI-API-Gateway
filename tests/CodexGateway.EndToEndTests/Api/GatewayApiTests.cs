@@ -280,6 +280,15 @@ public sealed class GatewayApiTests : IDisposable
         Assert.Equal(HttpStatusCode.ServiceUnavailable, unavailable.StatusCode);
         var unavailableJson = await unavailable.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("codex_unavailable", unavailableJson.GetProperty("error").GetProperty("code").GetString());
+
+        var usageLimited = await SendChatAsync("/v1/chat/completions", "[scenario:usage-limit]");
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, usageLimited.StatusCode);
+        var usageLimitedBody = await usageLimited.Content.ReadAsStringAsync();
+        var usageLimitedJson = JsonSerializer.Deserialize<JsonElement>(usageLimitedBody);
+        var usageLimitedError = usageLimitedJson.GetProperty("error");
+        Assert.Equal("codex_unavailable", usageLimitedError.GetProperty("code").GetString());
+        Assert.Contains("usage limit", usageLimitedError.GetProperty("message").GetString(), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("FAKE_SECRET", usageLimitedBody, StringComparison.Ordinal);
     }
 
     [Fact]

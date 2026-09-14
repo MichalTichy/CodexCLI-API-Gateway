@@ -213,6 +213,20 @@ async Task RunExecAsync(IReadOnlyList<string> codexArguments)
         return;
     }
 
+    if (prompt.Contains("[scenario:usage-limit]", StringComparison.Ordinal))
+    {
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            type = "turn.failed",
+            error = new
+            {
+                message = "You've hit your usage limit. FAKE_SECRET must never reach the API."
+            }
+        }));
+        Environment.ExitCode = 9;
+        return;
+    }
+
     string response;
     var artifacts = Path.Combine(Environment.CurrentDirectory, "artifacts");
     if (prompt.Contains("[scenario:write-artifact]", StringComparison.Ordinal))

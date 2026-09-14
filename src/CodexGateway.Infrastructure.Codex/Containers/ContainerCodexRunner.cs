@@ -149,6 +149,12 @@ public sealed class ContainerCodexRunner(
 
         if (runFailed || malformedOutput || !turnCompleted)
         {
+            if (LooksRateLimited(failureDiagnostics.ToString()) || LooksRateLimited(stderr))
+            {
+                throw new CodexUnavailableException(
+                    "The selected Codex model has reached its usage limit. Try again after it resets or select another model.");
+            }
+
             if (LooksUnavailable(failureDiagnostics.ToString()) || LooksUnavailable(stderr))
             {
                 throw new CodexUnavailableException("Codex or a required MCP server is unavailable.");
@@ -338,6 +344,20 @@ public sealed class ContainerCodexRunner(
             "failed to connect",
             "connection refused",
             "service unavailable"
+        ];
+        return markers.Any(marker => diagnostics.Contains(marker, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool LooksRateLimited(string diagnostics)
+    {
+        string[] markers =
+        [
+            "usage limit",
+            "usage_limit",
+            "rate limit",
+            "rate_limit",
+            "quota exceeded",
+            "too many requests"
         ];
         return markers.Any(marker => diagnostics.Contains(marker, StringComparison.OrdinalIgnoreCase));
     }
