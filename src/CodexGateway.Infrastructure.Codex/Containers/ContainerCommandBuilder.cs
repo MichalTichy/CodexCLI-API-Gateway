@@ -394,7 +394,7 @@ internal static class ContainerCommandBuilder
         arguments.Add("--disable");
         arguments.Add("plugins");
         AddConfig(arguments, "approval_policy=\"never\"");
-        AddConfig(arguments, "web_search=\"disabled\"");
+        AddConfig(arguments, $"web_search={ContainerCodexRunner.TomlString(WebSearchModeValue(request.WebSearchMode))}");
         AddConfig(arguments, $"model_reasoning_effort={ContainerCodexRunner.TomlString(request.ReasoningEffort)}");
         AddConfig(arguments, $"default_permissions={ContainerCodexRunner.TomlString(ContainerCodexRunner.RunPermissionProfile)}");
         AddConfig(
@@ -475,6 +475,15 @@ internal static class ContainerCommandBuilder
                 includeToolFilter: false);
         }
     }
+
+    private static string WebSearchModeValue(WebSearchMode mode) => mode switch
+    {
+        WebSearchMode.Disabled => "disabled",
+        WebSearchMode.Cached => "cached",
+        WebSearchMode.Indexed => "indexed",
+        WebSearchMode.Live => "live",
+        _ => throw new InvalidOperationException($"Web search mode '{mode}' is not supported.")
+    };
 
     private static void AddModelDiscoveryArguments(ICollection<string> arguments)
     {

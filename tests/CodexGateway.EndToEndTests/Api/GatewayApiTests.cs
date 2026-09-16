@@ -180,6 +180,7 @@ public sealed class GatewayApiTests : IDisposable
                 new ProjectApiKeyAccess
                 {
                     ApiKeyId = "default",
+                    WebSearchMode = WebSearchMode.Live,
                     McpServers =
                     {
                         new ProjectMcpAssignment
@@ -233,6 +234,7 @@ public sealed class GatewayApiTests : IDisposable
             "mcp_servers.stdio_catalog.args=[\"--stdio\",\"argument with spaces\"]",
             arguments);
         Assert.Contains("mcp_servers.stdio_catalog.enabled_tools=[\"search\"]", arguments);
+        Assert.Contains("web_search=\"live\"", arguments);
         Assert.Contains("--strict-config", arguments);
         Assert.Contains("--ignore-user-config", arguments);
         Assert.DoesNotContain("--output-last-message", arguments);

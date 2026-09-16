@@ -34,8 +34,11 @@ public partial class ProjectEditor : ComponentBase
 
     private int EnabledToolCount => _editor.ApiKeys
         .Where(key => key.HasProjectAccess)
-        .SelectMany(key => key.Servers.Where(server => server.Granted))
-        .Sum(server => server.Tools.Count(tool => tool.Enabled));
+        .Sum(key =>
+            key.Servers
+                .Where(server => server.Granted)
+                .Sum(server => server.Tools.Count(tool => tool.Enabled)) +
+            (key.WebSearchMode == WebSearchMode.Disabled ? 0 : 1));
 
     [Inject]
     private ISender Sender { get; set; } = null!;
@@ -226,7 +229,8 @@ public partial class ProjectEditor : ComponentBase
             .Append(editor.RunnerImage);
         foreach (var key in editor.ApiKeys)
         {
-            value.Append('\u001e').Append(key.Id).Append('\u001f').Append(key.HasProjectAccess);
+            value.Append('\u001e').Append(key.Id).Append('\u001f')
+                .Append(key.HasProjectAccess).Append('\u001f').Append(key.WebSearchMode);
             foreach (var server in key.Servers)
             {
                 value.Append('\u001d').Append(server.Id).Append('\u001f')

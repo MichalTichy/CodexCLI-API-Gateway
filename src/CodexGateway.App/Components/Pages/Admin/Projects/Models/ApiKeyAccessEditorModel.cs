@@ -11,6 +11,8 @@ internal sealed class ApiKeyAccessEditorModel
 
     public bool HasProjectAccess { get; set; }
 
+    public WebSearchMode WebSearchMode { get; set; } = WebSearchMode.Disabled;
+
     public List<McpGrantEditorModel> Servers { get; init; } = [];
 
     public static ApiKeyAccessEditorModel From(
@@ -25,6 +27,7 @@ internal sealed class ApiKeyAccessEditorModel
             Id = key.Id,
             Name = key.Name,
             HasProjectAccess = access is not null,
+            WebSearchMode = access?.WebSearchMode ?? WebSearchMode.Disabled,
             Servers = servers
                 .Select(server => McpGrantEditorModel.From(
                     server,
@@ -36,6 +39,7 @@ internal sealed class ApiKeyAccessEditorModel
     public ProjectApiKeyAccess ToDefinition() => new()
     {
         ApiKeyId = Id,
+        WebSearchMode = WebSearchMode,
         McpServers = Servers
             .Where(server => server.Granted && server.CatalogEnabled)
             .Select(server => server.ToDefinition())

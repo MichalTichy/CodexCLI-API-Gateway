@@ -7,7 +7,7 @@ This is the executable gateway host. It composes the protocol adapters and infra
 1. `Program.cs` applies service defaults and runs installers discovered from the module assemblies.
 2. The HTTP pipeline authenticates OpenAI requests, maps protocol endpoints, and exposes the internal MCP session route.
 3. Admin authentication creates a server-side session and a non-persistent browser cookie.
-4. Components under `Components/Pages/Admin/` send application use cases through MediatR and query repository specifications.
+4. Components under `Components/Pages/Admin/` send application use cases through MediatR and query repository specifications. The project editor grants MCP tools and Codex web-search modes per API key.
 
 ## Folders
 

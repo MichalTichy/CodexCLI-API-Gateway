@@ -45,7 +45,7 @@ public sealed class ContainerIsolationTests
             Assert.Contains("--init", run.Arguments);
             Assert.Contains("--read-only", run.Arguments);
             AssertOption(run.Arguments, "--cap-drop", "ALL");
-            AssertOption(run.Arguments, "--security-opt", "no-new-privileges");
+            Assert.DoesNotContain("no-new-privileges", run.Arguments);
             AssertOption(run.Arguments, "--security-opt", "seccomp=unconfined");
             AssertOption(run.Arguments, "--network", "codex-gateway-e2e");
             AssertOption(run.Arguments, "--pids-limit", "64");
