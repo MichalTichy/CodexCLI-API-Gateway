@@ -9,5 +9,6 @@ public sealed record CodexRunRequest(
     string ReasoningEffort,
     RunWorkspace Workspace,
     IReadOnlyList<ResolvedMcpServer> McpServers,
+    WebSearchMode WebSearchMode = WebSearchMode.Disabled,
     JsonElement? OutputSchema = null,
     string? RunnerImage = null);

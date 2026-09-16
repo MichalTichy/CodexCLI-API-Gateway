@@ -48,6 +48,28 @@ public sealed class ToolsDiscoveryTests : IDisposable
     }
 
     [Fact]
+    public async Task Catalog_includes_enabled_codex_web_search_without_starting_mcp_discovery()
+    {
+        await CreateProjectAsync(
+            "web-tools",
+            new ProjectApiKeyAccess
+            {
+                ApiKeyId = "default",
+                WebSearchMode = WebSearchMode.Live
+            });
+
+        using var response = await SendAsync("/p/web-tools/v1/tools", DefaultKey);
+        var catalog = await AssertCatalogPayloadAsync(response);
+
+        var server = Assert.Single(catalog.GetProperty("data").EnumerateArray());
+        Assert.Equal("codex-built-in", server.GetProperty("id").GetString());
+        var tool = Assert.Single(server.GetProperty("tools").EnumerateArray());
+        Assert.Equal("codex-built-in/web_search", tool.GetProperty("id").GetString());
+        Assert.Equal("live", tool.GetProperty("_meta").GetProperty("mode").GetString());
+        AssertNoDiscoveryContainerRuns();
+    }
+
+    [Fact]
     public async Task Default_catalog_and_full_alias_return_exact_enabled_metadata()
     {
         await _factory.UpsertMcpServerAsync(new StdioMcpServerDefinition

@@ -133,6 +133,7 @@ public sealed class GenerateAssistantResponseUseCaseHandler(
                     model.ReasoningEffort,
                     workspace,
                     mcpServers,
+                    access?.Access.WebSearchMode ?? WebSearchMode.Disabled,
                     prompt.OutputSchema,
                     project?.RunnerImage),
                 request.Observer is null

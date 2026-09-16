@@ -13,7 +13,7 @@ This project adapts the OpenAI-compatible HTTP schema to protocol-neutral gatewa
 
 - `ChatCompletions/` — validation, mapping, endpoint, and request/response `Models/` for chat completions.
 - `Files/` — upload, listing, metadata, download, and deletion endpoints with their response models.
-- `ModelCatalog/` and `Tools/` — discovery endpoints.
+- `ModelCatalog/` and `Tools/` — discovery endpoints; the tools catalog includes granted MCP tools and enabled Codex built-in capabilities.
 - `Errors/` — OpenAI error models and error mapping.
 - `Pipeline/` — request authentication and error-handling middleware.
 - `Serialization/` — shared JSON settings.

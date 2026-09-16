@@ -5,6 +5,7 @@ using CodexGateway.Logic.Tools;
 using CodexGateway.Models;
 using MediatR;
 using Shared.Infrastructure.Persistence.Repositories;
+using System.Text.Json;
 
 namespace CodexGateway.Logic.UseCases.Tools;
 
@@ -40,14 +41,15 @@ public sealed class GetToolCatalogUseCaseHandler(
                         token)
                     ?? [];
                 var metadata = await discovery.DiscoverAsync(enabled, token);
-                return CreateCatalog(enabled, metadata);
+                return CreateCatalog(enabled, metadata, access.Access.WebSearchMode);
             },
             cancellationToken);
     }
 
     private static ToolCatalog CreateCatalog(
         IReadOnlyList<ResolvedMcpServer> enabledServers,
-        IReadOnlyList<DiscoveredMcpServer> discoveredServers)
+        IReadOnlyList<DiscoveredMcpServer> discoveredServers,
+        WebSearchMode webSearchMode)
     {
         var enabledById = enabledServers.ToDictionary(
             server => server.Definition.Id,
@@ -84,8 +86,63 @@ public sealed class GetToolCatalogUseCaseHandler(
                             tool.Meta))
                         .ToArray());
             })
-            .ToArray();
-        return new ToolCatalog(servers);
+            .ToList();
+        if (webSearchMode != WebSearchMode.Disabled)
+        {
+            servers.Add(CreateWebSearchCatalog(webSearchMode));
+        }
+
+        return new ToolCatalog(servers.OrderBy(server => server.Id, StringComparer.Ordinal).ToArray());
+    }
+
+    private static ToolCatalogServer CreateWebSearchCatalog(WebSearchMode mode)
+    {
+        var description = mode switch
+        {
+            WebSearchMode.Cached => "Search the OpenAI-maintained web index without live external retrieval.",
+            WebSearchMode.Indexed => "Search indexed public web content with index-gated external retrieval.",
+            WebSearchMode.Live => "Search and open current public web content using live retrieval.",
+            _ => throw new InvalidOperationException($"Web search mode '{mode}' cannot be advertised.")
+        };
+        var inputSchema = JsonSerializer.SerializeToElement(new
+        {
+            type = "object",
+            properties = new
+            {
+                query = new
+                {
+                    type = "string",
+                    description = "The public information to find on the web."
+                }
+            },
+            required = new[] { "query" },
+            additionalProperties = false
+        });
+        var metadata = JsonSerializer.SerializeToElement(new
+        {
+            source = "codex",
+            mode = mode.ToString().ToLowerInvariant()
+        });
+
+        return new ToolCatalogServer(
+            "codex-built-in",
+            "Codex built-in tools",
+            "1",
+            Required: false,
+            "Codex built-in tools",
+            "Capabilities provided directly by Codex rather than an MCP server.",
+            "https://learn.chatgpt.com/docs/config-file/config-reference",
+            Icons: null,
+            [new ToolCatalogTool(
+                "codex-built-in",
+                "web_search",
+                "Web search",
+                description,
+                inputSchema,
+                OutputSchema: null,
+                Annotations: null,
+                Icons: null,
+                metadata)]);
     }
 
     private static void ValidateContext(GatewayRequestContext context)

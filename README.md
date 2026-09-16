@@ -219,7 +219,7 @@ This gateway intentionally implements a tested subset of the [OpenAI Chat Comple
 
 An optional message `name` is accepted for client wire compatibility when it matches `[A-Za-z0-9_-]{1,64}`; the gateway does not otherwise interpret it. Message history is flattened into the new Codex prompt for each independent run.
 
-Gateway-managed MCP tools remain internal to Codex. They are not OpenAI request-level function tools and are not returned as assistant `tool_calls`. Agent Framework consumers must not register local `AITool` functions on this client, and Harness features that emit hosted web search must be disabled. Planning clients retrieve `/tools` separately, while the runtime still enforces the key's enabled-tool grant at the Codex process boundary.
+Gateway-managed tools remain internal to Codex. MCP tools and the Codex built-in web search are not OpenAI request-level function tools and are not returned as assistant `tool_calls`. Agent Framework consumers must not register local `AITool` functions on this client or emit request-level hosted web search. Planning clients retrieve `/tools` separately, while the runtime still enforces the API key's project grant at the Codex process boundary.
 
 Compatibility is defined by the documented wire subset and the exact package versions tested by the consumer. Pin the OpenAI .NET, `Microsoft.Extensions.AI.OpenAI`, and Microsoft Agent Framework packages; treat an upgrade as a wire-contract change and review captured request fixtures before deploying it.
 
@@ -324,7 +324,7 @@ In the detailed view, `catalog_version` is an opaque deterministic hash of the n
 
 Each detailed tool has the stable qualified identity `server-id/tool-name` because names can collide across servers. It follows the official [MCP `Tool` definition](https://modelcontextprotocol.io/specification/2025-11-25/server/tools): `id`, `name`, and `input_schema` are always present, while `title`, `description`, `output_schema`, `annotations`, `icons`, and `_meta` are included when the server supplies them. The input and output schemas, annotations, icons, and `_meta` values retain their complete JSON structures, including vendor extensions. Optional fields are omitted rather than returned as `null`.
 
-The catalog contains only the exact tools enabled for that API key and project. Every returned tool can be used by the caller; tools advertised by an MCP server but absent from the grant are filtered out.
+The catalog contains only the exact tools enabled for that API key and project. Every returned tool can be used by the caller; tools advertised by an MCP server but absent from the grant are filtered out. When the key's project grant enables Codex web search, the catalog also contains the synthetic `codex-built-in/web_search` entry with its configured mode in `_meta`.
 
 `GET /v1/tools` without a project selector returns the same versioned envelope with empty `data` and a deterministic empty `catalog_version`; it does not contact an MCP server.
 
@@ -395,7 +395,7 @@ Semantics-changing OpenAI fields are rejected instead of being silently ignored:
 | `tool_choice` | missing, `null`, or `"none"` | `auto`, `required`, or a named function choice |
 | `function_call` | missing, `null`, or `"none"` | `auto` or a named legacy function choice |
 | `parallel_tool_calls` | missing, `null`, or `false` | `true` |
-| `web_search_options` | missing or `null` | Any non-null value; use Gateway-managed MCP search instead |
+| `web_search_options` | missing or `null` | Any non-null value; configure Codex web search on the API key's project grant instead |
 | `messages[].tool_calls` | missing, `null`, or `[]` | Non-empty assistant tool calls |
 | `messages[].function_call` | missing or `null` | Any legacy assistant function call |
 | `messages[].role` | `system`, `developer`, `user`, or `assistant` | `tool` and every other unsupported role |
@@ -443,9 +443,9 @@ The MCP catalog is the trust boundary:
 
 1. Add a trusted HTTP or STDIO server in the admin UI.
 2. Declare the tools that server is allowed to expose.
-3. In a project, allow an API key and assign that key the server plus exact visible and enabled tools.
+3. In a project, allow an API key, select its Codex web-search mode, and assign that key the server plus exact visible and enabled tools.
 4. Repeat independently for other keys that need different capabilities in the same project.
-5. A run resolves the authenticated key's assignment and receives only its enabled subset through Codex `enabled_tools` configuration.
+5. A run resolves the authenticated key's assignment, applies its `web_search` mode, and receives only its enabled MCP subset through Codex `enabled_tools` configuration.
 
 Read and write tools are both supported. Enabled tools are pre-approved because API runs cannot answer interactive prompts, and every enabled tool must also be visible. In the management UI, **Plan** controls visibility and **Invoke** controls execution; selecting Invoke automatically selects Plan. Newly added server tools remain invisible and disabled for every key until an administrator explicitly selects them. API callers cannot override visibility or invocation permissions.
 

@@ -102,6 +102,13 @@ public sealed class UpdateProjectUseCaseHandler(
                     parameter: "api_key_access");
             }
 
+            if (!Enum.IsDefined(access.WebSearchMode))
+            {
+                throw GatewayException.InvalidRequest(
+                    "The web search mode is not supported.",
+                    parameter: "web_search_mode");
+            }
+
             var assignments = new List<ProjectMcpAssignment>();
             var serverIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (var assignment in access.McpServers ?? [])
@@ -148,6 +155,7 @@ public sealed class UpdateProjectUseCaseHandler(
             normalized.Add(new ProjectApiKeyAccess
             {
                 ApiKeyId = access.ApiKeyId,
+                WebSearchMode = access.WebSearchMode,
                 McpServers = assignments
                     .OrderBy(assignment => assignment.ServerId, StringComparer.Ordinal)
                     .ToList()

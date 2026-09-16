@@ -96,13 +96,31 @@
                                 {
                                     <p class="hierarchy-hint">Enable project access to configure MCP servers and tools for this key.</p>
                                 }
-                                else if (access.Servers.Count == 0)
-                                {
-                                    <div class="empty-state empty-state-compact">No MCP servers are configured.</div>
-                                }
                                 else
                                 {
-                                    <div class="grant-list">
+                                    <div class="form-grid-two">
+                                        <div>
+                                            <div class="field-label-row">
+                                                <label for="@($"web-search-{Project.Id}-{access.Id}")">Codex web search</label>
+                                                <ContextHelp Title="Codex web search">Built-in Codex search; no MCP server is required. Cached uses OpenAI's maintained index, indexed permits gated retrieval, and live retrieves current public web content.</ContextHelp>
+                                            </div>
+                                            <InputSelect id="@($"web-search-{Project.Id}-{access.Id}")" class="native-select" @bind-Value="access.WebSearchMode">
+                                                <option value="@WebSearchMode.Disabled">Disabled</option>
+                                                <option value="@WebSearchMode.Cached">Cached index</option>
+                                                <option value="@WebSearchMode.Indexed">Indexed web</option>
+                                                <option value="@WebSearchMode.Live">Live web</option>
+                                            </InputSelect>
+                                            <p class="field-help">Applied only when this API key calls this project.</p>
+                                        </div>
+                                    </div>
+
+                                    @if (access.Servers.Count == 0)
+                                    {
+                                        <div class="empty-state empty-state-compact">No MCP servers are configured.</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="grant-list">
                                         @foreach (var server in access.Servers)
                                         {
                                             var serverAvailable = access.HasProjectAccess && server.CatalogEnabled;
@@ -209,7 +227,8 @@
                                                 }
                                             </section>
                                         }
-                                    </div>
+                                        </div>
+                                    }
                                 }
                             </section>
                         }

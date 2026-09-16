@@ -363,6 +363,43 @@ public sealed class ProtocolNeutralApplicationTests
         Assert.Equal("catalog/write", catalogServer.Tools.Single(tool => tool.Name == "write").Id);
     }
 
+    [Fact]
+    public async Task Tool_catalog_advertises_the_granted_codex_web_search_mode()
+    {
+        var project = new ProjectDefinition
+        {
+            Id = "web-project",
+            Name = "Web Project",
+            ApiKeyAccess =
+            [
+                new ProjectApiKeyAccess
+                {
+                    ApiKeyId = "default",
+                    WebSearchMode = WebSearchMode.Live
+                }
+            ]
+        };
+        var state = new FakeGatewayStateRepository(new GatewayState { Projects = [project] });
+        var access = project.ApiKeyAccess.Single();
+        state.QueueSpecificationResult<ProjectAccessSpecification>(
+            new ResolvedProjectAccess(project, access));
+        state.QueueSpecificationResult<EnabledMcpServersSpecification>(Array.Empty<ResolvedMcpServer>());
+        var handler = new GetToolCatalogUseCaseHandler(
+            state,
+            new StubMcpDiscovery(),
+            new RunCoordinator(TestOptions()));
+
+        var result = await handler.Handle(
+            new GetToolCatalogUseCase(new GatewayRequestContext("default", project.Id)),
+            CancellationToken.None);
+
+        var server = Assert.Single(result.Servers);
+        Assert.Equal("codex-built-in", server.Id);
+        var tool = Assert.Single(server.Tools);
+        Assert.Equal("codex-built-in/web_search", tool.Id);
+        Assert.Equal("live", tool.Meta!.Value.GetProperty("mode").GetString());
+    }
+
     private static IOptions<GatewayOptions> TestOptions() => Options.Create(new GatewayOptions
     {
         Limits = new RunLimitOptions

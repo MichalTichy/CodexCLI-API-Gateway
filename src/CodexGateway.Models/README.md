@@ -14,4 +14,4 @@ This project contains the persisted gateway state and the domain data shared by 
 - `Files/` — metadata for uploaded and project-owned files.
 - `Gateway/` — the root persisted aggregate.
 - `McpServers/` — HTTP and stdio MCP server definitions.
-- `Projects/` — projects, access grants, MCP assignments, and resolved access.
+- `Projects/` — projects, access grants, per-key/project Codex web-search modes, MCP assignments, and resolved access.

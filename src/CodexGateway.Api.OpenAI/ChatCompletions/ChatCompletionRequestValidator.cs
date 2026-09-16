@@ -122,7 +122,7 @@ public static partial class ChatCompletionRequestValidator
         if (HasValue(webSearchOptions))
         {
             throw Unsupported(
-                "Request-level hosted web search is not supported; use Gateway-managed MCP tools instead.",
+                "Request-level web search overrides are not supported; configure web search on the API key's project grant.",
                 "web_search_options");
         }
     }

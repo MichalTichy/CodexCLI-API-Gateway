@@ -131,6 +131,36 @@ public sealed class ContainerCommandBuilderTests
                         argument.Contains("\"answer\"", StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData(WebSearchMode.Disabled, "web_search=\"disabled\"")]
+    [InlineData(WebSearchMode.Cached, "web_search=\"cached\"")]
+    [InlineData(WebSearchMode.Indexed, "web_search=\"indexed\"")]
+    [InlineData(WebSearchMode.Live, "web_search=\"live\"")]
+    public void Run_command_applies_the_granted_web_search_mode(
+        WebSearchMode mode,
+        string expectedConfiguration)
+    {
+        var storageRoot = Path.GetFullPath(Path.Combine("test-data", "gateway-data"));
+        var workspaceRoot = Path.Combine(storageRoot, "runs", "run_web_search");
+        var request = CreateRequest(workspaceRoot) with { WebSearchMode = mode };
+
+        var startInfo = ContainerCommandBuilder.CreateRunStartInfo(
+            new CodexContainerOptions { EngineExecutablePath = "docker-test", Image = "runner:test" },
+            storageRoot,
+            Path.Combine(storageRoot, "auth"),
+            storageRoot,
+            request,
+            "codex-gateway-run-web-search",
+            "0123456789abcdef0123456789abcdef",
+            [],
+            new Dictionary<string, string?>(),
+            null);
+        var arguments = startInfo.ArgumentList.ToArray();
+
+        Assert.Contains(expectedConfiguration, arguments);
+        Assert.Contains("permissions.gateway_run.network.enabled=false", arguments);
+    }
+
     [Fact]
     public void Run_command_uses_the_project_runner_image_when_supplied()
     {

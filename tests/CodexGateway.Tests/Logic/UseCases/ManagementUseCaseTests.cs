@@ -64,7 +64,14 @@ public sealed class ManagementUseCaseTests
                 Name = " Renamed ",
                 Enabled = false,
                 RunnerImage = " project-runner:test ",
-                ApiKeyAccess = [new ProjectApiKeyAccess { ApiKeyId = "default" }]
+                ApiKeyAccess =
+                [
+                    new ProjectApiKeyAccess
+                    {
+                        ApiKeyId = "default",
+                        WebSearchMode = WebSearchMode.Live
+                    }
+                ]
             }),
             CancellationToken.None);
         await delete.Handle(new DeleteProjectUseCase(created.Id), CancellationToken.None);
@@ -74,9 +81,42 @@ public sealed class ManagementUseCaseTests
         Assert.Equal("Renamed", updated.Name);
         Assert.False(updated.Enabled);
         Assert.Equal("project-runner:test", updated.RunnerImage);
+        Assert.Equal(WebSearchMode.Live, updated.ApiKeyAccess.Single().WebSearchMode);
         Assert.Equal(created.CreatedAt, updated.CreatedAt);
         Assert.Equal(["project-one"], storage.DeletedIds);
         Assert.Empty(repository.State.Projects);
+    }
+
+    [Fact]
+    public async Task Updating_project_rejects_an_unknown_web_search_mode()
+    {
+        var repository = new FakeGatewayStateRepository(new GatewayState
+        {
+            ApiKeys = [new ApiKeyDefinition { Id = "default", Name = "Default", Key = "test-secret" }],
+            Projects = [Project("project-one", "Project One")]
+        });
+        var handler = new UpdateProjectUseCaseHandler(
+            repository,
+            new RunCoordinator(TestOptions()));
+
+        var exception = await Assert.ThrowsAsync<GatewayException>(() => handler.Handle(
+            new UpdateProjectUseCase(new ProjectDefinition
+            {
+                Id = "project-one",
+                Name = "Project One",
+                ApiKeyAccess =
+                [
+                    new ProjectApiKeyAccess
+                    {
+                        ApiKeyId = "default",
+                        WebSearchMode = (WebSearchMode)999
+                    }
+                ]
+            }),
+            CancellationToken.None));
+
+        Assert.Equal("invalid_request", exception.Code);
+        Assert.Equal("web_search_mode", exception.Field);
     }
 
     [Fact]
