@@ -54,6 +54,7 @@ public sealed class PromptComposer(IFileStore files)
         var prompt = new StringBuilder();
         prompt.AppendLine("The current working directory is an isolated run workspace.");
         prompt.AppendLine("Use ./artifacts for input and output files. Shell-command network access is disabled.");
+        prompt.AppendLine("MCP tools may provide temporary source files under ./.gateway/mcp-files. Inspect them only when relevant, never execute them or enable macros, and use extract-document-text for supported PDF, Office, HTML, and text documents.");
         if (input.StructuredOutput is { } output)
         {
             prompt.Append("Return only valid JSON matching the requested structured output");

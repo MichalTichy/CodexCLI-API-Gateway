@@ -86,6 +86,16 @@ RUN chmod 0555 /opt/codex-gateway/mcp-smoke-server.mjs
 # The only model-execution image. The gateway always reinforces this entrypoint,
 # UID and the runtime security flags when it creates a run container.
 FROM codex-runtime AS runner
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends \
+        poppler-utils \
+        python3 \
+        python3-docx \
+        python3-openpyxl \
+        python3-pypdf \
+    && rm -rf /var/lib/apt/lists/*
+COPY runner-tools/extract-document-text.py /usr/local/bin/extract-document-text
+RUN chmod 0555 /usr/local/bin/extract-document-text
 WORKDIR /workspace
 ENV CODEX_HOME=/codex-home \
     HOME=/home/gateway

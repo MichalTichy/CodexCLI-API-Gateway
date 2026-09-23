@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 using CodexGateway.Logic.Codex;
 using CodexGateway.McpGateway.Http.Transport;
 using CodexGateway.McpGateway.Stdio.Transport;
@@ -194,6 +195,71 @@ public sealed class GatewayMcpSessionManagerTests
     }
 
     [Fact]
+    public async Task Http_session_materializes_explicit_artifact_resource_inside_its_run_workspace()
+    {
+        const string secretVariable = "CODEX_GATEWAY_MCP_ARTIFACT_TEST_SECRET";
+        var previousValue = Environment.GetEnvironmentVariable(secretVariable);
+        Environment.SetEnvironmentVariable(secretVariable, "upstream-api-key");
+        var workspace = Path.Combine(Path.GetTempPath(), "codex-gateway-session-artifact-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(workspace);
+        try
+        {
+            var bytes = "attachment body"u8.ToArray();
+            var upstreamResponse = JsonSerializer.Serialize(new
+            {
+                jsonrpc = "2.0",
+                id = 1,
+                result = new
+                {
+                    content = new object[]
+                    {
+                        new
+                        {
+                            type = "resource",
+                            resource = new
+                            {
+                                uri = "artifact://mail/report.txt",
+                                mimeType = "text/plain",
+                                blob = Convert.ToBase64String(bytes)
+                            }
+                        }
+                    }
+                }
+            });
+            var upstream = new RecordingHttpMessageHandler(upstreamResponse);
+            var sessions = CreateManager(upstream);
+            await using var lease = await sessions.CreateAsync(
+                workspace,
+                [new ResolvedMcpServer(CreateHttpServer(secretVariable), ["get_email_attachment"], false)],
+                CancellationToken.None);
+            var connection = Assert.Single(lease.Connections).Value!;
+            var context = CreateRequest(
+                connection.Url!,
+                connection.SessionToken!,
+                """{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_email_attachment","arguments":{}}}""");
+
+            await sessions.HandleAsync(
+                context,
+                new Uri(connection.Url!).Segments.Last().TrimEnd('/'),
+                CancellationToken.None);
+
+            context.Response.Body.Position = 0;
+            var response = await new StreamReader(context.Response.Body).ReadToEndAsync();
+            Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+            Assert.Contains("./.gateway/mcp-files/", response, StringComparison.Ordinal);
+            Assert.DoesNotContain(Convert.ToBase64String(bytes), response, StringComparison.Ordinal);
+            var file = Assert.Single(Directory.EnumerateFiles(
+                Path.Combine(workspace, ".gateway", "mcp-files")));
+            Assert.Equal(bytes, await File.ReadAllBytesAsync(file));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(secretVariable, previousValue);
+            Directory.Delete(workspace, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task Http_session_rejects_a_denied_tool_hidden_in_a_json_rpc_batch()
     {
         const string secretVariable = "CODEX_GATEWAY_MCP_BATCH_DENIED_TEST_SECRET";
@@ -317,7 +383,9 @@ public sealed class GatewayMcpSessionManagerTests
         public HttpClient CreateClient(string name) => new(upstream, disposeHandler: false);
     }
 
-    private sealed class RecordingHttpMessageHandler : HttpMessageHandler
+    private sealed class RecordingHttpMessageHandler(
+        string responseBody = """{"jsonrpc":"2.0","id":1,"result":{"tools":[]}}""")
+        : HttpMessageHandler
     {
         public AuthenticationHeaderValue? Authorization { get; private set; }
 
@@ -338,7 +406,7 @@ public sealed class GatewayMcpSessionManagerTests
                 : await request.Content.ReadAsStringAsync(cancellationToken);
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("""{"jsonrpc":"2.0","id":1,"result":{"tools":[]}}""")
+                Content = new StringContent(responseBody, Encoding.UTF8, "application/json")
             };
         }
     }

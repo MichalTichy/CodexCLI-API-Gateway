@@ -3,6 +3,8 @@ using System.Security.Cryptography;
 using System.Text;
 using CodexGateway.Logic.Codex;
 using CodexGateway.Logic.McpServers;
+using CodexGateway.McpGateway.Files;
+using CodexGateway.McpGateway.Transport.Models;
 using CodexGateway.Models;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
@@ -52,7 +54,8 @@ public sealed class GatewayMcpSessionManager(
                     token,
                     DateTimeOffset.UtcNow.AddMinutes(options.Value.SessionLifetimeMinutes),
                     server.EnabledTools.ToHashSet(StringComparer.Ordinal),
-                    upstream);
+                    upstream,
+                    new McpRunFileMaterializer(workspacePath, options.Value, logger));
                 if (!_sessions.TryAdd(sessionId, session))
                 {
                     await upstream.DisposeAsync();
@@ -108,15 +111,24 @@ public sealed class GatewayMcpSessionManager(
         context.Response.Headers.CacheControl = "no-store";
         try
         {
+            var shouldMaterializeFiles = false;
             if (HttpMethods.IsPost(context.Request.Method))
             {
                 var body = await GatewayMcpRequestBody.ReadAsync(context.Request, cancellationToken);
                 GatewayMcpToolCallAuthorizer.EnsureAllowed(body, session.EnabledTools);
+                shouldMaterializeFiles = GatewayMcpRequestBody.ContainsMethod(body, "tools/call");
                 context.Request.Body = new MemoryStream(body, writable: false);
                 context.Request.ContentLength = body.Length;
             }
 
-            await session.Upstream.ForwardAsync(context.Request, context.Response, cancellationToken);
+            if (shouldMaterializeFiles)
+            {
+                await ForwardAndMaterializeAsync(context, session, cancellationToken);
+            }
+            else
+            {
+                await session.Upstream.ForwardAsync(context.Request, context.Response, cancellationToken);
+            }
         }
         catch (GatewayMcpRequestException exception)
         {
@@ -191,6 +203,32 @@ public sealed class GatewayMcpSessionManager(
         return $"CODEX_GATEWAY_MCP_{normalizedServerId}_{normalizedSessionId}";
     }
 
+    private static async Task ForwardAndMaterializeAsync(
+        HttpContext context,
+        GatewayMcpSession session,
+        CancellationToken cancellationToken)
+    {
+        var destination = context.Response.Body;
+        await using var buffer = new GatewayMcpResponseBuffer(session.Materializer.MaximumWireBytes);
+        context.Response.Body = buffer;
+        try
+        {
+            await session.Upstream.ForwardAsync(context.Request, context.Response, cancellationToken);
+            var responseBytes = buffer.ToArray();
+            var materialized = await session.Materializer.MaterializeAsync(
+                responseBytes,
+                context.Response.ContentType,
+                cancellationToken);
+            context.Response.ContentLength = materialized.LongLength;
+            context.Response.Body = destination;
+            await destination.WriteAsync(materialized, cancellationToken);
+        }
+        finally
+        {
+            context.Response.Body = destination;
+        }
+    }
+
     private static bool HasValidBearerToken(HttpRequest request, string expectedToken)
     {
         var authorization = request.Headers.Authorization.ToString();
@@ -237,5 +275,6 @@ public sealed class GatewayMcpSessionManager(
         string Token,
         DateTimeOffset ExpiresAt,
         IReadOnlySet<string> EnabledTools,
-        IGatewayMcpUpstream Upstream);
+        IGatewayMcpUpstream Upstream,
+        McpRunFileMaterializer Materializer);
 }

@@ -2,6 +2,9 @@
 **/bin/**
 **/obj
 **/obj/**
+**/__pycache__
+**/__pycache__/**
+**/*.py[cod]
 .git
 **/.git/**
 .github

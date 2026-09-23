@@ -20,4 +20,16 @@ public sealed class GatewayMcpOptions
     /// </summary>
     [Range(1, 1_440)]
     public int SessionLifetimeMinutes { get; init; } = 120;
+
+    /// <summary>Maximum number of MCP binary resources materialized during one run.</summary>
+    [Range(1, 100)]
+    public int MaxMaterializedFiles { get; init; } = 10;
+
+    /// <summary>Maximum decoded size, in megabytes, of one MCP binary resource.</summary>
+    [Range(1, 512)]
+    public int MaxMaterializedFileMegabytes { get; init; } = 25;
+
+    /// <summary>Maximum combined decoded size, in megabytes, of MCP binary resources during one run.</summary>
+    [Range(1, 1_024)]
+    public int MaxMaterializedTotalMegabytes { get; init; } = 50;
 }
