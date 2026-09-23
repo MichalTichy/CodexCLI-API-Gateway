@@ -13,37 +13,30 @@ public sealed record GetToolCatalogUseCase(GatewayRequestContext Context) : IReq
 
 public sealed class GetToolCatalogUseCaseHandler(
     IReadOnlyRepository<GatewayState> repository,
-    IMcpMetadataDiscoveryService discovery,
-    RunCoordinator coordinator) : IRequestHandler<GetToolCatalogUseCase, ToolCatalog>
+    IMcpMetadataDiscoveryService discovery) : IRequestHandler<GetToolCatalogUseCase, ToolCatalog>
 {
-    public Task<ToolCatalog> Handle(
+    public async Task<ToolCatalog> Handle(
         GetToolCatalogUseCase request,
         CancellationToken cancellationToken)
     {
         ValidateContext(request.Context);
         if (request.Context.ProjectId is null)
         {
-            return Task.FromResult(ToolCatalog.Empty);
+            return ToolCatalog.Empty;
         }
 
-        return coordinator.ExecuteAsync(
-            request.Context.ProjectId,
-            async token =>
-            {
-                var access = await repository.GetBySpecAsync(
-                        new ProjectAccessSpecification(
-                            request.Context.ProjectId,
-                            request.Context.ApiKeyId),
-                        token)
-                    ?? throw new InvalidApiKeyException();
-                var enabled = await repository.GetBySpecAsync(
-                        new EnabledMcpServersSpecification(access.Access),
-                        token)
-                    ?? [];
-                var metadata = await discovery.DiscoverAsync(enabled, token);
-                return CreateCatalog(enabled, metadata, access.Access.WebSearchMode);
-            },
-            cancellationToken);
+        var access = await repository.GetBySpecAsync(
+                new ProjectAccessSpecification(
+                    request.Context.ProjectId,
+                    request.Context.ApiKeyId),
+                cancellationToken)
+            ?? throw new InvalidApiKeyException();
+        var enabled = await repository.GetBySpecAsync(
+                new EnabledMcpServersSpecification(access.Access),
+                cancellationToken)
+            ?? [];
+        var metadata = await discovery.DiscoverAsync(enabled, cancellationToken);
+        return CreateCatalog(enabled, metadata, access.Access.WebSearchMode);
     }
 
     private static ToolCatalog CreateCatalog(

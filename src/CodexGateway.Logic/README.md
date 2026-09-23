@@ -9,6 +9,8 @@ This project contains protocol-neutral application behavior. HTTP endpoints and 
 3. Specifications asynchronously filter and project only the required data from `GatewayState` before materialization. Authentication compares the supplied API key in the database and returns only its ID, so the authentication path never materializes stored secrets.
 4. The handler returns a model from the relevant purpose folder without depending on an HTTP schema.
 
+Tool-catalog discovery is deliberately not admitted through `RunCoordinator`. Agents can call an MCP tool that asks the Gateway for a current schema while their generation already holds the same project's run lock; catalog reads must therefore remain re-entrant or the agent would deadlock waiting for itself.
+
 ## Folders
 
 - `UseCases/` — commands and queries grouped by purpose; each use-case file contains its request and handler.

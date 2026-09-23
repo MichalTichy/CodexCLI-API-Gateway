@@ -347,11 +347,9 @@ public sealed class ProtocolNeutralApplicationTests
             new ResolvedProjectAccess(project, access));
         state.QueueSpecificationResult<EnabledMcpServersSpecification>(
             new[] { new ResolvedMcpServer(server, ["read", "write"], true) });
-        var options = TestOptions();
         var handler = new GetToolCatalogUseCaseHandler(
             state,
-            new StubMcpDiscovery(),
-            new RunCoordinator(options));
+            new StubMcpDiscovery());
 
         var result = await handler.Handle(
             new GetToolCatalogUseCase(new GatewayRequestContext("default", project.Id)),
@@ -386,8 +384,7 @@ public sealed class ProtocolNeutralApplicationTests
         state.QueueSpecificationResult<EnabledMcpServersSpecification>(Array.Empty<ResolvedMcpServer>());
         var handler = new GetToolCatalogUseCaseHandler(
             state,
-            new StubMcpDiscovery(),
-            new RunCoordinator(TestOptions()));
+            new StubMcpDiscovery());
 
         var result = await handler.Handle(
             new GetToolCatalogUseCase(new GatewayRequestContext("default", project.Id)),
