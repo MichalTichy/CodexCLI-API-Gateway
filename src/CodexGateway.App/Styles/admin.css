@@ -927,6 +927,9 @@
 .matrix-key small { color: #b4b4be; font-size: 11px; overflow-wrap: anywhere; }
 .matrix-cell { width: 100%; border: 1px solid transparent; border-radius: 7px; padding: 12px 6px; white-space: nowrap; }
 .matrix-cell:hover, .matrix-cell.selected-cell { color: #93b6ff; border-color: #4f83f1; background: #25334d; }
+.matrix-cell { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.matrix-risk-counts { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px; }
+.matrix-risk-status { font-size: 11px; color: #b4b4be; white-space: normal; }
 .selected-key { background: #202635; }
 .selected-access { display: grid; gap: 18px; }
 .grant-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }

@@ -34,6 +34,10 @@ internal sealed class McpGrantEditorModel
 
     public int AvailableToolCount => Tools.Count - UnavailableToolCount;
 
+    public int AllowedDestructiveToolCount => Tools.Count(tool => tool.Enabled && tool.Risk == ToolRisk.Destructive);
+
+    public int AllowedUnknownRiskToolCount => Tools.Count(tool => tool.Enabled && tool.Risk == ToolRisk.Unknown);
+
     public static McpGrantEditorModel From(
         McpServerDefinition server,
         ProjectMcpAssignment? assignment)

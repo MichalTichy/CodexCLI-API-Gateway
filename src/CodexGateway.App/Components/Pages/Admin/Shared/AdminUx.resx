@@ -63,4 +63,10 @@
 <data name="BackServers" xml:space="preserve"><value>All MCP servers</value></data>
 <data name="NoMatchingProjects" xml:space="preserve"><value>No projects match this search.</value></data>
 <data name="NoMatchingServers" xml:space="preserve"><value>No servers match this search.</value></data>
+<data name="MatrixDestructiveTools" xml:space="preserve"><value>{0} destructive</value></data>
+<data name="MatrixUnknownTools" xml:space="preserve"><value>{0} risk unknown</value></data>
+<data name="MatrixRiskLoading" xml:space="preserve"><value>Checking risk…</value></data>
+<data name="MatrixRiskUnavailable" xml:space="preserve"><value>Risk check unavailable</value></data>
+<data name="MatrixRiskUnchecked" xml:space="preserve"><value>Risk not checked yet</value></data>
+<data name="MatrixRiskExplanation" xml:space="preserve"><value>Counts cover allowed tools and use MCP server annotations. Tools without usable annotations have unknown risk.</value></data>
 </root>
