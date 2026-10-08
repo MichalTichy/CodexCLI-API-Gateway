@@ -16,6 +16,17 @@ internal static class GatewayMcpEndpointExtensions
                     await handler.HandleAsync(context, sessionId, cancellationToken);
                 })
             .DisableAntiforgery();
+        endpoints.MapGet(
+                "/_internal/mcp/artifacts/{token}",
+                async (
+                    HttpContext context,
+                    string token,
+                    IGatewayMcpRequestHandler handler,
+                    CancellationToken cancellationToken) =>
+                {
+                    await handler.HandleArtifactAsync(context, token, cancellationToken);
+                })
+            .DisableAntiforgery();
         return endpoints;
     }
 }

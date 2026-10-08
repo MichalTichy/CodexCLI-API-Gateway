@@ -260,6 +260,84 @@ public sealed class GatewayMcpSessionManagerTests
     }
 
     [Fact]
+    public async Task Artifact_http_url_serves_exact_bytes_only_during_the_run()
+    {
+        const string secretVariable = "CODEX_GATEWAY_MCP_HTTP_ARTIFACT_TEST_SECRET";
+        var previousValue = Environment.GetEnvironmentVariable(secretVariable);
+        Environment.SetEnvironmentVariable(secretVariable, "upstream-api-key");
+        var workspace = Path.Combine(Path.GetTempPath(), "codex-gateway-http-artifact-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(workspace);
+        try
+        {
+            var bytes = "invoice PDF"u8.ToArray();
+            var upstream = new RecordingHttpMessageHandler(JsonSerializer.Serialize(new
+            {
+                jsonrpc = "2.0",
+                id = 1,
+                result = new
+                {
+                    content = new object[]
+                    {
+                        new
+                        {
+                            type = "resource",
+                            resource = new
+                            {
+                                uri = "artifact://riganti/invoice.pdf",
+                                mimeType = "application/pdf",
+                                blob = Convert.ToBase64String(bytes)
+                            }
+                        }
+                    }
+                }
+            }));
+            var sessions = CreateManager(upstream);
+            string token;
+            await using (var lease = await sessions.CreateAsync(
+                             workspace,
+                             [new ResolvedMcpServer(CreateHttpServer(secretVariable), ["download_invoice_pdf"], false)],
+                             CancellationToken.None))
+            {
+                var connection = Assert.Single(lease.Connections).Value!;
+                var call = CreateRequest(
+                    connection.Url!,
+                    connection.SessionToken!,
+                    """{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"download_invoice_pdf","arguments":{}}}""");
+                await sessions.HandleAsync(
+                    call,
+                    new Uri(connection.Url!).Segments.Last().TrimEnd('/'),
+                    CancellationToken.None);
+                call.Response.Body.Position = 0;
+                using var toolResponse = JsonDocument.Parse(call.Response.Body);
+                var text = toolResponse.RootElement.GetProperty("result").GetProperty("content")[0]
+                    .GetProperty("text").GetString()!;
+                using var metadata = JsonDocument.Parse(text[text.IndexOf('{')..]);
+                token = new Uri(metadata.RootElement.GetProperty("agentFileUrl").GetString()!).Segments.Last();
+
+                var download = new DefaultHttpContext();
+                download.Response.Body = new MemoryStream();
+                await sessions.HandleArtifactAsync(download, token, CancellationToken.None);
+
+                Assert.Equal(StatusCodes.Status200OK, download.Response.StatusCode);
+                Assert.Equal("application/pdf", download.Response.ContentType);
+                Assert.Equal(bytes, ((MemoryStream)download.Response.Body).ToArray());
+                Assert.Equal(Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes)),
+                    download.Response.Headers["X-Content-SHA256"]);
+            }
+
+            var expired = new DefaultHttpContext();
+            expired.Response.Body = new MemoryStream();
+            await sessions.HandleArtifactAsync(expired, token, CancellationToken.None);
+            Assert.Equal(StatusCodes.Status404NotFound, expired.Response.StatusCode);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(secretVariable, previousValue);
+            Directory.Delete(workspace, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task Http_session_rejects_a_denied_tool_hidden_in_a_json_rpc_batch()
     {
         const string secretVariable = "CODEX_GATEWAY_MCP_BATCH_DENIED_TEST_SECRET";

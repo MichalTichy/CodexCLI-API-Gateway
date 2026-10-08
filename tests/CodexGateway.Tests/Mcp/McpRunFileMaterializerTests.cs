@@ -33,6 +33,7 @@ public sealed class McpRunFileMaterializerTests
             Assert.Contains("invoice 42.pdf", text, StringComparison.Ordinal);
             Assert.Contains("application/pdf", text, StringComparison.Ordinal);
             Assert.Contains("./.gateway/mcp-files/", text, StringComparison.Ordinal);
+            Assert.Contains("http://host.docker.internal:8080/_internal/mcp/artifacts/", text, StringComparison.Ordinal);
 
             var relativePath = JsonDocument.Parse(text[(text.IndexOf('{'))..])
                 .RootElement.GetProperty("path").GetString()!;
@@ -40,6 +41,62 @@ public sealed class McpRunFileMaterializerTests
                 workspace,
                 relativePath[2..].Replace('/', Path.DirectorySeparatorChar));
             Assert.Equal(bytes, await File.ReadAllBytesAsync(fullPath));
+        }
+        finally
+        {
+            Directory.Delete(workspace, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Artifact_url_returns_original_bytes_without_model_base64()
+    {
+        var workspace = CreateWorkspace();
+        try
+        {
+            var materializer = CreateMaterializer(workspace);
+            var bytes = "invoice contents"u8.ToArray();
+            var response = await materializer.MaterializeAsync(
+                Response("artifact://invoice/invoice.pdf", "application/pdf", bytes),
+                "application/json",
+                CancellationToken.None);
+            var text = GetResultText(response);
+            var metadata = JsonDocument.Parse(text[text.IndexOf('{')..]);
+            var url = metadata.RootElement.GetProperty("agentFileUrl").GetString()!;
+            var token = new Uri(url).Segments.Last();
+
+            var artifact = await materializer.ReadArtifactAsync(token, CancellationToken.None);
+
+            Assert.NotNull(artifact);
+            Assert.Equal(bytes, artifact.Value.Bytes);
+            Assert.Equal("invoice.pdf", artifact.Value.FileName);
+            Assert.Equal("application/pdf", artifact.Value.MimeType);
+        }
+        finally
+        {
+            Directory.Delete(workspace, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task A_modified_file_cannot_be_served_as_an_http_artifact()
+    {
+        var workspace = CreateWorkspace();
+        try
+        {
+            var materializer = CreateMaterializer(workspace);
+            var response = await materializer.MaterializeAsync(
+                Response("artifact://invoice/invoice.pdf", "application/pdf", "original"u8.ToArray()),
+                "application/json",
+                CancellationToken.None);
+            var metadata = JsonDocument.Parse(GetResultText(response)[GetResultText(response).IndexOf('{')..]);
+            var token = new Uri(metadata.RootElement.GetProperty("agentFileUrl").GetString()!).Segments.Last();
+            var path = metadata.RootElement.GetProperty("path").GetString()!;
+            await File.WriteAllTextAsync(Path.Combine(workspace, path[2..]), "tampered");
+            var exception = await Assert.ThrowsAsync<GatewayMcpRequestException>(() =>
+                materializer.ReadArtifactAsync(token, CancellationToken.None));
+
+            Assert.Equal(StatusCodes.Status409Conflict, exception.StatusCode);
         }
         finally
         {

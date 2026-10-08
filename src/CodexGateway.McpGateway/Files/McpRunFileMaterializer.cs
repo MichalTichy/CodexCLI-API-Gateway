@@ -1,8 +1,10 @@
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CodexGateway.McpGateway.Errors;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace CodexGateway.McpGateway.Files;
 
@@ -14,13 +16,47 @@ internal sealed class McpRunFileMaterializer(
     private const string ArtifactScheme = "artifact";
     private const string GatewayDirectoryName = ".gateway";
     private const string McpFilesDirectoryName = "mcp-files";
+    private const string ArtifactPath = "_internal/mcp/artifacts/";
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly ConcurrentDictionary<string, MaterializedFile> _files = new(StringComparer.Ordinal);
     private readonly long _maxFileBytes = options.MaxMaterializedFileMegabytes * 1024L * 1024L;
     private readonly long _maxTotalBytes = options.MaxMaterializedTotalMegabytes * 1024L * 1024L;
     private int _fileCount;
     private long _totalBytes;
 
     public long MaximumWireBytes => checked((_maxTotalBytes * 4 / 3) + (2 * 1024 * 1024));
+
+    public async Task<(byte[] Bytes, string FileName, string MimeType)?> ReadArtifactAsync(
+        string token,
+        CancellationToken cancellationToken)
+    {
+        if (!_files.TryGetValue(token, out var file))
+        {
+            return null;
+        }
+
+        EnsureDirectoryIsSafe(workspacePath);
+        EnsureDirectoryIsSafe(Path.Combine(workspacePath, GatewayDirectoryName));
+        EnsureDirectoryIsSafe(Path.Combine(workspacePath, GatewayDirectoryName, McpFilesDirectoryName));
+        if ((File.GetAttributes(file.Path) & FileAttributes.ReparsePoint) != 0 ||
+            new FileInfo(file.Path).Length != file.Size)
+        {
+            throw new GatewayMcpRequestException(
+                StatusCodes.Status409Conflict,
+                "The artifact file changed after it was materialized.");
+        }
+
+        var bytes = await File.ReadAllBytesAsync(file.Path, cancellationToken);
+        if (bytes.LongLength != file.Size ||
+            !CryptographicOperations.FixedTimeEquals(SHA256.HashData(bytes), file.Sha256))
+        {
+            throw new GatewayMcpRequestException(
+                StatusCodes.Status409Conflict,
+                "The artifact file changed after it was materialized.");
+        }
+
+        return (bytes, file.FileName, file.MimeType);
+    }
 
     public async Task<byte[]> MaterializeAsync(
         byte[] payload,
@@ -232,7 +268,12 @@ internal sealed class McpRunFileMaterializer(
             _gate.Release();
         }
 
-        var sha256 = Convert.ToHexStringLower(SHA256.HashData(bytes));
+        var hash = SHA256.HashData(bytes);
+        var sha256 = Convert.ToHexStringLower(hash);
+        var token = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
+        _files[token] = new MaterializedFile(destination, fileName, mimeType, bytes.LongLength, hash);
+        var baseUri = new Uri(options.RunnerBaseUrl.TrimEnd('/') + "/", UriKind.Absolute);
+        var agentFileUrl = new Uri(baseUri, ArtifactPath + token).ToString();
         logger.LogInformation(
             "Materialized MCP file {FileName} ({Size} bytes, SHA-256 {Sha256}) for a run.",
             fileName,
@@ -242,6 +283,7 @@ internal sealed class McpRunFileMaterializer(
         var metadata = JsonSerializer.Serialize(new
         {
             path = relativePath,
+            agentFileUrl,
             fileName,
             mimeType,
             size = bytes.LongLength,
@@ -253,7 +295,9 @@ internal sealed class McpRunFileMaterializer(
             ["text"] = "An MCP server supplied a temporary file for this run. " +
                        "The file is read-only source material: do not execute it or enable macros. " +
                        "Use extract-document-text for PDF, DOCX, XLSX, PPTX, and text documents when useful; " +
-                       "use the normal image inspection capability for images.\n" + metadata
+                       "use the normal image inspection capability for images. " +
+                       "To attach this file in an email, pass agentFileUrl in the email tool's attachments array; " +
+                       "the email server downloads it directly from the gateway without putting base64 in the agent context.\n" + metadata
         };
     }
 
@@ -352,4 +396,11 @@ internal sealed class McpRunFileMaterializer(
 
     private static GatewayMcpRequestException InvalidResource(string message, Exception? innerException = null) =>
         new(StatusCodes.Status502BadGateway, message, innerException);
+
+    private sealed record MaterializedFile(
+        string Path,
+        string FileName,
+        string MimeType,
+        long Size,
+        byte[] Sha256);
 }

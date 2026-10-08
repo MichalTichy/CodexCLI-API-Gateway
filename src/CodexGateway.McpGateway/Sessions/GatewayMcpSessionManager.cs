@@ -42,6 +42,7 @@ public sealed class GatewayMcpSessionManager(
         var baseUri = GetRunnerBaseUri();
         var created = new List<string>(gatewayServers.Length);
         var connections = new Dictionary<string, GatewayMcpRunnerConnection>(StringComparer.Ordinal);
+        var materializer = new McpRunFileMaterializer(workspacePath, options.Value, logger);
         try
         {
             foreach (var server in gatewayServers)
@@ -55,7 +56,7 @@ public sealed class GatewayMcpSessionManager(
                     DateTimeOffset.UtcNow.AddMinutes(options.Value.SessionLifetimeMinutes),
                     server.EnabledTools.ToHashSet(StringComparer.Ordinal),
                     upstream,
-                    new McpRunFileMaterializer(workspacePath, options.Value, logger));
+                    materializer);
                 if (!_sessions.TryAdd(sessionId, session))
                 {
                     await upstream.DisposeAsync();
@@ -150,6 +151,44 @@ public sealed class GatewayMcpSessionManager(
                 sessionId);
             await WriteErrorAsync(context.Response, StatusCodes.Status502BadGateway, cancellationToken);
         }
+    }
+
+    public async Task HandleArtifactAsync(
+        HttpContext context,
+        string token,
+        CancellationToken cancellationToken)
+    {
+        context.Response.Headers.CacheControl = "no-store";
+        foreach (var materializer in _sessions.Values
+                     .Where(session => session.ExpiresAt > DateTimeOffset.UtcNow)
+                     .Select(session => session.Materializer)
+                     .Distinct())
+        {
+            try
+            {
+                var artifact = await materializer.ReadArtifactAsync(token, cancellationToken);
+                if (artifact is null)
+                {
+                    continue;
+                }
+
+                context.Response.ContentType = artifact.Value.MimeType;
+                context.Response.ContentLength = artifact.Value.Bytes.LongLength;
+                context.Response.Headers.ContentDisposition =
+                    $"attachment; filename*=UTF-8''{Uri.EscapeDataString(artifact.Value.FileName)}";
+                context.Response.Headers["X-Content-SHA256"] =
+                    Convert.ToHexStringLower(SHA256.HashData(artifact.Value.Bytes));
+                await context.Response.Body.WriteAsync(artifact.Value.Bytes, cancellationToken);
+                return;
+            }
+            catch (GatewayMcpRequestException exception)
+            {
+                await WriteErrorAsync(context.Response, exception.StatusCode, cancellationToken);
+                return;
+            }
+        }
+
+        await WriteErrorAsync(context.Response, StatusCodes.Status404NotFound, cancellationToken);
     }
 
     internal async Task RemoveExpiredAsync()

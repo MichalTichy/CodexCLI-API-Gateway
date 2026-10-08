@@ -10,8 +10,11 @@ This project provides gateway-scoped MCP sessions for Codex run containers.
 4. The selected transport project forwards JSON-RPC to its upstream.
 5. An embedded binary resource with an `artifact://` URI is decoded into the run's
    temporary `./.gateway/mcp-files` directory and replaced by a small textual result
-   containing its local path, media type, size, and checksum.
-6. The session manager and cleanup service revoke expired or completed sessions.
+   containing its local path, media type, size, checksum, and a run-scoped HTTP URL.
+6. Another MCP server on the private Gateway network can download that file by
+   the opaque URL. Gateway verifies the on-disk checksum before serving it and
+   revokes the URL when the run ends; the agent never needs to copy base64.
+7. The session manager and cleanup service revoke expired or completed sessions.
 
 ## Folders
 
