@@ -32,6 +32,7 @@ public partial class ProjectEditor : ComponentBase, IDisposable
     private ProjectEditorModel _savedEditor = new() { Id = string.Empty };
     private readonly CancellationTokenSource _metadataLifetime = new();
     private bool _disposed;
+    private bool _loadingMatrixMetadata;
 
     private ApiKeyAccessEditorModel? SelectedKey => _editor.ApiKeys.FirstOrDefault(k => k.Id == _selectedKeyId);
     private McpGrantEditorModel? SelectedServer => SelectedKey?.Servers.FirstOrDefault(s => s.Id == _selectedServerId);
@@ -54,8 +55,28 @@ public partial class ProjectEditor : ComponentBase, IDisposable
         key.Servers.Any(s => s.Id == _selectedServerId && s.Granted && s.CatalogEnabled && s.Tools.Any(t => t.Name == name && t.Enabled));
 
     private static string GrantSummary(ApiKeyAccessEditorModel key, McpGrantEditorModel grant) =>
-        !key.HasProjectAccess || !grant.Granted || !grant.CatalogEnabled ? AdminUx.Text("NoAccess") :
+        !HasGrantAccess(key, grant) ? AdminUx.Text("NoAccess") :
             AdminUx.Format("MatrixTools", grant.Tools.Count(t => t.Enabled), grant.Tools.Count);
+
+    private static bool HasGrantAccess(ApiKeyAccessEditorModel key, McpGrantEditorModel grant) =>
+        key.HasProjectAccess && grant.Granted && grant.CatalogEnabled;
+
+    private static string MatrixRiskStatus(McpGrantEditorModel grant) => AdminUx.Text(
+        grant.MetadataLoading ? "MatrixRiskLoading" : grant.MetadataError is not null ? "MatrixRiskUnavailable" : "MatrixRiskUnchecked");
+
+    private static bool HasRiskCounts(McpGrantEditorModel grant) =>
+        (!grant.MetadataLoading && grant.MetadataError is null && grant.MetadataLoaded) || !grant.Tools.Any(tool => tool.Enabled);
+
+    private static string MatrixCellLabel(ApiKeyAccessEditorModel key, McpGrantEditorModel grant)
+    {
+        var label = $"{key.Name} / {grant.Name}: {GrantSummary(key, grant)}";
+        if (!HasGrantAccess(key, grant)) { return label; }
+        if (!HasRiskCounts(grant)) { return $"{label}; {MatrixRiskStatus(grant)}"; }
+        label += $"; {AdminUx.Format("MatrixDestructiveTools", grant.AllowedDestructiveToolCount)}";
+        return grant.AllowedUnknownRiskToolCount > 0
+            ? $"{label}; {AdminUx.Format("MatrixUnknownTools", grant.AllowedUnknownRiskToolCount)}"
+            : label;
+    }
 
     private void SelectKey(string id)
     {
@@ -209,12 +230,25 @@ public partial class ProjectEditor : ComponentBase, IDisposable
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!_disposed && SelectedServer is { CatalogEnabled: true, MetadataLoading: false, MetadataAttemptedAt: null } server)
+        if (_disposed || _loadingMatrixMetadata) { return; }
+        _loadingMatrixMetadata = true;
+        try
         {
-            await DiscoverToolDetailsAsync(server.Id);
-            if (!_disposed) { StateHasChanged(); }
+            while (!_disposed && NextMetadataServer() is { } server)
+            {
+                await DiscoverToolDetailsAsync(server.Id);
+                if (!_disposed) { StateHasChanged(); }
+            }
         }
+        finally { _loadingMatrixMetadata = false; }
     }
+
+    private McpGrantEditorModel? NextMetadataServer() =>
+        SelectedServer is { CatalogEnabled: true, MetadataLoading: false, MetadataAttemptedAt: null } selected
+            ? selected
+            : _editor.ApiKeys.Where(key => key.HasProjectAccess).SelectMany(key => key.Servers)
+                .FirstOrDefault(server => server is { CatalogEnabled: true, Granted: true, MetadataLoading: false, MetadataAttemptedAt: null } &&
+                    server.Tools.Any(tool => tool.Enabled));
 
     public void Dispose()
     {
@@ -275,6 +309,7 @@ public partial class ProjectEditor : ComponentBase, IDisposable
             grant.MetadataError = null;
             grant.MetadataAttemptedAt = DateTimeOffset.Now;
         }
+        if (!_disposed) { StateHasChanged(); }
 
         try
         {

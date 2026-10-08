@@ -49,7 +49,23 @@
                         {
                             <tr class="@(key.Id == _selectedKeyId ? "selected-key" : null)">
                                 <th scope="row"><button type="button" class="matrix-key" @onclick="() => SelectKey(key.Id)"><strong>@key.Name</strong><small>@key.Id</small><small>@(key.HasProjectAccess ? AdminUx.Text("Allowed") : AdminUx.Text("NoAccess"))</small></button></th>
-                                @foreach (var grant in key.Servers) { <td><button type="button" class="matrix-cell @(key.Id == _selectedKeyId && grant.Id == _selectedServerId ? "selected-cell" : null)" aria-label="@($"{key.Name} / {grant.Name}")" @onclick="() => SelectGrant(key.Id, grant.Id)">@GrantSummary(key, grant)</button></td> }
+                                @foreach (var grant in key.Servers)
+                                {
+                                    <td><button type="button" class="matrix-cell @(key.Id == _selectedKeyId && grant.Id == _selectedServerId ? "selected-cell" : null)" aria-label="@MatrixCellLabel(key, grant)" @onclick="() => SelectGrant(key.Id, grant.Id)">
+                                        <span>@GrantSummary(key, grant)</span>
+                                        @if (HasGrantAccess(key, grant))
+                                        {
+                                            @if (HasRiskCounts(grant))
+                                            {
+                                                <span class="matrix-risk-counts" title="@AdminUx.Text("MatrixRiskExplanation")">
+                                                    <span class="risk-badge @(grant.AllowedDestructiveToolCount > 0 ? "risk-destructive" : "risk-unknown")">@if (grant.AllowedDestructiveToolCount > 0) { <span aria-hidden="true">⚠</span> }@AdminUx.Format("MatrixDestructiveTools", grant.AllowedDestructiveToolCount)</span>
+                                                    @if (grant.AllowedUnknownRiskToolCount > 0) { <span class="risk-badge risk-unknown">@AdminUx.Format("MatrixUnknownTools", grant.AllowedUnknownRiskToolCount)</span> }
+                                                </span>
+                                            }
+                                            else { <span class="matrix-risk-status">@MatrixRiskStatus(grant)</span> }
+                                        }
+                                    </button></td>
+                                }
                             </tr>
                         }
                         </tbody>
