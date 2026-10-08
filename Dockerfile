@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-ARG CODEX_VERSION=0.148.0
+ARG CODEX_VERSION=latest
 ARG DOCKER_CLI_IMAGE=docker:28.3.3-cli
 
 FROM ${DOCKER_CLI_IMAGE} AS docker-cli
@@ -118,7 +118,7 @@ ENV ASPNETCORE_URLS=http://+:8080 \
     Codex__ExecutablePath=codex \
     Codex__HomePath=/app/.codex-home \
     Codex__Container__EngineExecutablePath=docker \
-    Codex__Container__Image=codex-gateway-runner:0.148.0
+    Codex__Container__Image=codex-gateway-runner:latest
 
 VOLUME ["/app/data", "/app/.codex-home"]
 EXPOSE 8080

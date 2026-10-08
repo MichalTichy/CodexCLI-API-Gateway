@@ -61,7 +61,7 @@ try {
 		throw "Codex home '$CodexHomePath' does not contain auth.json. Complete Codex device login before running this paid live test."
 	}
 
-	& docker image inspect codex-gateway-runner:0.148.0 | Out-Null
+	& docker image inspect codex-gateway-runner:latest | Out-Null
 	Assert-NativeSuccess 'Runner image lookup'
 
 	New-Item -ItemType Directory -Path $dataPath -Force | Out-Null

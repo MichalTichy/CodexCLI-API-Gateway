@@ -79,7 +79,7 @@ public sealed class ContainerIsolationTests
             AssertOption(run.Arguments, "--workdir", "/workspace");
 
             var imageIndex = Array.IndexOf(run.Arguments, "codex-gateway-runner:e2e");
-            Assert.True(imageIndex >= 0, "The configured, pinned runner image must be used.");
+            Assert.True(imageIndex >= 0, "The configured, configured runner image must be used.");
             var innerArguments = run.Arguments[(imageIndex + 1)..];
             Assert.Equal("exec", innerArguments[0]);
             var joinedInnerArguments = string.Join('\0', innerArguments);

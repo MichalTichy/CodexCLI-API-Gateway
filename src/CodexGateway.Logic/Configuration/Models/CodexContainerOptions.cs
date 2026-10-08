@@ -17,7 +17,7 @@ public sealed class CodexContainerOptions
 
     /// <summary>Container image used for every Codex agent run. The image must already be available to the engine.</summary>
     [Required]
-    public string Image { get; set; } = "codex-gateway-runner:0.148.0";
+    public string Image { get; set; } = "codex-gateway-runner:latest";
 
     /// <summary>
     /// Optional existing container volume containing <see cref="GatewayOptions.StoragePath"/>.

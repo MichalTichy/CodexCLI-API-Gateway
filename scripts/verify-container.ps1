@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string] $GatewayImage = 'codex-gateway:verify',
-    [string] $RunnerImage = 'codex-gateway-runner:0.148.0',
+    [string] $RunnerImage = 'codex-gateway-runner:latest',
     [switch] $SkipBuild
 )
 
@@ -15,6 +15,8 @@ $runnerContainer = "codex-gateway-runner-smoke-$verificationId"
 $discoveryContainer = "codex-gateway-discovery-smoke-$verificationId"
 $dataVolume = "codex-gateway-data-smoke-$verificationId"
 $authVolume = "codex-gateway-auth-smoke-$verificationId"
+$databaseContainer = "codex-gateway-db-smoke-$verificationId"
+$verificationNetwork = "codex-gateway-smoke-$verificationId"
 $locationPushed = $false
 
 function Assert-NativeSuccess([string] $Step) {
@@ -91,6 +93,14 @@ function Test-McpDiscoveryProtocol([string] $Image, [string] $ContainerName) {
         $process.StandardInput.Flush()
         $catalog = Read-AppServerResponse $process 2
         Assert-True ($null -ne $catalog.result.data) 'MCP discovery response did not contain data.'
+        $process.StandardInput.WriteLine('{"method":"model/list","id":3,"params":{"limit":100,"includeHidden":false}}')
+        $process.StandardInput.Flush()
+        $models = Read-AppServerResponse $process 3
+        Assert-True ($models.result.data.Count -gt 0) 'Model discovery response did not contain models.'
+        foreach ($model in $models.result.data) {
+            Assert-True (-not [string]::IsNullOrWhiteSpace($model.model)) 'Model discovery omitted a model ID.'
+            Assert-True ($model.supportedReasoningEfforts.reasoningEffort -contains $model.defaultReasoningEffort) 'Model discovery returned an invalid default reasoning effort.'
+        }
         $process.StandardInput.Close()
         Assert-True ($process.WaitForExit(5000)) 'Codex App Server discovery smoke did not stop after stdin closed.'
         Assert-True ($process.ExitCode -eq 0) "Codex App Server discovery smoke failed: $($stderr.Result)"
@@ -111,14 +121,15 @@ try {
     $locationPushed = $true
 
     if (-not $SkipBuild) {
-        & docker build --target runner --tag $RunnerImage .
+        $codexVersion = (Invoke-RestMethod 'https://registry.npmjs.org/@openai%2fcodex/latest').version
+        & docker build --pull --target runner --tag $RunnerImage --build-arg "CODEX_VERSION=$codexVersion" .
         Assert-NativeSuccess 'Runner image build'
-        & docker build --target gateway --tag $GatewayImage .
+        & docker build --pull --target gateway --tag $GatewayImage --build-arg "CODEX_VERSION=$codexVersion" .
         Assert-NativeSuccess 'Gateway image build'
     }
 
     & docker run --rm --entrypoint codex $RunnerImage --version
-    Assert-NativeSuccess 'Pinned runner Codex CLI check'
+    Assert-NativeSuccess 'Runner Codex CLI check'
     & docker run --rm --entrypoint bwrap $RunnerImage --version
     Assert-NativeSuccess 'Runner Bubblewrap check'
     & docker run --rm --entrypoint codex $GatewayImage --version
@@ -253,13 +264,29 @@ cat artifacts/smoke.txt
     & docker volume create $authVolume | Out-Null
     Assert-NativeSuccess 'Gateway auth volume create'
 
+    & docker network create $verificationNetwork | Out-Null
+    Assert-NativeSuccess 'Verification network create'
+    & docker run -d --name $databaseContainer --network $verificationNetwork `
+        -e POSTGRES_USER=gateway -e POSTGRES_PASSWORD=smoke-password -e POSTGRES_DB=gateway `
+        postgres:18.1-alpine | Out-Null
+    Assert-NativeSuccess 'Verification database start'
+    $databaseReady = $false
+    for ($attempt = 0; $attempt -lt 40; $attempt++) {
+        & docker exec $databaseContainer pg_isready -U gateway -d gateway 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0) { $databaseReady = $true; break }
+        Start-Sleep -Milliseconds 500
+    }
+    Assert-True $databaseReady 'Verification database did not become ready.'
+
     $startedGateway = & docker run -d `
         --name $gatewayContainer `
+        --network $verificationNetwork `
         --group-add 0 `
         --security-opt no-new-privileges `
         -p '127.0.0.1::8080' `
         -e AdminUi__Username=container-smoke-admin `
         -e AdminUi__Password=container-smoke-password `
+        -e "ConnectionStrings__Gateway=Host=$databaseContainer;Database=gateway;Username=gateway;Password=smoke-password" `
         -e Codex__Container__Image=$RunnerImage `
         -e Codex__Container__WorkspaceVolume=$dataVolume `
         -e Codex__Container__AuthVolume=$authVolume `
@@ -323,7 +350,8 @@ cat artifacts/smoke.txt
     Write-Output 'Runner image, hardened container contract, inner filesystem/network sandbox, gateway health/UI/auth, Docker access, and cleanup checks passed.'
 }
 finally {
-    & docker rm --force $runnerContainer $gatewayContainer $discoveryContainer 2>$null | Out-Null
+    & docker rm --force $runnerContainer $gatewayContainer $discoveryContainer $databaseContainer 2>$null | Out-Null
+    & docker network rm $verificationNetwork 2>$null | Out-Null
     & docker volume rm --force $dataVolume $authVolume 2>$null | Out-Null
 
     if ($locationPushed) {

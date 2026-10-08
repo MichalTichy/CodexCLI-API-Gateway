@@ -365,7 +365,7 @@ public sealed class ContainerCommandBuilderTests
     }
 
     [Fact]
-    public void Model_discovery_uses_the_pinned_runner_shared_auth_and_no_application_secrets()
+    public void Model_discovery_uses_the_configured_runner_shared_auth_and_no_application_secrets()
     {
         var storageRoot = Path.GetFullPath(Path.Combine("test-data", "gateway-data"));
         var workspaceRoot = Path.Combine(storageRoot, "runs", "run_models");

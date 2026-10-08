@@ -75,11 +75,11 @@ flowchart LR
     Control["Admin UI"] --> Projects["Projects + API-key grants + trusted MCP catalog"]
     Control --> DeviceAuth["codex login --device-auth<br/>host CLI process"]
     DeviceAuth -->|"writes credentials"| Auth
-    Auth -->|"model/list in pinned runner"| Models["Account models + reasoning levels"]
+    Auth -->|"model/list in configured runner"| Models["Account models + reasoning levels"]
     Models --> API
 ```
 
-Every request starts exactly one sibling container from the pinned `codex-gateway-runner:0.148.0` image unless its project selects a trusted runner-image override in the admin UI. A project run first copies persistent artifacts into a private run snapshot. Only that snapshot is mounted at `/workspace`; the live project artifact directory is never mounted. A successful run is checked and atomically committed, while failed, cancelled, and timed-out runs are discarded.
+Every request starts exactly one sibling container from the configured `codex-gateway-runner:latest` image unless its project selects a trusted runner-image override in the admin UI. A project run first copies persistent artifacts into a private run snapshot. Only that snapshot is mounted at `/workspace`; the live project artifact directory is never mounted. A successful run is checked and atomically committed, while failed, cancelled, and timed-out runs are discarded.
 
 The outer container has a read-only root filesystem, no Linux capabilities, CPU/memory/PID limits, a bounded tmpfs, a non-root UID, Docker init for descendant reaping, and two labelled mounts. The inner Bubblewrap sandbox gives model-generated commands a private PID view, so `/proc/1/root` cannot be used to reach the outer auth mount.
 
@@ -98,13 +98,15 @@ This is strong workspace/process isolation for a trusted internal tool, not a ho
 - [.NET SDK 10.0.301 or newer 10.0 feature band](https://dotnet.microsoft.com/download)
 - A current Docker Engine and CLI with `--mount volume-subpath` support (named-volume deployments require it)
 - PostgreSQL 18 (started automatically by Aspire or Compose)
-- Codex CLI `0.148.0` on the gateway host; it is used only for UI-triggered device login, login status, and logout, never for model execution
+- The latest stable Codex CLI on the gateway host; it is used only for UI-triggered device login, login status, and logout, never for model execution
 - Node.js 20 or newer only when changing the administration UI styles; the compiled stylesheet is committed for normal .NET and Docker builds
 
 The gateway uses one dedicated `CODEX_HOME`; do not point it at a developer's normal Codex directory.
 Run the gateway as a non-root user so run and auth directories retain the runner UID/GID. The gateway fails startup as root instead of silently creating storage that its non-root runner cannot use. Compose already configures an explicitly non-root gateway user.
 
-The restricted split-filesystem profile requires Codex CLI `0.138` or newer; both shipped images pin `0.148.0`. The runner is Linux-only and uses Bubblewrap inside Docker. Its outer container deliberately sets `seccomp=unconfined` because Docker's default profile blocks Bubblewrap's unprivileged user namespace; the inner permission profile still restricts filesystem reads/writes and command networking.
+The restricted split-filesystem profile requires Codex CLI `0.138` or newer; both shipped images use the latest stable CLI at release time. The runner is Linux-only and uses Bubblewrap inside Docker. Its outer container deliberately sets `seccomp=unconfined` because Docker's default profile blocks Bubblewrap's unprivileged user namespace; the inner permission profile still restricts filesystem reads/writes and command networking.
+
+Use `./scripts/build-images.ps1` to build and verify both images. It resolves npm's stable `latest` version once for each release and passes it to both Docker builds, preventing a cached `@latest` installation from silently remaining outdated. To publish, pass `-GatewayImage registry.tichymichal.net/codex-gateway:latest -RunnerImage registry.tichymichal.net/codex-gateway-runner:latest -Push`. Running containers do not self-update: pull the newly published images and redeploy. For manual or Compose builds, pass the current version as `CODEX_VERSION`, or disable the Docker build cache when using the default `latest` argument.
 
 ## Quick start with Aspire
 
@@ -128,7 +130,7 @@ dotnet aspire run --project src/CodexGateway.AppHost/CodexGateway.AppHost.csproj
 You can also build the mandatory runner and run the API directly:
 
 ```powershell
-docker build --target runner -t codex-gateway-runner:0.148.0 .
+docker build --target runner -t codex-gateway-runner:latest .
 $env:ConnectionStrings__Gateway = 'Host=localhost;Port=5432;Database=codex_gateway;Username=postgres;Password=postgres'
 dotnet run --project src/CodexGateway.App/CodexGateway.App.csproj --urls http://localhost:5050
 ```
@@ -150,7 +152,7 @@ $env:GATEWAY_DB_PASSWORD = 'a-different-database-password'
 docker compose up --build
 ```
 
-The API is at `http://localhost:5050`; the UI is at `http://localhost:5050/admin`. Compose runs PostgreSQL and the gateway, and builds both Dockerfile targets. Its `runner-image` helper exits after ensuring `codex-gateway-runner:0.148.0` exists. The Gateway image starts through its framework-dependent native app host instead of executing `/usr/bin/dotnet`, which keeps the control plane compatible with hosts that restrict that executable path. The fixed database, data, and auth volumes survive container replacement. If a reverse proxy is placed in front of the gateway, enable WebSocket forwarding for the Blazor circuit.
+The API is at `http://localhost:5050`; the UI is at `http://localhost:5050/admin`. Compose runs PostgreSQL and the gateway, and builds both Dockerfile targets. Its `runner-image` helper exits after ensuring `codex-gateway-runner:latest` exists. The Gateway image starts through its framework-dependent native app host instead of executing `/usr/bin/dotnet`, which keeps the control plane compatible with hosts that restrict that executable path. The fixed database, data, and auth volumes survive container replacement. If a reverse proxy is placed in front of the gateway, enable WebSocket forwarding for the Blazor circuit.
 
 Compose keeps PostgreSQL on `codex-gateway-backend` and runner containers on `codex-gateway-runner`; only the gateway joins both networks. Separately deployed HTTP MCP servers can join the backend network so the gateway can reach them without exposing them directly to runner containers.
 
@@ -165,7 +167,7 @@ Each sibling runner—not the gateway—sets `seccomp=unconfined` so Bubblewrap 
 Build directly when Compose is not desired:
 
 ```powershell
-docker build --target runner -t codex-gateway-runner:0.148.0 .
+docker build --target runner -t codex-gateway-runner:latest .
 docker build --target gateway -t codex-gateway:latest .
 docker volume create codex-gateway-data
 docker volume create codex-gateway-auth
@@ -175,7 +177,7 @@ docker run --rm -p 5050:8080 `
   -e AdminUi__Username=admin `
   -e AdminUi__Password=a-different-admin-password `
   -e ConnectionStrings__Gateway='Host=database-host;Port=5432;Database=codex_gateway;Username=codex_gateway;Password=database-password' `
-  -e   Codex__Container__Image=codex-gateway-runner:0.148.0 `
+  -e   Codex__Container__Image=codex-gateway-runner:latest `
   -e Codex__Container__WorkspaceVolume=codex-gateway-data `
   -e Codex__Container__AuthVolume=codex-gateway-auth `
   -v codex-gateway-data:/app/data `
@@ -320,7 +322,7 @@ If `detail` is supplied, `full` is the only accepted value; repeated or differen
 }
 ```
 
-In the detailed view, `catalog_version` is an opaque deterministic hash of the normalized detailed catalog. Persist it with a plan and retrieve the catalog again before execution; a changed value means the plan should be revalidated. Server entries contain catalog `id` and display `name`, the live MCP implementation `version`, the key-specific grant's `required` flag, and any server-provided `title`, `description`, `website_url`, and `icons`. The pinned Codex App Server status surface does not provide [MCP initialization `instructions`](https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle#initialization), so the gateway cannot include that field.
+In the detailed view, `catalog_version` is an opaque deterministic hash of the normalized detailed catalog. Persist it with a plan and retrieve the catalog again before execution; a changed value means the plan should be revalidated. Server entries contain catalog `id` and display `name`, the live MCP implementation `version`, the key-specific grant's `required` flag, and any server-provided `title`, `description`, `website_url`, and `icons`. The Codex App Server status response used by the gateway does not provide [MCP initialization `instructions`](https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle#initialization), so the gateway cannot include that field.
 
 Each detailed tool has the stable qualified identity `server-id/tool-name` because names can collide across servers. It follows the official [MCP `Tool` definition](https://modelcontextprotocol.io/specification/2025-11-25/server/tools): `id`, `name`, and `input_schema` are always present, while `title`, `description`, `output_schema`, `annotations`, `icons`, and `_meta` are included when the server supplies them. The input and output schemas, annotations, icons, and `_meta` values retain their complete JSON structures, including vendor extensions. Optional fields are omitted rather than returned as `null`.
 
@@ -483,7 +485,7 @@ All settings can be supplied through `appsettings.json` or normal ASP.NET Core e
 | `Codex:ModelCatalogRefreshSeconds` | `300` | How long a successful account-specific catalog is reused; the next model listing or generation request refreshes it after expiry, and a failed refresh does not serve stale permissions |
 | `Codex:Container:EngineExecutablePath` | `docker` | Docker-compatible client used to create/inspect/remove run containers |
 | `Codex:Container:EngineArgumentPrefix` | empty | Optional engine prefix, useful for a remote Docker context |
-| `Codex:Container:Image` | `codex-gateway-runner:0.148.0` | Mandatory runner image; customize this for packaged STDIO MCP binaries |
+| `Codex:Container:Image` | `codex-gateway-runner:latest` | Mandatory runner image; customize this for packaged STDIO MCP binaries |
 | `Codex:Container:WorkspaceVolume` | unset | Named gateway-data volume in containerized deployment; unset selects host bind mounts |
 | `Codex:Container:AuthVolume` | unset | Named auth volume in containerized deployment; unset selects the configured host auth path |
 | `Codex:Container:Network` | `bridge` | Outer runner network; it must reach `McpGateway:RunnerBaseUrl` for gateway-hosted MCP |
@@ -544,12 +546,12 @@ Build the production container as an additional packaging check:
 
 That repeatable smoke builds both image targets and verifies:
 
-- the pinned CLI, Bubblewrap, non-root runner, and gateway Docker client;
+- the current stable CLI, Bubblewrap, non-root runner, and gateway Docker client;
 - a real inner filesystem/network denial under Codex sandbox code;
 - the outer read-only filesystem, dropped capabilities, security settings, resource limits, labels, mounts, configured network, writable bounded tmpfs, and Bubblewrap PID-view denial of the outer auth mount;
 - gateway health, the admin page, API authentication, access to the Docker engine, cleanup, and absence of a stale verification-labelled container.
 
-It deliberately does not make a paid/live model request because a repeatable packaging check has no Codex credentials. Use `-SkipBuild -GatewayImage codex-gateway:verify -RunnerImage codex-gateway-runner:0.148.0` to retest existing images.
+It deliberately does not make a paid/live model request because a repeatable packaging check has no Codex credentials. Use `-SkipBuild -GatewayImage codex-gateway:verify -RunnerImage codex-gateway-runner:latest` to retest existing images.
 
 ## Component map
 
@@ -595,7 +597,7 @@ Dashboard reads use `IReadOnlyRepository<GatewayState>` with explicit specificat
 |---|---|---|
 | File storage | Resolves storage roots, isolates project and projectless files, creates private run snapshots, commits successful artifacts, enforces quotas, and removes expired temporary files. | Registration is in [`FileStorageInfrastructureInstaller.cs`](src/CodexGateway.Infrastructure.FileStorage/Composition/FileStorageInfrastructureInstaller.cs). Change paths in [`StoragePaths.cs`](src/CodexGateway.Infrastructure.FileStorage/Configuration/StoragePaths.cs), persistent projects in [`ProjectStorageManager.cs`](src/CodexGateway.Infrastructure.FileStorage/Projects/ProjectStorageManager.cs), uploaded files in [`FileStore.cs`](src/CodexGateway.Infrastructure.FileStorage/Files/FileStore.cs), run snapshots in [`WorkspaceManager.cs`](src/CodexGateway.Infrastructure.FileStorage/Workspaces/WorkspaceManager.cs), and quota enforcement in [`Artifacts`](src/CodexGateway.Infrastructure.FileStorage/Artifacts/). |
 | Codex authentication | Runs short-lived host CLI commands for `login --device-auth`, `login status`, and `logout`. Device login stays alive only while the code is pending and writes into the same Codex home mounted by run containers. | Change process lifecycle and URL/code parsing in [`HostCodexAuthenticationManager.cs`](src/CodexGateway.Infrastructure.Codex/Authentication/HostCodexAuthenticationManager.cs). Its application port is [`ICodexAuthenticationManager.cs`](src/CodexGateway.Logic/Codex/ICodexAuthenticationManager.cs); UI actions remain in [`UseCases/CodexAuthentication`](src/CodexGateway.Logic/UseCases/CodexAuthentication/). |
-| Codex model catalog | Asks Codex App Server inside the pinned runner image for every visible model and reasoning effort available to the authenticated account. It briefly caches successful results, refreshes them on demand after expiry, and invalidates them after login or logout. | Change discovery, pagination, validation, and cache behavior in [`CodexModelCatalog.cs`](src/CodexGateway.Infrastructure.Codex/Models/CodexModelCatalog.cs); container construction in [`ContainerCommandBuilder.cs`](src/CodexGateway.Infrastructure.Codex/Containers/ContainerCommandBuilder.cs); timeout and refresh settings in [`CodexOptions.cs`](src/CodexGateway.Logic/Configuration/Models/CodexOptions.cs); and application usage through [`ICodexModelCatalog.cs`](src/CodexGateway.Logic/Codex/ICodexModelCatalog.cs), [`ListModelsUseCase.cs`](src/CodexGateway.Logic/UseCases/ModelCatalog/ListModelsUseCase.cs), and [`GenerateAssistantResponseUseCase.cs`](src/CodexGateway.Logic/UseCases/Generation/GenerateAssistantResponseUseCase.cs). |
+| Codex model catalog | Asks Codex App Server inside the configured runner image for every visible model and reasoning effort available to the authenticated account. It briefly caches successful results, refreshes them on demand after expiry, and invalidates them after login or logout. | Change discovery, pagination, validation, and cache behavior in [`CodexModelCatalog.cs`](src/CodexGateway.Infrastructure.Codex/Models/CodexModelCatalog.cs); container construction in [`ContainerCommandBuilder.cs`](src/CodexGateway.Infrastructure.Codex/Containers/ContainerCommandBuilder.cs); timeout and refresh settings in [`CodexOptions.cs`](src/CodexGateway.Logic/Configuration/Models/CodexOptions.cs); and application usage through [`ICodexModelCatalog.cs`](src/CodexGateway.Logic/Codex/ICodexModelCatalog.cs), [`ListModelsUseCase.cs`](src/CodexGateway.Logic/UseCases/ModelCatalog/ListModelsUseCase.cs), and [`GenerateAssistantResponseUseCase.cs`](src/CodexGateway.Logic/UseCases/Generation/GenerateAssistantResponseUseCase.cs). |
 | Container execution | Builds hardened Docker arguments, starts one short-lived runner for each model call, filters its environment, consumes Codex JSONL events, cancels/removes containers, and reconciles stale containers at startup. The runner includes `extract-document-text` for safe text extraction from common document formats. There is no host execution fallback. | Start with [`ContainerCodexRunner.cs`](src/CodexGateway.Infrastructure.Codex/Containers/ContainerCodexRunner.cs). Change Docker arguments and mounts in [`ContainerCommandBuilder.cs`](src/CodexGateway.Infrastructure.Codex/Containers/ContainerCommandBuilder.cs), lifecycle calls in [`ContainerRuntime.cs`](src/CodexGateway.Infrastructure.Codex/Containers/ContainerRuntime.cs), environment policy in [`CodexProcessEnvironment.cs`](src/CodexGateway.Infrastructure.Codex/Containers/CodexProcessEnvironment.cs), document extraction in [`extract-document-text.py`](runner-tools/extract-document-text.py), and startup checks/reconciliation in [`ContainerRuntimePreflightInitializer.cs`](src/CodexGateway.Infrastructure.Codex/Containers/ContainerRuntimePreflightInitializer.cs). |
 | MCP metadata discovery | Connects to configured trusted servers to obtain live server descriptions, tool descriptions, schemas, annotations, and icons before filtering the catalog for a key/project grant. | Change discovery and metadata normalization in [`McpMetadataDiscoveryService.cs`](src/CodexGateway.Infrastructure.Codex/Mcp/McpMetadataDiscoveryService.cs). Change the returned application model in [`Logic/Tools/Models`](src/CodexGateway.Logic/Tools/Models/) and authorization/filtering in [`GetToolCatalogUseCase.cs`](src/CodexGateway.Logic/UseCases/Tools/GetToolCatalogUseCase.cs). |
 | MCP gateway core | Creates run-scoped sessions with opaque tokens, rejects tool calls outside the project/API-key grant, materializes explicitly marked `artifact://` binary resources into the temporary run workspace, selects an explicit transport factory, and removes completed or expired sessions. | Registration/options are in [`McpGatewayInstaller.cs`](src/CodexGateway.McpGateway/Composition/McpGatewayInstaller.cs) and [`GatewayMcpOptions.cs`](src/CodexGateway.McpGateway/Configuration/Models/GatewayMcpOptions.cs). Change session/token behavior in [`GatewayMcpSessionManager.cs`](src/CodexGateway.McpGateway/Sessions/GatewayMcpSessionManager.cs), file handling in [`McpRunFileMaterializer.cs`](src/CodexGateway.McpGateway/Files/McpRunFileMaterializer.cs), tool-call enforcement in [`GatewayMcpToolCallAuthorizer.cs`](src/CodexGateway.McpGateway/Sessions/GatewayMcpToolCallAuthorizer.cs), transport contracts in [`Transport`](src/CodexGateway.McpGateway/Transport/), and the internal runner-facing route in [`GatewayMcpEndpointExtensions.cs`](src/CodexGateway.App/Mcp/Endpoints/GatewayMcpEndpointExtensions.cs). |

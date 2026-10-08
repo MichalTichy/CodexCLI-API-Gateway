@@ -47,7 +47,7 @@ public sealed class CodexOptions
     public int McpDiscoveryTimeoutSeconds { get; set; } = 30;
 
     /// <summary>
-    /// Maximum time to wait while asking the pinned Codex runner for the models available to the authenticated account.
+    /// Maximum time to wait while asking the configured Codex runner for the models available to the authenticated account.
     /// On expiry, model listing and requests that need to refresh the catalog fail as temporarily unavailable.
     /// </summary>
     [Range(1, 300)]

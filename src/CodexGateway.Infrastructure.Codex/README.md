@@ -5,7 +5,7 @@ This project implements gateway-managed Codex authentication, account-specific m
 ## Main flow
 
 1. `Authentication/HostCodexAuthenticationManager.cs` runs the host CLI for device login, status, and logout against the configured Codex home.
-2. `Models/CodexModelCatalog.cs` asks Codex App Server in the pinned runner image for the authenticated account's visible models and supported reasoning efforts, then briefly caches the validated result.
+2. `Models/CodexModelCatalog.cs` asks Codex App Server in the configured runner image for the authenticated account's visible models and supported reasoning efforts, then briefly caches the validated result.
 3. `Containers/ContainerCodexRunner.cs` receives a protocol-neutral agent-run request, including the web-search mode resolved from the API key's project grant.
 4. `Containers/ContainerRuntime.cs` creates an isolated command with the workspace and that same Codex home mounted explicitly.
 5. The runner may inspect temporary MCP files with `extract-document-text`, which extracts text from PDF, DOCX, XLSX, PPTX, HTML, and plain-text documents without executing the source.
