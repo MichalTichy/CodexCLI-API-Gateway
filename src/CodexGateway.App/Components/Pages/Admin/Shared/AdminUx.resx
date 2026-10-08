@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+<resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+<resheader name="version"><value>2.0</value></resheader>
+<data name="Unknown" xml:space="preserve"><value>Risk unknown</value></data>
+<data name="ReadOnly" xml:space="preserve"><value>Read only</value></data>
+<data name="Write" xml:space="preserve"><value>Writes data</value></data>
+<data name="Destructive" xml:space="preserve"><value>Destructive</value></data>
+<data name="RiskSource" xml:space="preserve"><value>Based on MCP server annotations. Missing annotations mean the risk is unknown.</value></data>
+<data name="Discard" xml:space="preserve"><value>Discard changes</value></data>
+<data name="ReviewChanges" xml:space="preserve"><value>Review {0} pending changes</value></data>
+<data name="ExternalChanges" xml:space="preserve"><value>The saved configuration changed while you were editing. Your draft is preserved. Discard it to load the current configuration before saving.</value></data>
+<data name="ProjectSections" xml:space="preserve"><value>Project sections</value></data>
+<data name="Access" xml:space="preserve"><value>Access</value></data>
+<data name="Settings" xml:space="preserve"><value>Settings</value></data>
+<data name="Runner" xml:space="preserve"><value>Runner</value></data>
+<data name="AccessInstructions" xml:space="preserve"><value>Select an API key and server to review tools. Selecting a cell does not change permissions.</value></data>
+<data name="ProjectCounts" xml:space="preserve"><value>{0} keys · {1} unique servers · {2} tool grants</value></data>
+<data name="AccessMatrix" xml:space="preserve"><value>API key and MCP server access</value></data>
+<data name="Allowed" xml:space="preserve"><value>Allowed</value></data>
+<data name="NoAccess" xml:space="preserve"><value>No access</value></data>
+<data name="Blocked" xml:space="preserve"><value>Blocked</value></data>
+<data name="ProjectAccess" xml:space="preserve"><value>Allow project access</value></data>
+<data name="AllowServer" xml:space="preserve"><value>Allow {0} for this key</value></data>
+<data name="AllowedTools" xml:space="preserve"><value>{0} of {1} tools allowed</value></data>
+<data name="InactiveGrant" xml:space="preserve"><value>These tools cannot be called until project access and this server grant are enabled. Disabled catalog servers remain unavailable.</value></data>
+<data name="SearchTools" xml:space="preserve"><value>Search tools</value></data>
+<data name="SearchPlaceholder" xml:space="preserve"><value>Name or description</value></data>
+<data name="All" xml:space="preserve"><value>All</value></data>
+<data name="Risk" xml:space="preserve"><value>Risk</value></data>
+<data name="CompareWith" xml:space="preserve"><value>Compare with API key</value></data>
+<data name="None" xml:space="preserve"><value>None</value></data>
+<data name="DifferencesOnly" xml:space="preserve"><value>Only differences</value></data>
+<data name="ShownTools" xml:space="preserve"><value>Showing {0} of {1} tools</value></data>
+<data name="AllowShown" xml:space="preserve"><value>Allow {0} shown tools</value></data>
+<data name="BlockShown" xml:space="preserve"><value>Block {0} shown tools</value></data>
+<data name="Undo" xml:space="preserve"><value>Undo bulk change</value></data>
+<data name="DiscoveredAt" xml:space="preserve"><value>Metadata checked: {0}</value></data>
+<data name="MetadataNotLoaded" xml:space="preserve"><value>Discover tool details to load descriptions and risk annotations.</value></data>
+<data name="Details" xml:space="preserve"><value>Description and input schema</value></data>
+<data name="NoMatchingTools" xml:space="preserve"><value>No tools match these filters.</value></data>
+<data name="DiscardTitle" xml:space="preserve"><value>Discard unsaved changes?</value></data>
+<data name="DiscardDescription" xml:space="preserve"><value>This removes your draft and reloads the latest saved configuration.</value></data>
+<data name="NameChanged" xml:space="preserve"><value>Project name: {0} → {1}</value></data>
+<data name="RequestsChanged" xml:space="preserve"><value>Accept API requests → {0}</value></data>
+<data name="RunnerChanged" xml:space="preserve"><value>Runner image changed</value></data>
+<data name="KeyChanged" xml:space="preserve"><value>{0}: project access → {1}</value></data>
+<data name="ServerChanged" xml:space="preserve"><value>{0} / {1}: {2}; required → {3}</value></data>
+<data name="MatrixTools" xml:space="preserve"><value>{0} / {1} tools</value></data>
+<data name="ListProjectCounts" xml:space="preserve"><value>{0} keys · {1} unique servers</value></data>
+<data name="NewProject" xml:space="preserve"><value>Create project</value></data>
+<data name="NewServer" xml:space="preserve"><value>Add MCP server</value></data>
+<data name="NewKey" xml:space="preserve"><value>Create API key</value></data>
+<data name="SearchProjects" xml:space="preserve"><value>Search projects</value></data>
+<data name="SearchServers" xml:space="preserve"><value>Search MCP servers</value></data>
+<data name="Open" xml:space="preserve"><value>Open</value></data>
+<data name="BackProjects" xml:space="preserve"><value>All projects</value></data>
+<data name="ManageAccess" xml:space="preserve"><value>Manage access</value></data>
+<data name="DraftsKept" xml:space="preserve"><value>Unsaved drafts are kept when switching sections.</value></data>
+<data name="FilterTools" xml:space="preserve"><value>Filter discovered tools</value></data>
+<data name="Selected" xml:space="preserve"><value>Selected</value></data>
+<data name="NotSelected" xml:space="preserve"><value>Not selected</value></data>
+<data name="BackServers" xml:space="preserve"><value>All MCP servers</value></data>
+<data name="NoMatchingProjects" xml:space="preserve"><value>No projects match this search.</value></data>
+<data name="NoMatchingServers" xml:space="preserve"><value>No servers match this search.</value></data>
+</root>

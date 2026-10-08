@@ -3,8 +3,9 @@
 <article aria-busy="@_busy.ToString().ToLowerInvariant()">
     <NavigationLock ConfirmExternalNavigation="@IsDirty" />
     <EditForm Model="_editor" OnValidSubmit="SaveAsync" autocomplete="off">
-        <LumexCard Class="form-card">
-            <LumexCardHeader Class="responsive-row editor-toolbar">
+        <fieldset disabled="@_busy" class="editor-fields">
+        <LumexCard Class="form-card overflow-visible-card">
+            <LumexCardHeader Class="responsive-row detail-savebar">
                 <div>
                     <h3>@Server.Name</h3>
                     <div class="mt-2 flex flex-wrap gap-2">
@@ -17,16 +18,18 @@
                     <span class="mt-2 block font-mono text-xs text-foreground-400">@Server.Id</span>
                 </div>
                 <div class="flex flex-wrap justify-end gap-2">
-                    <LumexButton Type="@ButtonType.Submit" Color="@ThemeColor.Primary" Disabled="@(_busy || !IsDirty || (ConnectionSettingsChanged && !ConnectionVerified))">@(_busy ? "Saving…" : "Save server")</LumexButton>
+                    <LumexButton Type="@ButtonType.Button" Variant="@Variant.Light" Disabled="@(_busy || !IsDirty)" OnClick="AskDiscard">@AdminUx.Text("Discard")</LumexButton>
+                    <LumexButton Type="@ButtonType.Submit" Color="@ThemeColor.Primary" Disabled="@(_busy || !IsDirty || HasExternalChanges || (ConnectionSettingsChanged && !ConnectionVerified))">@(_busy ? "Saving…" : "Save server")</LumexButton>
                     <LumexButton Color="@ThemeColor.Danger" Variant="@Variant.Light" Disabled="@_busy" OnClick="ConfirmDelete">Delete</LumexButton>
                 </div>
             </LumexCardHeader>
             <LumexDivider />
             <LumexCardBody Class="gap-5">
                 <DataAnnotationsValidator />
+                @if (HasExternalChanges) { <p class="tool-metadata-note tool-metadata-warning" role="alert">@AdminUx.Text("ExternalChanges")</p> }
                 @if (IsDirty)
                 {
-                    <p class="unsaved-navigation-note" role="status">Unsaved changes are kept only on this page. Retest changed connection settings, then save before switching sections.</p>
+                    <p class="unsaved-navigation-note" role="status">@AdminUx.Text("DraftsKept") Retest changed connection settings before saving.</p>
                 }
                 <div class="form-grid-two">
                     <div>
@@ -85,19 +88,24 @@
                 </div>
                 @if (ConnectionVerified && _discoveredTools.Count > 0)
                 {
+                    <div class="tool-filters">
+                        <label>@AdminUx.Text("SearchTools")<input type="search" class="native-select" @bind="_toolSearch" @bind:event="oninput" /></label>
+                        <label>@AdminUx.Text("Risk")<select class="native-select" @bind="_toolRiskFilter"><option value="all">@AdminUx.Text("All")</option>@foreach (var risk in Enum.GetValues<ToolRisk>()) { <option value="@risk.ToString()">@ToolRiskPresentation.Label(risk)</option> }</select></label>
+                        <label>@AdminUx.Text("Access")<select class="native-select" @bind="_toolSelectionFilter"><option value="all">@AdminUx.Text("All")</option><option value="selected">@AdminUx.Text("Selected")</option><option value="blocked">@AdminUx.Text("NotSelected")</option></select></label>
+                    </div>
                     <div class="discovered-tools-toolbar">
                         <span><strong>Discovered tools</strong><small>@SelectedDiscoveredToolCount of @_discoveredTools.Count selected</small></span>
                         <div class="bulk-actions" role="group" aria-label="Discovered tool bulk actions">
-                            <button type="button" @onclick="() => SetAllDiscoveredTools(true)">Select all</button>
-                            <button type="button" @onclick="() => SetAllDiscoveredTools(false)">Clear all</button>
+                            <button type="button" @onclick="() => SetAllDiscoveredTools(true)">@AdminUx.Format("AllowShown", FilteredDiscoveredTools.Count)</button>
+                            <button type="button" @onclick="() => SetAllDiscoveredTools(false)">@AdminUx.Format("BlockShown", FilteredDiscoveredTools.Count)</button><button type="button" disabled="@(_undoAllowlist is null)" @onclick="UndoDiscoveredToolChanges">@AdminUx.Text("Undo")</button>
                         </div>
                     </div>
                     <div class="discovered-tool-list" aria-label="Discovered MCP tools">
-                        @foreach (var tool in _discoveredTools)
+                        @foreach (var tool in FilteredDiscoveredTools)
                         {
-                            <label class="discovered-tool" for="@($"{Server.Id}-tool-{tool.Name}")">
+                            <label class="discovered-tool @ToolRiskPresentation.CssClass(ToolRiskPresentation.Classify(tool.Annotations))" for="@($"{Server.Id}-tool-{tool.Name}")">
                                 <input id="@($"{Server.Id}-tool-{tool.Name}")" type="checkbox" checked="@IsToolSelected(tool.Name)" @onchange="args => ToggleDiscoveredTool(tool.Name, args)" />
-                                <span><code>@tool.Name</code><small>@(string.IsNullOrWhiteSpace(tool.Description) ? "This MCP server did not provide a description." : tool.Description)</small><details class="tool-schema"><summary>Input schema</summary><pre>@FormatJson(tool.InputSchema)</pre></details></span>
+                                <span><code>@tool.Name</code><ToolRiskBadge Annotations="tool.Annotations" /><small>@(string.IsNullOrWhiteSpace(tool.Description) ? "This MCP server did not provide a description." : tool.Description)</small><details class="tool-schema"><summary>Input schema</summary><pre>@FormatJson(tool.InputSchema)</pre></details></span>
                             </label>
                         }
                     </div>
@@ -109,8 +117,12 @@
                 }
             </LumexCardBody>
         </LumexCard>
+        </fieldset>
     </EditForm>
 
+    <LumexModal @bind-Open="_confirmDiscard">
+        <LumexModalContent><LumexModalHeader>@AdminUx.Text("DiscardTitle")</LumexModalHeader><LumexModalBody>@AdminUx.Text("DiscardDescription")</LumexModalBody><LumexModalFooter><LumexButton Variant="@Variant.Light" OnClick="CancelDiscard">Cancel</LumexButton><LumexButton Color="@ThemeColor.Warning" OnClick="DiscardChanges">@AdminUx.Text("Discard")</LumexButton></LumexModalFooter></LumexModalContent>
+    </LumexModal>
     <LumexModal @bind-Open="_confirmDelete">
         <LumexModalContent>
             <LumexModalHeader>Delete MCP server @Server.Name?</LumexModalHeader>

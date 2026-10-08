@@ -7,9 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Marten" Version="9.3.5" />
+    <PackageReference Include="Marten" Version="9.13.0" />
     <PackageReference Include="Marten.Analyzers" Version="1.5.0" />
-    <PackageReference Include="Marten.Newtonsoft" Version="9.3.5" />
+    <PackageReference Include="Marten.Newtonsoft" Version="9.13.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.1" />
     <PackageReference Include="Npgsql" Version="10.0.2" />
     <PackageReference Include="Npgsql.DependencyInjection" Version="10.0.2" />

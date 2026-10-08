@@ -11,6 +11,7 @@
         </div>
     </div>
 
+    <details class="creation-panel"><summary>@AdminUx.Text("NewServer")</summary>
     <EditForm Model="_create" OnValidSubmit="CreateAsync" autocomplete="off">
         <LumexCard Class="form-card">
             <LumexCardHeader Class="flex-col items-start gap-1">
@@ -149,20 +150,25 @@
                 }
                 @if (ConnectionVerified && _discoveredTools.Count > 0)
                 {
+                    <div class="tool-filters">
+                        <label>@AdminUx.Text("SearchTools")<input type="search" class="native-select" @bind="_toolSearch" @bind:event="oninput" /></label>
+                        <label>@AdminUx.Text("Risk")<select class="native-select" @bind="_toolRiskFilter"><option value="all">@AdminUx.Text("All")</option>@foreach (var risk in Enum.GetValues<ToolRisk>()) { <option value="@risk.ToString()">@ToolRiskPresentation.Label(risk)</option> }</select></label>
+                        <label>@AdminUx.Text("Access")<select class="native-select" @bind="_toolSelectionFilter"><option value="all">@AdminUx.Text("All")</option><option value="selected">@AdminUx.Text("Selected")</option><option value="blocked">@AdminUx.Text("NotSelected")</option></select></label>
+                    </div>
                     <div class="discovered-tools-toolbar">
                         <span><strong>Discovered tools</strong><small>@SelectedDiscoveredToolCount of @_discoveredTools.Count selected</small></span>
                         <div class="bulk-actions" role="group" aria-label="Discovered tool bulk actions">
-                            <button type="button" @onclick="() => SetAllDiscoveredTools(true)">Select all</button>
-                            <button type="button" @onclick="() => SetAllDiscoveredTools(false)">Clear all</button>
+                            <button type="button" @onclick="() => SetAllDiscoveredTools(true)">@AdminUx.Format("AllowShown", FilteredDiscoveredTools.Count)</button>
+                            <button type="button" @onclick="() => SetAllDiscoveredTools(false)">@AdminUx.Format("BlockShown", FilteredDiscoveredTools.Count)</button><button type="button" disabled="@(_undoAllowlist is null)" @onclick="UndoDiscoveredToolChanges">@AdminUx.Text("Undo")</button>
                         </div>
                     </div>
                     <div class="discovered-tool-list" aria-label="Discovered MCP tools">
-                        @foreach (var tool in _discoveredTools)
+                        @foreach (var tool in FilteredDiscoveredTools)
                         {
-                            <label class="discovered-tool" for="@($"new-tool-{tool.Name}")">
+                            <label class="discovered-tool @ToolRiskPresentation.CssClass(ToolRiskPresentation.Classify(tool.Annotations))" for="@($"new-tool-{tool.Name}")">
                                 <input id="@($"new-tool-{tool.Name}")" type="checkbox" checked="@IsToolSelected(tool.Name)" @onchange="args => ToggleDiscoveredTool(tool.Name, args)" />
                                 <span>
-                                    <code>@tool.Name</code>
+                                    <code>@tool.Name</code><ToolRiskBadge Annotations="tool.Annotations" />
                                     <small>@(string.IsNullOrWhiteSpace(tool.Description) ? "This MCP server did not provide a description." : tool.Description)</small>
                                     <details class="tool-schema"><summary>Input schema</summary><pre>@FormatJson(tool.InputSchema)</pre></details>
                                 </span>
@@ -181,18 +187,21 @@
             </LumexCardBody>
         </LumexCard>
     </EditForm>
+    </details>
 
-    @if (Servers.Count == 0)
+    <label class="list-search">@AdminUx.Text("SearchServers")<input type="search" class="native-select" @bind="_serverSearch" @bind:event="oninput" /></label>
+    <div class="management-list">
+        @foreach (var server in FilteredServers)
+        {
+            <button type="button" class="management-row @(server.Id == _selectedServerId ? "selected-row" : null)" @onclick="() => OpenServer(server.Id)">
+                <span><strong>@server.Name</strong><small>@server.Id · @(server is HttpMcpServerDefinition ? "HTTP" : "STDIO") · @server.ExecutionMode · @(server.AvailableTools?.Count ?? 0) tools</small></span>
+                <span>@(server.Enabled ? "Enabled" : "Disabled") →</span>
+            </button>
+        }
+        @if (!FilteredServers.Any()) { <p class="empty-state">@AdminUx.Text("NoMatchingServers")</p> }
+    </div>
+    @foreach (var server in Servers.Where(s => _openedServers.Contains(s.Id)))
     {
-        <div class="empty-state">No trusted MCP servers have been added.</div>
-    }
-    else
-    {
-        <div class="grid gap-4">
-            @foreach (var server in Servers)
-            {
-                <McpServerEditor Server="server" OnChanged="OnChanged" @key="server.Id" />
-            }
-        </div>
+        <div hidden="@(server.Id != _selectedServerId)" @key="server.Id"><McpServerEditor Server="server" OnChanged="OnChanged" /></div>
     }
 </section>

@@ -15,6 +15,16 @@ namespace CodexGateway.App.Components.Pages.Admin.Dashboard;
 public partial class AdminDashboard : AdminComponentBase
 {
     private AdminSection _selectedSection;
+    private readonly HashSet<AdminSection> _visitedSections = [];
+    private string? _requestedApiKeyId;
+    private int _accessRequestVersion;
+
+    private Task ManageKeyAccessAsync(string keyId)
+    {
+        _requestedApiKeyId = keyId;
+        _accessRequestVersion++;
+        return SelectSectionAsync(AdminSection.Projects);
+    }
     private IReadOnlyList<ProjectDefinition> _projects = [];
     private IReadOnlyList<McpServerDefinition> _servers = [];
     private IReadOnlyList<ApiKeyIdentity> _apiKeys = [];
@@ -331,6 +341,7 @@ public partial class AdminDashboard : AdminComponentBase
     private Task SelectSectionAsync(AdminSection section)
     {
         _selectedSection = section;
+        _visitedSections.Add(section);
         _mobileMenuOpen = false;
         DismissStatus();
         _focusPageTitle = true;

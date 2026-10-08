@@ -24,11 +24,40 @@ public partial class McpCatalogSection : AdminComponentBase
     private string _testStatusKind = string.Empty;
     private bool _testValidationAttempted;
     private string? _focusInvalidFieldId;
+    private string? _selectedServerId;
+    private string _serverSearch = string.Empty;
+    private readonly HashSet<string> _openedServers = [];
+
+    private IEnumerable<McpServerDefinition> FilteredServers => Servers.Where(server =>
+        string.IsNullOrWhiteSpace(_serverSearch) || server.Name.Contains(_serverSearch, StringComparison.OrdinalIgnoreCase) ||
+        server.Id.Contains(_serverSearch, StringComparison.OrdinalIgnoreCase));
+
+    private void OpenServer(string id)
+    {
+        _selectedServerId = id;
+        _openedServers.Add(id);
+    }
 
     private bool ConnectionVerified => string.Equals(
         _testedConnectionFingerprint,
         ConnectionFingerprint(_create),
         StringComparison.Ordinal);
+
+    private string _toolSearch = string.Empty;
+    private string _toolRiskFilter = "all";
+    private string _toolSelectionFilter = "all";
+    private string? _undoAllowlist;
+
+    private IReadOnlyList<McpToolMetadata> FilteredDiscoveredTools => _discoveredTools.Where(tool =>
+        (string.IsNullOrWhiteSpace(_toolSearch) || tool.Name.Contains(_toolSearch, StringComparison.OrdinalIgnoreCase) ||
+            tool.Description?.Contains(_toolSearch, StringComparison.OrdinalIgnoreCase) == true) &&
+        (_toolRiskFilter == "all" || ToolRiskPresentation.Classify(tool.Annotations).ToString() == _toolRiskFilter) &&
+        (_toolSelectionFilter == "all" || IsToolSelected(tool.Name) == (_toolSelectionFilter == "selected"))).ToArray();
+
+    private void UndoDiscoveredToolChanges()
+    {
+        if (_undoAllowlist is not null) { _create.AvailableTools = _undoAllowlist; _undoAllowlist = null; }
+    }
 
     private int SelectedDiscoveredToolCount => _discoveredTools.Count(tool => IsToolSelected(tool.Name));
 
@@ -155,6 +184,7 @@ public partial class McpCatalogSection : AdminComponentBase
                     ExecutionMode = McpExecutionMode.Gateway
                 };
                 _discoveredTools = [];
+                _undoAllowlist = null;
                 _testedConnectionFingerprint = null;
                 _testStatus = string.Empty;
                 await OnChanged.InvokeAsync($"Trusted MCP server {createdId} added.");
@@ -224,10 +254,16 @@ public partial class McpCatalogSection : AdminComponentBase
     private bool IsToolSelected(string toolName) =>
         AdminText.Lines(_create.AvailableTools).Contains(toolName, StringComparer.Ordinal);
 
-    private void SetAllDiscoveredTools(bool selected) =>
-        _create.AvailableTools = selected
-            ? string.Join(Environment.NewLine, _discoveredTools.Select(tool => tool.Name).OrderBy(name => name, StringComparer.Ordinal))
-            : string.Empty;
+    private void SetAllDiscoveredTools(bool selected)
+    {
+        _undoAllowlist = _create.AvailableTools;
+        var allowlist = AdminText.Lines(_create.AvailableTools).ToHashSet(StringComparer.Ordinal);
+        foreach (var tool in FilteredDiscoveredTools)
+        {
+            if (selected) { allowlist.Add(tool.Name); } else { allowlist.Remove(tool.Name); }
+        }
+        _create.AvailableTools = string.Join(Environment.NewLine, allowlist.OrderBy(name => name, StringComparer.Ordinal));
+    }
 
     private void ToggleDiscoveredTool(string toolName, ChangeEventArgs args)
     {

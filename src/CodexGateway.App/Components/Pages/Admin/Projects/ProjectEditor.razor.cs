@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace CodexGateway.App.Components.Pages.Admin.Projects;
 
-public partial class ProjectEditor : ComponentBase
+public partial class ProjectEditor : ComponentBase, IDisposable
 {
     private ProjectDefinition? _source;
     private ProjectEditorModel _editor = new() { Id = string.Empty };
@@ -19,6 +19,124 @@ public partial class ProjectEditor : ComponentBase
     private string _status = string.Empty;
     private string _statusKind = string.Empty;
     private string _savedFingerprint = string.Empty;
+    private string _tab = "access";
+    private string? _selectedKeyId;
+    private string? _selectedServerId;
+    private string _toolSearch = string.Empty;
+    private string _accessFilter = "all";
+    private string _riskFilter = "all";
+    private string _compareKeyId = string.Empty;
+    private bool _differencesOnly;
+    private bool _confirmDiscard;
+    private Dictionary<ToolGrantEditorModel, bool>? _undoTools;
+    private ProjectEditorModel _savedEditor = new() { Id = string.Empty };
+    private readonly CancellationTokenSource _metadataLifetime = new();
+    private bool _disposed;
+
+    private ApiKeyAccessEditorModel? SelectedKey => _editor.ApiKeys.FirstOrDefault(k => k.Id == _selectedKeyId);
+    private McpGrantEditorModel? SelectedServer => SelectedKey?.Servers.FirstOrDefault(s => s.Id == _selectedServerId);
+    private ApiKeyAccessEditorModel? ComparisonKey => _editor.ApiKeys.FirstOrDefault(k => k.Id == _compareKeyId && k.Id != _selectedKeyId);
+    private string SelectedContext => _tab == "access" ? $" / {SelectedKey?.Name} / {SelectedServer?.Name}" : string.Empty;
+    private bool HasExternalChanges => IsDirty && !ReferenceEquals(_source, Project) &&
+        Fingerprint(ProjectEditorModel.From(Project, ApiKeys, Servers)) != _savedFingerprint;
+
+    private IReadOnlyList<ToolGrantEditorModel> FilteredTools => SelectedServer?.Tools.Where(tool =>
+        (string.IsNullOrWhiteSpace(_toolSearch) || tool.Name.Contains(_toolSearch, StringComparison.OrdinalIgnoreCase) ||
+            tool.Description?.Contains(_toolSearch, StringComparison.OrdinalIgnoreCase) == true) &&
+        (_accessFilter == "all" || tool.Enabled == (_accessFilter == "allowed")) &&
+        (_riskFilter == "all" || tool.Risk.ToString() == _riskFilter) &&
+        (!_differencesOnly || ComparisonKey is null || CurrentAllows(tool) != ComparisonAllows(tool.Name))).ToArray() ?? [];
+
+    private bool CurrentAllows(ToolGrantEditorModel tool) => SelectedKey is { HasProjectAccess: true } &&
+        SelectedServer is { Granted: true, CatalogEnabled: true } && tool.Enabled;
+
+    private bool ComparisonAllows(string name) => ComparisonKey is { HasProjectAccess: true } key &&
+        key.Servers.Any(s => s.Id == _selectedServerId && s.Granted && s.CatalogEnabled && s.Tools.Any(t => t.Name == name && t.Enabled));
+
+    private static string GrantSummary(ApiKeyAccessEditorModel key, McpGrantEditorModel grant) =>
+        !key.HasProjectAccess || !grant.Granted || !grant.CatalogEnabled ? AdminUx.Text("NoAccess") :
+            AdminUx.Format("MatrixTools", grant.Tools.Count(t => t.Enabled), grant.Tools.Count);
+
+    private void SelectKey(string id)
+    {
+        _selectedKeyId = id;
+        _selectedServerId ??= SelectedKey?.Servers.FirstOrDefault()?.Id;
+        ResetToolFilters();
+    }
+
+    private void SelectGrant(string keyId, string serverId)
+    {
+        _selectedKeyId = keyId;
+        _selectedServerId = serverId;
+        ResetToolFilters();
+    }
+
+    private void SelectServer(ChangeEventArgs args)
+    {
+        _selectedServerId = args.Value?.ToString();
+        ResetToolFilters();
+    }
+
+    private void ResetToolFilters()
+    {
+        _toolSearch = string.Empty;
+        _accessFilter = _riskFilter = "all";
+        _undoTools = null;
+    }
+
+    private void SetFilteredTools(bool enabled)
+    {
+        var tools = FilteredTools;
+        _undoTools = tools.ToDictionary(t => t, t => t.Enabled);
+        foreach (var tool in tools) { tool.Enabled = enabled; }
+    }
+
+    private void UndoToolChanges()
+    {
+        if (_undoTools is null) { return; }
+        foreach (var (tool, enabled) in _undoTools) { tool.Enabled = enabled; }
+        _undoTools = null;
+    }
+
+    private void DiscardChanges() => _confirmDiscard = true;
+    private void CancelDiscard() => _confirmDiscard = false;
+    private void ConfirmDiscard()
+    {
+        _source = null;
+        _savedFingerprint = string.Empty;
+        _editor = new() { Id = string.Empty };
+        _confirmDiscard = false;
+        OnParametersSet();
+    }
+
+    private IReadOnlyList<string> PendingChanges
+    {
+        get
+        {
+            var changes = new List<string>();
+            if (_editor.Name != _savedEditor.Name) { changes.Add(AdminUx.Format("NameChanged", _savedEditor.Name, _editor.Name)); }
+            if (_editor.Enabled != _savedEditor.Enabled) { changes.Add(AdminUx.Format("RequestsChanged", _editor.Enabled)); }
+            if (_editor.RunnerImage != _savedEditor.RunnerImage) { changes.Add(AdminUx.Text("RunnerChanged")); }
+            foreach (var key in _editor.ApiKeys)
+            {
+                var savedKey = _savedEditor.ApiKeys.FirstOrDefault(k => k.Id == key.Id);
+                if (savedKey is null) { continue; }
+                if (key.HasProjectAccess != savedKey.HasProjectAccess) { changes.Add(AdminUx.Format("KeyChanged", key.Name, key.HasProjectAccess ? AdminUx.Text("Allowed") : AdminUx.Text("Blocked"))); }
+                if (key.WebSearchMode != savedKey.WebSearchMode) { changes.Add($"{key.Name}: Codex web search → {key.WebSearchMode}"); }
+                foreach (var server in key.Servers)
+                {
+                    var savedServer = savedKey.Servers.FirstOrDefault(s => s.Id == server.Id);
+                    if (savedServer is null) { continue; }
+                    if (server.Granted != savedServer.Granted || server.Required != savedServer.Required) { changes.Add(AdminUx.Format("ServerChanged", key.Name, server.Name, server.Granted ? AdminUx.Text("Allowed") : AdminUx.Text("Blocked"), server.Required)); }
+                    foreach (var tool in server.Tools.Where(t => t.Enabled != savedServer.Tools.FirstOrDefault(s => s.Name == t.Name)?.Enabled))
+                    {
+                        changes.Add($"{key.Name} / {server.Name} / {tool.Name}: {(tool.Enabled ? AdminUx.Text("Allowed") : AdminUx.Text("Blocked"))} · {ToolRiskPresentation.Label(tool.Risk)}");
+                    }
+                }
+            }
+            return changes;
+        }
+    }
 
     private bool IsDirty => Fingerprint(_editor) != _savedFingerprint;
 
@@ -30,7 +148,8 @@ public partial class ProjectEditor : ComponentBase
 
     private int GrantedServerCount => _editor.ApiKeys
         .Where(key => key.HasProjectAccess)
-        .Sum(key => key.Servers.Count(server => server.Granted));
+        .SelectMany(key => key.Servers.Where(server => server.Granted && server.CatalogEnabled))
+        .Select(server => server.Id).Distinct(StringComparer.Ordinal).Count();
 
     private int EnabledToolCount => _editor.ApiKeys
         .Where(key => key.HasProjectAccess)
@@ -61,22 +180,52 @@ public partial class ProjectEditor : ComponentBase
     [Parameter, EditorRequired]
     public EventCallback<string> OnChanged { get; set; }
 
+    [Parameter] public string? FocusedApiKeyId { get; set; }
+    [Parameter] public int FocusRequestVersion { get; set; }
+    private int _lastFocusRequestVersion = -1;
+
     protected override void OnParametersSet()
     {
-        if (!ReferenceEquals(_source, Project))
+        if (FocusedApiKeyId is not null && FocusRequestVersion != _lastFocusRequestVersion)
+        {
+            _lastFocusRequestVersion = FocusRequestVersion;
+            _selectedKeyId = FocusedApiKeyId;
+            _tab = "access";
+        }
+        if (_source is null || (!ReferenceEquals(_source, Project) && !IsDirty))
         {
             _source = Project;
             _editor = ProjectEditorModel.From(Project, ApiKeys, Servers);
             _savedFingerprint = Fingerprint(_editor);
+            _savedEditor = ProjectEditorModel.From(Project, ApiKeys, Servers);
+            _selectedKeyId ??= _editor.ApiKeys.FirstOrDefault()?.Id;
+            _selectedServerId ??= SelectedKey?.Servers.FirstOrDefault()?.Id;
+            _undoTools = null;
             _status = string.Empty;
             _statusKind = string.Empty;
             _confirmDelete = false;
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_disposed && SelectedServer is { CatalogEnabled: true, MetadataLoading: false, MetadataAttemptedAt: null } server)
+        {
+            await DiscoverToolDetailsAsync(server.Id);
+            if (!_disposed) { StateHasChanged(); }
+        }
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        _metadataLifetime.Cancel();
+        _metadataLifetime.Dispose();
+    }
+
     private async Task SaveAsync()
     {
-        if (_busy)
+        if (_busy || HasExternalChanges)
         {
             return;
         }
@@ -88,6 +237,8 @@ public partial class ProjectEditor : ComponentBase
         {
             await Sender.Send(new UpdateProjectUseCase(_editor.ToDefinition()));
             _savedFingerprint = Fingerprint(_editor);
+            _savedEditor = ProjectEditorModel.From(_editor.ToDefinition(), ApiKeys, Servers);
+            _undoTools = null;
             _status = string.Empty;
             await OnChanged.InvokeAsync($"Saved changes to “{_editor.Name}”.");
         }
@@ -111,30 +262,6 @@ public partial class ProjectEditor : ComponentBase
 
     private void CancelDelete() => _confirmDelete = false;
 
-    private void SetAllApiKeys(bool enabled)
-    {
-        foreach (var access in _editor.ApiKeys)
-        {
-            access.HasProjectAccess = enabled;
-        }
-    }
-
-    private static void SetAllServers(ApiKeyAccessEditorModel access, bool enabled)
-    {
-        foreach (var server in access.Servers)
-        {
-            server.Granted = enabled && server.CatalogEnabled;
-        }
-    }
-
-    private static void SetAllTools(McpGrantEditorModel server, bool enabled)
-    {
-        foreach (var tool in server.Tools)
-        {
-            tool.Enabled = enabled;
-        }
-    }
-
     private async Task DiscoverToolDetailsAsync(string serverId)
     {
         var matchingGrants = _editor.ApiKeys
@@ -153,7 +280,7 @@ public partial class ProjectEditor : ComponentBase
         {
             var discovered = await McpMetadataDiscovery.DiscoverAsync(
                 [new ResolvedMcpServer(definition, definition.AvailableTools, Required: false)],
-                CancellationToken.None);
+                _metadataLifetime.Token);
             var metadata = discovered.SingleOrDefault(server => string.Equals(server.ServerId, serverId, StringComparison.Ordinal));
             if (metadata?.ServerInfo is null)
             {
@@ -177,6 +304,7 @@ public partial class ProjectEditor : ComponentBase
                                          !string.Equals(tool.InputSchema, inputSchema, StringComparison.Ordinal);
                     tool.AvailableInDiscovery = true;
                     tool.Description = details.Description;
+                    tool.Annotations = details.Annotations;
                     tool.InputSchema = inputSchema;
                 }
 

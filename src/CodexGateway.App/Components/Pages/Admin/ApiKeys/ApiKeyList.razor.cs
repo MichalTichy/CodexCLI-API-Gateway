@@ -37,6 +37,8 @@ public partial class ApiKeyList : AdminComponentBase
     [Parameter, EditorRequired]
     public EventCallback<string> OnChanged { get; set; }
 
+    [Parameter] public EventCallback<string> OnManageAccess { get; set; }
+
     private async Task CreateAsync()
     {
         ApiKeyDefinition? created = null;

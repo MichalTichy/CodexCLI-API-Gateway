@@ -20,6 +20,19 @@ public partial class McpServerEditor : ComponentBase
     private IReadOnlyList<McpToolMetadata> _discoveredTools = [];
     private bool _testingConnection;
     private bool _connectionVerified;
+    private bool _confirmDiscard;
+
+    private bool HasExternalChanges => IsDirty && !ReferenceEquals(_source, Server) &&
+        Fingerprint(McpServerEditorModel.From(Server)) != _savedFingerprint;
+
+    private void AskDiscard() => _confirmDiscard = true;
+    private void CancelDiscard() => _confirmDiscard = false;
+    private void DiscardChanges()
+    {
+        _source = null;
+        _confirmDiscard = false;
+        OnParametersSet();
+    }
     private string _savedFingerprint = string.Empty;
     private string _savedConnectionFingerprint = string.Empty;
     private string? _testedConnectionFingerprint;
@@ -28,6 +41,22 @@ public partial class McpServerEditor : ComponentBase
         _testedConnectionFingerprint,
         ConnectionFingerprint(_editor),
         StringComparison.Ordinal);
+
+    private string _toolSearch = string.Empty;
+    private string _toolRiskFilter = "all";
+    private string _toolSelectionFilter = "all";
+    private string? _undoAllowlist;
+
+    private IReadOnlyList<McpToolMetadata> FilteredDiscoveredTools => _discoveredTools.Where(tool =>
+        (string.IsNullOrWhiteSpace(_toolSearch) || tool.Name.Contains(_toolSearch, StringComparison.OrdinalIgnoreCase) ||
+            tool.Description?.Contains(_toolSearch, StringComparison.OrdinalIgnoreCase) == true) &&
+        (_toolRiskFilter == "all" || ToolRiskPresentation.Classify(tool.Annotations).ToString() == _toolRiskFilter) &&
+        (_toolSelectionFilter == "all" || IsToolSelected(tool.Name) == (_toolSelectionFilter == "selected"))).ToArray();
+
+    private void UndoDiscoveredToolChanges()
+    {
+        if (_undoAllowlist is not null) { _editor.AvailableTools = _undoAllowlist; _undoAllowlist = null; }
+    }
 
     private int SelectedDiscoveredToolCount => _discoveredTools.Count(tool => IsToolSelected(tool.Name));
 
@@ -66,7 +95,7 @@ public partial class McpServerEditor : ComponentBase
 
     protected override void OnParametersSet()
     {
-        if (!ReferenceEquals(_source, Server))
+        if (_source is null || (!ReferenceEquals(_source, Server) && !IsDirty))
         {
             _source = Server;
             _editor = McpServerEditorModel.From(Server);
@@ -74,6 +103,7 @@ public partial class McpServerEditor : ComponentBase
             _statusKind = string.Empty;
             _confirmDelete = false;
             _discoveredTools = [];
+            _undoAllowlist = null;
             _connectionVerified = false;
             _savedFingerprint = Fingerprint(_editor);
             _savedConnectionFingerprint = ConnectionFingerprint(_editor);
@@ -83,7 +113,7 @@ public partial class McpServerEditor : ComponentBase
 
     private async Task SaveAsync()
     {
-        if (_busy)
+        if (_busy || HasExternalChanges || (ConnectionSettingsChanged && !ConnectionVerified))
         {
             return;
         }
@@ -170,10 +200,16 @@ public partial class McpServerEditor : ComponentBase
     private bool IsToolSelected(string toolName) =>
         AdminText.Lines(_editor.AvailableTools).Contains(toolName, StringComparer.Ordinal);
 
-    private void SetAllDiscoveredTools(bool selected) =>
-        _editor.AvailableTools = selected
-            ? string.Join(Environment.NewLine, _discoveredTools.Select(tool => tool.Name).OrderBy(name => name, StringComparer.Ordinal))
-            : string.Empty;
+    private void SetAllDiscoveredTools(bool selected)
+    {
+        _undoAllowlist = _editor.AvailableTools;
+        var allowlist = AdminText.Lines(_editor.AvailableTools).ToHashSet(StringComparer.Ordinal);
+        foreach (var tool in FilteredDiscoveredTools)
+        {
+            if (selected) { allowlist.Add(tool.Name); } else { allowlist.Remove(tool.Name); }
+        }
+        _editor.AvailableTools = string.Join(Environment.NewLine, allowlist.OrderBy(name => name, StringComparer.Ordinal));
+    }
 
     private void ToggleDiscoveredTool(string toolName, ChangeEventArgs args)
     {
