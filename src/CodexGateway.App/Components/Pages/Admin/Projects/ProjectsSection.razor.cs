@@ -13,6 +13,35 @@ public partial class ProjectsSection : ComponentBase
     private bool _busy;
     private string _status = string.Empty;
     private string _statusKind = string.Empty;
+    private string? _selectedProjectId;
+    private string _search = string.Empty;
+    private readonly HashSet<string> _openedProjects = [];
+    private int _lastRequestVersion = -1;
+
+    private IReadOnlyList<ProjectDefinition> FilteredProjects => Projects.Where(p =>
+        string.IsNullOrWhiteSpace(_search) || p.Name.Contains(_search, StringComparison.OrdinalIgnoreCase) ||
+        p.Id.Contains(_search, StringComparison.OrdinalIgnoreCase)).ToArray();
+
+    [Parameter] public string? RequestedApiKeyId { get; set; }
+    [Parameter] public int AccessRequestVersion { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (RequestedApiKeyId is not null && AccessRequestVersion != _lastRequestVersion)
+        {
+            _lastRequestVersion = AccessRequestVersion;
+            OpenProject(Projects.FirstOrDefault(p => p.ApiKeyAccess.Any(a => a.ApiKeyId == RequestedApiKeyId))?.Id ?? Projects.FirstOrDefault()?.Id);
+        }
+    }
+
+    private void OpenProject(string? id)
+    {
+        _selectedProjectId = id;
+        if (id is not null) { _openedProjects.Add(id); }
+    }
+
+    private static string ProjectSummary(ProjectDefinition project) => AdminUx.Format("ListProjectCounts",
+        project.ApiKeyAccess.Count, project.ApiKeyAccess.SelectMany(k => k.McpServers).Select(s => s.ServerId).Distinct().Count());
 
     [Inject]
     private ISender Sender { get; set; } = null!;

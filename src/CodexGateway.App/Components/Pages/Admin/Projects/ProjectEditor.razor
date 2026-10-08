@@ -1,258 +1,129 @@
 @namespace CodexGateway.App.Components.Pages.Admin.Projects
 
-<article aria-busy="@_busy.ToString().ToLowerInvariant()">
+<article class="project-detail" aria-busy="@_busy.ToString().ToLowerInvariant()">
+    <NavigationLock ConfirmExternalNavigation="@IsDirty" />
     <EditForm Model="_editor" OnValidSubmit="SaveAsync" autocomplete="off">
-        <LumexCard Class="form-card">
-            <LumexCardHeader Class="responsive-row editor-toolbar">
-                <div>
-                    <h3>@Project.Name</h3>
-                    <div class="mt-2 flex flex-wrap items-center gap-2">
-                        <LumexChip Color="@(Project.Enabled ? ThemeColor.Success : ThemeColor.Default)" Variant="@ChipVariant.Dot" Size="@Size.Small">@(Project.Enabled ? "Enabled" : "Disabled")</LumexChip>
-                        <span class="font-mono text-xs text-foreground-400">@Project.Id</span>
-                    </div>
-                </div>
-                <div class="editor-toolbar-actions">
-                    <span class="save-state @SaveStateClass" role="status">@SaveState</span>
-                    <LumexButton Type="@ButtonType.Submit" Color="@ThemeColor.Primary" Disabled="@(_busy || !IsDirty)">Save changes</LumexButton>
-                    <LumexButton Color="@ThemeColor.Danger" Variant="@Variant.Light" Disabled="@_busy" OnClick="ConfirmDelete">Delete</LumexButton>
-                </div>
-            </LumexCardHeader>
-            <LumexDivider />
-            <LumexCardBody Class="gap-6">
-                <DataAnnotationsValidator />
-                <div class="form-grid-two">
-                    <div>
-                        <LumexTextbox id="@($"project-name-{Project.Id}")" Behavior="@InputBehavior.OnInput" @bind-Value="_editor.Name" Label="Project name" aria-label="Project name" LabelPlacement="@LabelPlacement.Outside" Variant="@InputVariant.Outlined" />
-                        <ValidationMessage For="() => _editor.Name" />
-                    </div>
-                    <label class="toggle-field" for="@($"project-enabled-{Project.Id}")">
-                        <InputCheckbox id="@($"project-enabled-{Project.Id}")" @bind-Value="_editor.Enabled" />
-                        <span><strong>Accept API requests</strong><small>Turn off to block new requests for this project.</small></span>
-                    </label>
-                    <div class="sm:col-span-2">
-                        <div class="field-label-row">
-                            <label for="@($"project-runner-image-{Project.Id}")">Runner container image <span>(optional)</span></label>
-                            <ContextHelp Title="Runner container image">OCI image used for this project's isolated Codex runs. Leave blank to use the gateway default. The image must contain the Codex CLI; changes apply to future runs.</ContextHelp>
-                        </div>
-                        <LumexTextbox id="@($"project-runner-image-{Project.Id}")"
-                                      Behavior="@InputBehavior.OnInput"
-                                      @bind-Value="_editor.RunnerImage"
-                                      aria-label="Runner container image"
-                                      Placeholder="e.g. registry.example/codex-runner:1.0"
-                                      Variant="@InputVariant.Outlined" />
-                        <p class="field-help">Leave blank to use the configured default for future runs.</p>
-                        <ValidationMessage For="() => _editor.RunnerImage" />
-                    </div>
-                </div>
-
-                <LumexDivider />
-                <div class="section-title-row permission-heading">
-                    <div>
-                        <h4>API-key access</h4>
-                        <p>Choose who can enter this project, then reveal only the servers and tools that key needs.</p>
-                    </div>
-                    <div class="permission-heading-actions">
-                        <LumexChip Variant="@ChipVariant.Flat" Size="@Size.Small">@Pluralize(GrantedApiKeyCount, "key") · @Pluralize(GrantedServerCount, "server") · @Pluralize(EnabledToolCount, "tool")</LumexChip>
-                        @if (_editor.ApiKeys.Count > 0)
+        <fieldset disabled="@_busy" class="editor-fields">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="detail-savebar" data-testid="project-savebar">
+            <div class="savebar-context"><strong>@Project.Name</strong><small>@Project.Id @SelectedContext</small><span class="save-state @SaveStateClass" role="status">@SaveState</span></div>
+            <div class="editor-toolbar-actions">
+                <LumexButton Type="@ButtonType.Button" Variant="@Variant.Light" Disabled="@(_busy || !IsDirty)" OnClick="DiscardChanges">@AdminUx.Text("Discard")</LumexButton>
+                <LumexButton Type="@ButtonType.Submit" Color="@ThemeColor.Primary" Disabled="@(_busy || !IsDirty || HasExternalChanges)">Save changes</LumexButton>
+            </div>
+        </div>
+        @if (IsDirty) { <details class="change-summary"><summary>@AdminUx.Format("ReviewChanges", PendingChanges.Count)</summary><ul>@foreach (var change in PendingChanges) { <li>@change</li> }</ul></details> }
+        @if (HasExternalChanges) { <p class="tool-metadata-note tool-metadata-warning" role="alert">@AdminUx.Text("ExternalChanges")</p> }
+        <nav class="detail-tabs" aria-label="@AdminUx.Text("ProjectSections")">
+            <button type="button" aria-pressed="@(_tab == "access")" @onclick='() => _tab = "access"'>@AdminUx.Text("Access")</button>
+            <button type="button" aria-pressed="@(_tab == "settings")" @onclick='() => _tab = "settings"'>@AdminUx.Text("Settings")</button>
+            <button type="button" aria-pressed="@(_tab == "runner")" @onclick='() => _tab = "runner"'>@AdminUx.Text("Runner")</button>
+        </nav>
+        <div class="detail-body">
+        @if (_tab == "settings")
+        {
+            <div class="form-grid-two">
+                <div><LumexTextbox id="@($"project-name-{Project.Id}")" Behavior="@InputBehavior.OnInput" @bind-Value="_editor.Name" Label="Project name" aria-label="Project name" LabelPlacement="@LabelPlacement.Outside" Variant="@InputVariant.Outlined" /><ValidationMessage For="() => _editor.Name" /></div>
+                <label class="toggle-field"><InputCheckbox @bind-Value="_editor.Enabled" /><span><strong>Accept API requests</strong><small>Turn off to block new requests for this project.</small></span></label>
+            </div>
+            <div class="danger-zone"><LumexButton Type="@ButtonType.Button" Color="@ThemeColor.Danger" Variant="@Variant.Light" Disabled="@_busy" OnClick="ConfirmDelete">Delete project</LumexButton></div>
+        }
+        else if (_tab == "runner")
+        {
+            <label for="@($"project-runner-image-{Project.Id}")">Runner container image (optional)</label>
+            <LumexTextbox id="@($"project-runner-image-{Project.Id}")" Behavior="@InputBehavior.OnInput" @bind-Value="_editor.RunnerImage" aria-label="Runner container image" Placeholder="e.g. registry.example/codex-runner:1.0" Variant="@InputVariant.Outlined" />
+            <p class="field-help">Leave blank to use the configured default for future runs.</p><ValidationMessage For="() => _editor.RunnerImage" />
+        }
+        else
+        {
+            <div class="section-title-row"><div><h4>API-key access</h4><p>@AdminUx.Text("AccessInstructions")</p></div><span class="field-help">@AdminUx.Format("ProjectCounts", GrantedApiKeyCount, GrantedServerCount, EnabledToolCount)</span></div>
+            @if (_editor.ApiKeys.Count == 0) { <div class="empty-state">Configure a gateway API key before granting project access.</div> }
+            else
+            {
+                <div class="access-matrix-wrap">
+                    <table class="access-matrix" aria-label="@AdminUx.Text("AccessMatrix")">
+                        <thead><tr><th scope="col">API key</th>@foreach (var catalogServer in Servers) { <th scope="col">@catalogServer.Name</th> }</tr></thead>
+                        <tbody>
+                        @foreach (var key in _editor.ApiKeys)
                         {
-                            <div class="bulk-actions" role="group" aria-label="API key access bulk actions">
-                                <button type="button" @onclick="() => SetAllApiKeys(true)">Select all keys</button>
-                                <button type="button" @onclick="() => SetAllApiKeys(false)">Clear all keys</button>
+                            <tr class="@(key.Id == _selectedKeyId ? "selected-key" : null)">
+                                <th scope="row"><button type="button" class="matrix-key" @onclick="() => SelectKey(key.Id)"><strong>@key.Name</strong><small>@key.Id</small><small>@(key.HasProjectAccess ? AdminUx.Text("Allowed") : AdminUx.Text("NoAccess"))</small></button></th>
+                                @foreach (var grant in key.Servers) { <td><button type="button" class="matrix-cell @(key.Id == _selectedKeyId && grant.Id == _selectedServerId ? "selected-cell" : null)" aria-label="@($"{key.Name} / {grant.Name}")" @onclick="() => SelectGrant(key.Id, grant.Id)">@GrantSummary(key, grant)</button></td> }
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+                @if (SelectedKey is { } access)
+                {
+                    <section class="selected-access" aria-label="@access.Name">
+                        <div class="section-title-row"><div><h4>@access.Name</h4><small class="field-help">@access.Id</small></div><label class="inline-check"><input type="checkbox" @bind="access.HasProjectAccess" /><span>@AdminUx.Text("ProjectAccess")</span></label></div>
+                        <div class="grant-selector">
+                            <div class="native-field"><label for="@($"selected-server-{Project.Id}")">MCP server</label><select id="@($"selected-server-{Project.Id}")" class="native-select" value="@_selectedServerId" @onchange="SelectServer">@foreach (var grant in access.Servers) { <option value="@grant.Id">@grant.Name</option> }</select></div>
+                            <div class="native-field"><label for="@($"web-search-{Project.Id}-{access.Id}")">Codex web search</label><InputSelect id="@($"web-search-{Project.Id}-{access.Id}")" class="native-select" @bind-Value="access.WebSearchMode" disabled="@(!access.HasProjectAccess)"><option value="@WebSearchMode.Disabled">Disabled</option><option value="@WebSearchMode.Cached">Cached index</option><option value="@WebSearchMode.Indexed">Indexed web</option><option value="@WebSearchMode.Live">Live web</option></InputSelect></div>
+                        </div>
+                        @if (SelectedServer is { } server)
+                        {
+                            var toolsAvailable = access.HasProjectAccess && server.CatalogEnabled && server.Granted;
+                            <div class="server-access-controls">
+                                <label class="inline-check"><input type="checkbox" @bind="server.Granted" disabled="@(!access.HasProjectAccess || !server.CatalogEnabled)" /><span>@AdminUx.Format("AllowServer", server.Name)</span></label>
+                                <label class="inline-check"><input type="checkbox" @bind="server.Required" disabled="@(!toolsAvailable)" /><span>Fail run if unavailable</span></label>
+                                <span class="field-help">@AdminUx.Format("AllowedTools", server.Tools.Count(t => t.Enabled), server.Tools.Count)</span>
+                            </div>
+                            @if (!toolsAvailable) { <p class="hierarchy-hint">@AdminUx.Text("InactiveGrant")</p> }
+                            <div class="tool-filters">
+                                <label>@AdminUx.Text("SearchTools")<input type="search" class="native-select" @bind="_toolSearch" @bind:event="oninput" placeholder="@AdminUx.Text("SearchPlaceholder")" /></label>
+                                <label>@AdminUx.Text("Access")<select class="native-select" @bind="_accessFilter"><option value="all">@AdminUx.Text("All")</option><option value="allowed">@AdminUx.Text("Allowed")</option><option value="blocked">@AdminUx.Text("Blocked")</option></select></label>
+                                <label>@AdminUx.Text("Risk")<select class="native-select" @bind="_riskFilter"><option value="all">@AdminUx.Text("All")</option>@foreach (var risk in Enum.GetValues<ToolRisk>()) { <option value="@risk.ToString()">@ToolRiskPresentation.Label(risk)</option> }</select></label>
+                            </div>
+                            <div class="grant-comparison">
+                                <label>@AdminUx.Text("CompareWith")<select class="native-select" @bind="_compareKeyId"><option value="">@AdminUx.Text("None")</option>@foreach (var key in _editor.ApiKeys.Where(k => k.Id != access.Id)) { <option value="@key.Id">@key.Name</option> }</select></label>
+                                @if (ComparisonKey is not null) { <label class="inline-check"><input type="checkbox" @bind="_differencesOnly" /><span>@AdminUx.Text("DifferencesOnly")</span></label> }
+                            </div>
+                            <div class="tool-list-actions">
+                                <span class="field-help">@AdminUx.Format("ShownTools", FilteredTools.Count, server.Tools.Count)</span>
+                                <div class="bulk-actions">
+                                    <button type="button" disabled="@(!server.CatalogEnabled || server.MetadataLoading)" @onclick="() => DiscoverToolDetailsAsync(server.Id)">@(server.MetadataLoading ? "Discovering…" : server.MetadataLoaded ? "Refresh tool details" : "Discover tool details")</button>
+                                    <button type="button" disabled="@(!toolsAvailable || FilteredTools.Count == 0)" @onclick="() => SetFilteredTools(true)">@AdminUx.Format("AllowShown", FilteredTools.Count)</button>
+                                    <button type="button" disabled="@(!toolsAvailable || FilteredTools.Count == 0)" @onclick="() => SetFilteredTools(false)">@AdminUx.Format("BlockShown", FilteredTools.Count)</button>
+                                    <button type="button" disabled="@(_undoTools is null)" @onclick="UndoToolChanges">@AdminUx.Text("Undo")</button>
+                                </div>
+                            </div>
+                            @if (server.MetadataDiscoveredAt is { } discoveredAt) { <p class="tool-discovery-time">@AdminUx.Format("DiscoveredAt", discoveredAt.ToString("u"))</p> }
+                            @if (!string.IsNullOrWhiteSpace(server.MetadataError)) { <p class="tool-metadata-note tool-metadata-error" role="alert">@server.MetadataError</p> }
+                            @if (!string.IsNullOrWhiteSpace(server.MetadataWarning)) { <p class="tool-metadata-note tool-metadata-warning" role="alert">@server.MetadataWarning</p> }
+                            <div class="tool-table">
+                                <div class="tool-row tool-row-header" aria-hidden="true"><span>Tool</span><span>Access</span></div>
+                                @foreach (var tool in FilteredTools)
+                                {
+                                    <div class="tool-row @ToolRiskPresentation.CssClass(tool.Risk)" @key="tool.Name">
+                                        <div class="tool-identity">
+                                            <div class="tool-name-line"><code>@tool.Name</code><ToolRiskBadge Annotations="tool.Annotations" /></div>
+                                            <span class="tool-description">@(tool.Description ?? AdminUx.Text("MetadataNotLoaded"))</span>
+                                            @if (tool.Description is not null || tool.InputSchema is not null) { <details class="tool-schema"><summary>@AdminUx.Text("Details")</summary><p>@tool.Description</p>@if (tool.InputSchema is not null) { <pre>@tool.InputSchema</pre> }</details> }
+                                            @if (tool.AvailableInDiscovery == false) { <strong class="tool-availability-warning">Unavailable in latest discovery; stored grant preserved.</strong> }
+                                            @if (tool.SchemaChanged) { <strong class="tool-availability-warning">Input schema changed; review before use.</strong> }
+                                            @if (ComparisonKey is { } compared) { <small class="comparison-value">@compared.Name: @(ComparisonAllows(tool.Name) ? AdminUx.Text("Allowed") : AdminUx.Text("Blocked"))</small> }
+                                        </div>
+                                        <label class="inline-check"><InputCheckbox @bind-Value="tool.Enabled" disabled="@(!toolsAvailable)" aria-label="@($"Allow tool {tool.Name} for API key {access.Id}")" /><span class="sr-only">Allow @tool.Name</span></label>
+                                    </div>
+                                }
+                                @if (FilteredTools.Count == 0) { <p class="empty-state">@AdminUx.Text("NoMatchingTools")</p> }
                             </div>
                         }
-                    </div>
-                </div>
-
-                @if (_editor.ApiKeys.Count == 0)
-                {
-                    <div class="empty-state">Configure a gateway API key before granting project access.</div>
+                    </section>
                 }
-                else
-                {
-                    <div class="permission-list">
-                        @foreach (var access in _editor.ApiKeys)
-                        {
-                            <section class="access-card @(!access.HasProjectAccess ? "access-card-disabled" : null)" @key="access.Id">
-                                <header class="access-card-header">
-                                    <label class="toggle-field toggle-field-compact" for="@($"access-{Project.Id}-{access.Id}")">
-                                        <input id="@($"access-{Project.Id}-{access.Id}")" type="checkbox" @bind="access.HasProjectAccess" />
-                                        <span><strong>@access.Name</strong><small><span class="font-mono">@access.Id</span> · Project access</small></span>
-                                    </label>
-                                    <div class="access-card-actions">
-                                        <LumexChip Color="@(access.HasProjectAccess ? ThemeColor.Success : ThemeColor.Default)" Variant="@ChipVariant.Dot" Size="@Size.Small">
-                                            @(access.HasProjectAccess ? "Allowed" : "No access")
-                                        </LumexChip>
-                                        @if (access.Servers.Count > 0)
-                                        {
-                                            <div class="bulk-actions" role="group" aria-label="@($"MCP server access for {access.Name}")">
-                                                <button type="button" disabled="@(!access.HasProjectAccess)" @onclick="() => SetAllServers(access, true)">Select all servers</button>
-                                                <button type="button" disabled="@(!access.HasProjectAccess)" @onclick="() => SetAllServers(access, false)">Clear all servers</button>
-                                            </div>
-                                        }
-                                    </div>
-                                </header>
-
-                                @if (!access.HasProjectAccess)
-                                {
-                                    <p class="hierarchy-hint">Enable project access to configure MCP servers and tools for this key.</p>
-                                }
-                                else
-                                {
-                                    <div class="form-grid-two">
-                                        <div>
-                                            <div class="field-label-row">
-                                                <label for="@($"web-search-{Project.Id}-{access.Id}")">Codex web search</label>
-                                                <ContextHelp Title="Codex web search">Built-in Codex search; no MCP server is required. Cached uses OpenAI's maintained index, indexed permits gated retrieval, and live retrieves current public web content.</ContextHelp>
-                                            </div>
-                                            <InputSelect id="@($"web-search-{Project.Id}-{access.Id}")" class="native-select" @bind-Value="access.WebSearchMode">
-                                                <option value="@WebSearchMode.Disabled">Disabled</option>
-                                                <option value="@WebSearchMode.Cached">Cached index</option>
-                                                <option value="@WebSearchMode.Indexed">Indexed web</option>
-                                                <option value="@WebSearchMode.Live">Live web</option>
-                                            </InputSelect>
-                                            <p class="field-help">Applied only when this API key calls this project.</p>
-                                        </div>
-                                    </div>
-
-                                    @if (access.Servers.Count == 0)
-                                    {
-                                        <div class="empty-state empty-state-compact">No MCP servers are configured.</div>
-                                    }
-                                    else
-                                    {
-                                        <div class="grant-list">
-                                        @foreach (var server in access.Servers)
-                                        {
-                                            var serverAvailable = access.HasProjectAccess && server.CatalogEnabled;
-                                            var toolsAvailable = serverAvailable && server.Granted;
-                                            <section class="server-grant @(server.Granted ? "server-grant-enabled" : null) @(!server.CatalogEnabled ? "server-grant-disabled" : null)" @key="server.Id">
-                                                <header class="server-grant-header">
-                                                    <label class="toggle-field toggle-field-compact" for="@($"grant-{Project.Id}-{access.Id}-{server.Id}")">
-                                                        <input id="@($"grant-{Project.Id}-{access.Id}-{server.Id}")" type="checkbox" @bind="server.Granted" disabled="@(!serverAvailable)" />
-                                                        <span><strong>@server.Name</strong><small><span class="font-mono">@server.Id</span> · MCP server access</small></span>
-                                                    </label>
-                                                    <div class="server-grant-actions">
-                                                        <LumexChip Color="@(server.CatalogEnabled && server.UnavailableToolCount > 0 ? ThemeColor.Warning : server.CatalogEnabled ? ThemeColor.Success : ThemeColor.Default)" Variant="@ChipVariant.Dot" Size="@Size.Small">
-                                                            @(server.CatalogEnabled && server.UnavailableToolCount > 0 ? $"{server.AvailableToolCount} of {server.Tools.Count} tools available" : server.CatalogEnabled ? $"{Pluralize(server.Tools.Count, "tool")} available" : "Unavailable")
-                                                        </LumexChip>
-                                                        <label class="inline-check" for="@($"required-{Project.Id}-{access.Id}-{server.Id}")">
-                                                            <input id="@($"required-{Project.Id}-{access.Id}-{server.Id}")" type="checkbox" @bind="server.Required" disabled="@(!toolsAvailable)" />
-                                                            <span>Fail run if unavailable</span>
-                                                        </label>
-                                                        <ContextHelp Title="Required MCP server">When selected, a run fails before starting if this MCP server cannot connect or initialize.</ContextHelp>
-                                                    </div>
-                                                </header>
-
-                                                @if (!server.CatalogEnabled)
-                                                {
-                                                    <p class="hierarchy-hint">This server is disabled in the trusted MCP catalog.</p>
-                                                }
-                                                else if (!server.Granted)
-                                                {
-                                                    <p class="hierarchy-hint">Enable this server to choose its tools.</p>
-                                                }
-                                                else if (server.Tools.Count == 0)
-                                                {
-                                                    <p class="hierarchy-hint">No tools are available in the server catalog.</p>
-                                                }
-                                                else
-                                                {
-                                                    <div class="tool-list-actions">
-                                                        <span><strong>Tool access</strong><small>Choose which tools this API key may call.</small></span>
-                                                        <span class="bulk-actions">
-                                                            <button type="button" disabled="@(!serverAvailable || server.MetadataLoading)" @onclick="() => DiscoverToolDetailsAsync(server.Id)">@(server.MetadataLoading ? "Discovering…" : server.MetadataLoaded ? "Refresh tool details" : "Discover tool details")</button>
-                                                            <button type="button" disabled="@(!toolsAvailable)" @onclick="() => SetAllTools(server, true)">Select all tools</button>
-                                                            <button type="button" disabled="@(!toolsAvailable)" @onclick="() => SetAllTools(server, false)">Clear all tools</button>
-                                                        </span>
-                                                    </div>
-                                                    @if (!server.MetadataLoaded && string.IsNullOrWhiteSpace(server.MetadataError))
-                                                    {
-                                                        <p class="tool-metadata-note">Descriptions are not stored in gateway configuration. Discover live details before granting a tool, or verify it in the MCP server documentation.</p>
-                                                    }
-                                                    else if (!string.IsNullOrWhiteSpace(server.MetadataError))
-                                                    {
-                                                        <p class="tool-metadata-note tool-metadata-error" role="alert">Could not discover tool details: @server.MetadataError</p>
-                                                    }
-                                                    @if (server.MetadataDiscoveredAt is not null)
-                                                    {
-                                                        <p class="tool-discovery-time" title="@server.MetadataDiscoveredAt.Value.ToLocalTime().ToString("F")">Last successful discovery at @server.MetadataDiscoveredAt.Value.ToLocalTime().ToString("HH:mm:ss")</p>
-                                                    }
-                                                    @if (!string.IsNullOrWhiteSpace(server.MetadataError) && server.MetadataAttemptedAt is not null)
-                                                    {
-                                                        <p class="tool-discovery-time tool-discovery-failed" title="@server.MetadataAttemptedAt.Value.ToLocalTime().ToString("F")">Last attempt failed just now</p>
-                                                    }
-                                                    @if (!string.IsNullOrWhiteSpace(server.MetadataError) && server.MetadataLoaded)
-                                                    {
-                                                        <p class="tool-metadata-note tool-metadata-stale">Showing previously discovered details.</p>
-                                                    }
-                                                    @if (!string.IsNullOrWhiteSpace(server.MetadataWarning))
-                                                    {
-                                                        <p class="tool-metadata-note tool-metadata-warning" role="alert">@server.MetadataWarning</p>
-                                                    }
-                                                    <div class="tool-table">
-                                                        <div class="tool-row tool-row-header" aria-hidden="true"><span>Tool</span><span>Access</span></div>
-                                                        @foreach (var tool in server.Tools)
-                                                        {
-                                                            <div class="tool-row" @key="tool.Name">
-                                                                <div class="tool-identity">
-                                                                    <code>@tool.Name</code>
-                                                                    @if (server.MetadataLoaded)
-                                                                    {
-                                                                        <span>@(string.IsNullOrWhiteSpace(tool.Description) ? "This MCP server did not provide a description." : tool.Description)</span>
-                                                                        @if (tool.AvailableInDiscovery == false)
-                                                                        {
-                                                                            <strong class="tool-availability-warning">Unavailable in latest discovery; stored grant preserved.</strong>
-                                                                        }
-                                                                        else if (tool.SchemaChanged)
-                                                                        {
-                                                                            <strong class="tool-availability-warning">Input schema changed; review before use.</strong>
-                                                                        }
-                                                                        @if (!string.IsNullOrWhiteSpace(tool.InputSchema))
-                                                                        {
-                                                                            <details class="tool-schema"><summary>Input schema</summary><pre>@tool.InputSchema</pre></details>
-                                                                        }
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        <span>Description not loaded.</span>
-                                                                    }
-                                                                </div>
-                                                                <label class="inline-check">
-                                                                    <InputCheckbox @bind-Value="tool.Enabled" disabled="@(!toolsAvailable)" aria-label="@($"Allow tool {tool.Name} for API key {access.Id}")" />
-                                                                    <span class="sr-only">Allow @tool.Name</span>
-                                                                </label>
-                                                            </div>
-                                                        }
-                                                    </div>
-                                                }
-                                            </section>
-                                        }
-                                        </div>
-                                    }
-                                }
-                            </section>
-                        }
-                    </div>
-                }
-
-                @if (!string.IsNullOrWhiteSpace(_status))
-                {
-                    <LumexAlert Color="@(_statusKind == "error" ? ThemeColor.Danger : ThemeColor.Default)" Description="@_status" />
-                }
-            </LumexCardBody>
-        </LumexCard>
+            }
+        }
+        @if (!string.IsNullOrWhiteSpace(_status)) { <LumexAlert Color="@(_statusKind == "error" ? ThemeColor.Danger : ThemeColor.Default)" Description="@_status" /> }
+        </div>
+        </fieldset>
     </EditForm>
-
+    <LumexModal @bind-Open="_confirmDiscard">
+        <LumexModalContent><LumexModalHeader>@AdminUx.Text("DiscardTitle")</LumexModalHeader><LumexModalBody>@AdminUx.Text("DiscardDescription")</LumexModalBody><LumexModalFooter><LumexButton Variant="@Variant.Light" OnClick="CancelDiscard">Cancel</LumexButton><LumexButton Color="@ThemeColor.Warning" OnClick="ConfirmDiscard">@AdminUx.Text("Discard")</LumexButton></LumexModalFooter></LumexModalContent>
+    </LumexModal>
     <LumexModal @bind-Open="_confirmDelete">
-        <LumexModalContent>
-            <LumexModalHeader>Delete project @Project.Name?</LumexModalHeader>
-            <LumexModalBody>
-                <p class="text-sm leading-6 text-foreground-600">This permanently removes project <code>@Project.Id</code>, its access configuration, and its stored artifacts. New requests will stop working immediately.</p>
-            </LumexModalBody>
-            <LumexModalFooter>
-                <LumexButton Variant="@Variant.Light" OnClick="CancelDelete">Cancel</LumexButton>
-                <LumexButton Color="@ThemeColor.Danger" Disabled="@_busy" OnClick="DeleteAsync">Delete project</LumexButton>
-            </LumexModalFooter>
-        </LumexModalContent>
+        <LumexModalContent><LumexModalHeader>Delete project @Project.Name?</LumexModalHeader><LumexModalBody><p>This permanently removes project <code>@Project.Id</code>, its access configuration, and its stored artifacts. New requests will stop working immediately.</p></LumexModalBody><LumexModalFooter><LumexButton Variant="@Variant.Light" OnClick="CancelDelete">Cancel</LumexButton><LumexButton Color="@ThemeColor.Danger" Disabled="@_busy" OnClick="DeleteAsync">Delete project</LumexButton></LumexModalFooter></LumexModalContent>
     </LumexModal>
 </article>

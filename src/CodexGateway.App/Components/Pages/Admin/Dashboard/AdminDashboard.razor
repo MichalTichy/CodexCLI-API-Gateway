@@ -239,13 +239,13 @@
                     </div>
                     break;
                 case AdminSection.ApiKeys:
-                    <ApiKeyList ApiKeys="_apiKeys" Projects="_projects" OnChanged="HandleChangedAsync" />
+                    <ApiKeyList ApiKeys="_apiKeys" Projects="_projects" OnChanged="HandleChangedAsync" OnManageAccess="ManageKeyAccessAsync" />
                     break;
                 case AdminSection.Projects:
-                    <ProjectsSection Projects="_projects" ApiKeys="_apiKeys" Servers="_servers" OnChanged="HandleChangedAsync" />
+
                     break;
                 case AdminSection.McpServers:
-                    <McpCatalogSection Servers="_servers" OnChanged="HandleChangedAsync" />
+
                     break;
                 case AdminSection.Codex:
                     <section class="max-w-4xl" aria-labelledby="codex-heading">
@@ -258,6 +258,14 @@
                         <CodexAccountCard Account="_account" Login="_login" LoadError="@_codexError" LastVerifiedAt="_codexVerifiedAt" OnChanged="HandleCodexChangedAsync" />
                     </section>
                     break;
+            }
+            @if (_visitedSections.Contains(AdminSection.Projects))
+            {
+                <div hidden="@(_selectedSection != AdminSection.Projects)"><ProjectsSection Projects="_projects" ApiKeys="_apiKeys" Servers="_servers" OnChanged="HandleChangedAsync" RequestedApiKeyId="@_requestedApiKeyId" AccessRequestVersion="_accessRequestVersion" /></div>
+            }
+            @if (_visitedSections.Contains(AdminSection.McpServers))
+            {
+                <div hidden="@(_selectedSection != AdminSection.McpServers)"><McpCatalogSection Servers="_servers" OnChanged="HandleChangedAsync" /></div>
             }
         }
     </section>

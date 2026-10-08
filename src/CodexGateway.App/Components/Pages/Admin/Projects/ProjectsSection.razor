@@ -10,6 +10,7 @@
         </div>
     </div>
 
+    <details class="creation-panel"><summary>@AdminUx.Text("NewProject")</summary>
     <EditForm Model="_create" OnValidSubmit="CreateAsync" autocomplete="off">
         <LumexCard Class="form-card">
             <LumexCardHeader Class="flex-col items-start gap-1">
@@ -48,22 +49,22 @@
             </LumexCardBody>
         </LumexCard>
     </EditForm>
+    </details>
 
-    @if (Projects.Count == 0)
+    <label class="list-search">@AdminUx.Text("SearchProjects")<input type="search" class="native-select" @bind="_search" @bind:event="oninput" /></label>
+    <div class="management-list">
+        @foreach (var project in FilteredProjects)
+        {
+            <button type="button" class="management-row @(project.Id == _selectedProjectId ? "selected-row" : null)" @onclick="() => OpenProject(project.Id)">
+                <span><strong>@project.Name</strong><small>@project.Id · @ProjectSummary(project)</small></span><span>@(project.Enabled ? "Enabled" : "Disabled") →</span>
+            </button>
+        }
+        @if (FilteredProjects.Count == 0) { <p class="empty-state">@AdminUx.Text("NoMatchingProjects")</p> }
+    </div>
+    @foreach (var project in Projects.Where(p => _openedProjects.Contains(p.Id)))
     {
-        <div class="empty-state">No projects have been created.</div>
-    }
-    else
-    {
-        <div class="grid gap-4">
-            @foreach (var project in Projects)
-            {
-                <ProjectEditor Project="project"
-                               ApiKeys="ApiKeys"
-                               Servers="Servers"
-                               OnChanged="OnChanged"
-                               @key="project.Id" />
-            }
+        <div hidden="@(project.Id != _selectedProjectId)" @key="project.Id">
+            <ProjectEditor Project="project" ApiKeys="ApiKeys" Servers="Servers" OnChanged="OnChanged" FocusedApiKeyId="@RequestedApiKeyId" FocusRequestVersion="AccessRequestVersion" />
         </div>
     }
 </section>

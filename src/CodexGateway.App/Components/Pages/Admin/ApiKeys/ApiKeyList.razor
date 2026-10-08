@@ -11,6 +11,7 @@
         </div>
     </div>
 
+    <details class="creation-panel"><summary>@AdminUx.Text("NewKey")</summary>
     <EditForm Model="_create" OnValidSubmit="CreateAsync" autocomplete="off">
         <LumexCard Class="form-card">
             <LumexCardHeader Class="flex-col items-start gap-1">
@@ -62,6 +63,7 @@
             </LumexCardBody>
         </LumexCard>
     </EditForm>
+    </details>
 
     @if (_createdApiKey is not null)
     {
@@ -113,7 +115,7 @@
                                     <span class="block truncate text-xs text-foreground-500">Key ID: <code>@key.Id</code> · @ProjectGrantSummary(key.Id)</span>
                                 </div>
                             </div>
-                            <LumexButton Color="@ThemeColor.Danger" Variant="@Variant.Light" Size="@Size.Small" Disabled="@IsBusy" OnClick="@(() => AskToRevoke(key.Id))">Revoke</LumexButton>
+                            <div class="row-actions"><LumexButton Variant="@Variant.Light" Size="@Size.Small" OnClick="@(() => OnManageAccess.InvokeAsync(key.Id))">@AdminUx.Text("ManageAccess")</LumexButton><LumexButton Color="@ThemeColor.Danger" Variant="@Variant.Light" Size="@Size.Small" Disabled="@IsBusy" OnClick="@(() => AskToRevoke(key.Id))">Revoke</LumexButton></div>
                         </div>
                     }
                 </div>
