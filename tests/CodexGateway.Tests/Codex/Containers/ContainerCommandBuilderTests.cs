@@ -64,6 +64,7 @@ public sealed class ContainerCommandBuilderTests
         AssertArgumentPair(arguments, "--cap-drop", "ALL");
         Assert.DoesNotContain("no-new-privileges", arguments);
         AssertArgumentPair(arguments, "--security-opt", "seccomp=unconfined");
+        Assert.DoesNotContain(arguments, value => value.StartsWith("apparmor=", StringComparison.Ordinal));
         AssertArgumentPair(arguments, "--user", "10001:10001");
         Assert.Contains("--read-only", arguments);
         Assert.Contains("--init", arguments);
@@ -87,6 +88,43 @@ public sealed class ContainerCommandBuilderTests
         Assert.False(startInfo.Environment.ContainsKey("ConnectionStrings__Gateway"));
         Assert.False(startInfo.Environment.ContainsKey("OPENAI_API_KEY"));
         Assert.False(startInfo.Environment.ContainsKey("UNRELATED_SECRET"));
+    }
+
+    [Theory]
+    [InlineData("codex-gateway-runner", true)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void Run_command_applies_only_the_explicit_host_apparmor_profile(string? profile, bool expected)
+    {
+        var root = Path.GetFullPath("test-data/apparmor");
+        var startInfo = ContainerCommandBuilder.CreateRunStartInfo(
+            new CodexContainerOptions { Image = "runner:test", AppArmorProfile = profile },
+            root, Path.Combine(root, "auth"), root,
+            CreateRequest(Path.Combine(root, "runs", "run_profile")),
+            "codex-gateway-run-profile", "0123456789abcdef0123456789abcdef",
+            [], new Dictionary<string, string?>(), "10001:10001");
+
+        var arguments = startInfo.ArgumentList.ToArray();
+        Assert.Equal(expected, arguments.Contains("apparmor=codex-gateway-runner"));
+        AssertArgumentPair(arguments, "--security-opt", "seccomp=unconfined");
+        AssertArgumentPair(arguments, "--cap-drop", "ALL");
+        Assert.DoesNotContain("--privileged", arguments);
+        Assert.DoesNotContain("--dangerously-bypass-approvals-and-sandbox", arguments);
+    }
+
+    [Theory]
+    [InlineData("-invalid")]
+    [InlineData("profile,seccomp=unconfined")]
+    [InlineData("profile\nother")]
+    public void Run_command_rejects_invalid_apparmor_profile_names(string profile)
+    {
+        var root = Path.GetFullPath("test-data/apparmor");
+        Assert.Throws<InvalidOperationException>(() => ContainerCommandBuilder.CreateRunStartInfo(
+            new CodexContainerOptions { Image = "runner:test", AppArmorProfile = profile },
+            root, Path.Combine(root, "auth"), root,
+            CreateRequest(Path.Combine(root, "runs", "run_profile")),
+            "codex-gateway-run-profile", "0123456789abcdef0123456789abcdef",
+            [], new Dictionary<string, string?>(), "10001:10001"));
     }
 
     [Fact]

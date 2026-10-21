@@ -178,6 +178,16 @@ internal static class ContainerCommandBuilder
             "--cap-drop", "ALL",
             "--security-opt", "seccomp=unconfined"
         };
+        if (!string.IsNullOrWhiteSpace(options.AppArmorProfile))
+        {
+            if (!VolumeNamePattern.IsMatch(options.AppArmorProfile))
+            {
+                throw new InvalidOperationException("Codex:Container:AppArmorProfile must be a host-installed profile name.");
+            }
+
+            arguments.Add("--security-opt");
+            arguments.Add("apparmor=" + options.AppArmorProfile);
+        }
         if (!string.IsNullOrWhiteSpace(containerUser))
         {
             arguments.Add("--user");

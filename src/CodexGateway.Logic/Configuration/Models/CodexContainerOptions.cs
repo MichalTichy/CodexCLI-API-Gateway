@@ -36,6 +36,13 @@ public sealed class CodexContainerOptions
     public string Network { get; set; } = "bridge";
 
     /// <summary>
+    /// Optional host-installed AppArmor profile for runner containers. Leave empty to use Docker's default.
+    /// Hosts restricting unprivileged user namespaces need a profile permitting Bubblewrap's nested sandbox.
+    /// </summary>
+    [RegularExpression("^[A-Za-z0-9][A-Za-z0-9_.-]*$")]
+    public string? AppArmorProfile { get; set; }
+
+    /// <summary>
     /// Hard memory limit, in megabytes, for each run container. Swap is set to the same value to prevent extra swap allowance.
     /// </summary>
     [Range(128, 262_144)]

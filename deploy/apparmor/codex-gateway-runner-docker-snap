@@ -1,0 +1,3 @@
+# The Docker Snap must be able to stop, inspect and clean up its own runners.
+signal (send) peer=codex-gateway-runner,
+ptrace (read, trace) peer=codex-gateway-runner,

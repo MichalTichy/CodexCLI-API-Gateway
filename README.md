@@ -164,6 +164,10 @@ export DOCKER_GID="$(stat -c '%g' /var/run/docker.sock)"
 
 Each sibling runner—not the gateway—sets `seccomp=unconfined` so Bubblewrap can create an unprivileged user namespace. The runner network defaults to `bridge`: Codex authentication, model calls, and HTTP MCP require outbound connectivity, while the inner sandbox blocks direct networking from model-generated shell commands.
 
+On Ubuntu hosts restricting unprivileged user namespaces, Docker's default AppArmor profile can still prevent Bubblewrap starting (`Failed to make / slave`, `loopback: Failed RTM_NEWADDR`). Install `apparmor` on the **Docker host**, run `sudo sh scripts/install-runner-apparmor.sh`, then set `CODEX_RUNNER_APPARMOR_PROFILE=codex-gateway-runner` and redeploy. This opts only ephemeral runners into a host-installed profile explicitly permitting user namespaces; the host-wide restriction stays enabled. The profile replaces Docker's default AppArmor policy for these containers, so the inner Codex filesystem/network sandbox remains essential. Runners still use a non-root UID, dropped capabilities, a read-only root and resource limits; never replace the inner sandbox with `danger-full-access`.
+
+The installer also adds narrowly scoped signal/ptrace permissions to Snap Docker's generated host profile so Docker can clean up these runners. It keeps a `.before-codex-gateway` backup. Rerun the installer after refreshing the Docker Snap, which may regenerate that profile. On non-AppArmor hosts leave the setting empty. A missing configured profile fails closed instead of silently disabling sandboxing.
+
 Build directly when Compose is not desired:
 
 ```powershell

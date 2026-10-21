@@ -51,6 +51,7 @@ services:
       Codex__Container__WorkspaceVolume: codex-gateway-data
       Codex__Container__AuthVolume: codex-gateway-auth
       Codex__Container__Network: "${CODEX_RUNNER_NETWORK:-codex-gateway-runner}"
+      Codex__Container__AppArmorProfile: "${CODEX_RUNNER_APPARMOR_PROFILE:-}"
       Codex__Container__MemoryMegabytes: "${CODEX_RUNNER_MEMORY_MB:-2048}"
       Codex__Container__CpuLimit: "${CODEX_RUNNER_CPU_LIMIT:-2}"
       Codex__Container__PidsLimit: "${CODEX_RUNNER_PIDS_LIMIT:-256}"

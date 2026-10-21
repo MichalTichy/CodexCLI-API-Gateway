@@ -1,0 +1,8 @@
+# Applied only to ephemeral runners, never the Gateway control plane.
+# Ubuntu 24.04 otherwise transitions unconfined user namespaces into the
+# restrictive unprivileged_userns profile and prevents Bubblewrap starting.
+# The runner remains non-root, cap-drop ALL, read-only, and resource-limited.
+# Codex's inner sandbox enforces filesystem and command network permissions.
+profile codex-gateway-runner flags=(unconfined) {
+    userns,
+}
