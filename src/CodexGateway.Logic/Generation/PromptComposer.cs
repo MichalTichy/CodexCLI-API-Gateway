@@ -54,6 +54,7 @@ public sealed class PromptComposer(IFileStore files)
         var prompt = new StringBuilder();
         prompt.AppendLine("The current working directory is an isolated run workspace.");
         prompt.AppendLine("Use ./artifacts for input and output files. Shell-command network access is disabled.");
+        prompt.AppendLine("The catalog's codex-built-in/shell and codex-built-in/web_search IDs are planning descriptors, not MCP endpoints. Execute their command or query using the corresponding native Codex tool while respecting the conversation's investigation-only and approval constraints. The standard runner includes python3 with openpyxl for XLSX templates, python-docx, and pypdf.");
         prompt.AppendLine("MCP tools may provide temporary source files under ./.gateway/mcp-files. Inspect them only when relevant, never execute them or enable macros, and use extract-document-text for supported PDF, Office, HTML, and text documents.");
         prompt.AppendLine("To pass a newly generated file to an MCP tool accepting agentFileUrl, supply its ./artifacts/... path in that field. Gateway snapshots the file and replaces the path with a run-scoped download URL before forwarding the authorized tool call. Use this instead of copying file bytes into the conversation.");
         if (input.StructuredOutput is { } output)

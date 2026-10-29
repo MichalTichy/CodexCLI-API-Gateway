@@ -50,6 +50,8 @@ public sealed class ProtocolNeutralApplicationTests
         Assert.Contains("[user]\nSummarize the file.\n[Attached file: file-one]", NormalizeNewlines(prompt.Text), StringComparison.Ordinal);
         Assert.Contains("./artifacts/file-one_notes.txt", prompt.Text, StringComparison.Ordinal);
         Assert.Contains("structured output 'summary'", prompt.Text, StringComparison.Ordinal);
+        Assert.Contains("codex-built-in/shell", prompt.Text, StringComparison.Ordinal);
+        Assert.Contains("planning descriptors, not MCP endpoints", prompt.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("Codex CLI API Gateway", prompt.Text, StringComparison.Ordinal);
         Assert.Equal(["file-one"], prompt.TemporaryFileIds);
         Assert.Equal("object", prompt.OutputSchema?.GetProperty("type").GetString());
@@ -355,7 +357,7 @@ public sealed class ProtocolNeutralApplicationTests
             new GetToolCatalogUseCase(new GatewayRequestContext("default", project.Id)),
             CancellationToken.None);
 
-        var catalogServer = Assert.Single(result.Servers);
+        var catalogServer = Assert.Single(result.Servers, server => server.Id == "catalog");
         Assert.True(catalogServer.Required);
         Assert.Equal(["read", "write"], catalogServer.Tools.Select(tool => tool.Name));
         Assert.Equal("catalog/write", catalogServer.Tools.Single(tool => tool.Name == "write").Id);
@@ -392,9 +394,32 @@ public sealed class ProtocolNeutralApplicationTests
 
         var server = Assert.Single(result.Servers);
         Assert.Equal("codex-built-in", server.Id);
-        var tool = Assert.Single(server.Tools);
+        var tool = Assert.Single(server.Tools, tool => tool.Name == "web_search");
         Assert.Equal("codex-built-in/web_search", tool.Id);
         Assert.Equal("live", tool.Meta!.Value.GetProperty("mode").GetString());
+    }
+
+    [Fact]
+    public async Task Projectless_catalog_describes_local_document_processing_without_discovering_mcp()
+    {
+        var handler = new GetToolCatalogUseCaseHandler(
+            new FakeGatewayStateRepository(new GatewayState()),
+            new StubMcpDiscovery());
+
+        var result = await handler.Handle(
+            new GetToolCatalogUseCase(new GatewayRequestContext("default", null)),
+            CancellationToken.None);
+
+        var server = Assert.Single(result.Servers);
+        var shell = Assert.Single(server.Tools);
+        Assert.Equal("codex-built-in/shell", shell.Id);
+        Assert.Contains("openpyxl", shell.Description, StringComparison.Ordinal);
+        Assert.Contains("extract-document-text", shell.Description, StringComparison.Ordinal);
+        Assert.Contains("networking is disabled", shell.Description, StringComparison.Ordinal);
+        Assert.Contains("agentFileUrl", shell.Description, StringComparison.Ordinal);
+        Assert.Equal("command", Assert.Single(shell.InputSchema.GetProperty("required").EnumerateArray()).GetString());
+        Assert.Equal("string", shell.InputSchema.GetProperty("properties").GetProperty("command").GetProperty("type").GetString());
+        Assert.Equal("native-shell", shell.Meta!.Value.GetProperty("execution").GetString());
     }
 
     private static IOptions<GatewayOptions> TestOptions() => Options.Create(new GatewayOptions

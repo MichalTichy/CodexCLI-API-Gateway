@@ -26,7 +26,7 @@ public sealed class ToolsDiscoveryTests : IDisposable
     }
 
     [Fact]
-    public async Task Projectless_default_catalog_and_full_alias_are_identical_and_empty_for_every_valid_global_key()
+    public async Task Projectless_catalog_and_full_alias_describe_only_native_shell_for_every_valid_global_key()
     {
         using var defaultResponse = await SendAsync("/v1/tools", DefaultKey);
         using var secondaryResponse = await SendAsync("/v1/tools", SecondaryKey);
@@ -37,8 +37,8 @@ public sealed class ToolsDiscoveryTests : IDisposable
         var secondaryCatalog = await AssertCatalogPayloadAsync(secondaryResponse);
         var defaultAlias = await AssertCatalogPayloadAsync(defaultAliasResponse);
         var secondaryAlias = await AssertCatalogPayloadAsync(secondaryAliasResponse);
-        Assert.Empty(defaultCatalog.GetProperty("data").EnumerateArray());
-        Assert.Empty(secondaryCatalog.GetProperty("data").EnumerateArray());
+        AssertNativeShellOnly(defaultCatalog);
+        AssertNativeShellOnly(secondaryCatalog);
         Assert.Equal(defaultCatalog.ToString(), defaultAlias.ToString());
         Assert.Equal(secondaryCatalog.ToString(), secondaryAlias.ToString());
         Assert.Equal(
@@ -63,7 +63,9 @@ public sealed class ToolsDiscoveryTests : IDisposable
 
         var server = Assert.Single(catalog.GetProperty("data").EnumerateArray());
         Assert.Equal("codex-built-in", server.GetProperty("id").GetString());
-        var tool = Assert.Single(server.GetProperty("tools").EnumerateArray());
+        var tools = server.GetProperty("tools").EnumerateArray().ToArray();
+        Assert.Equal(new[] { "shell", "web_search" }, tools.Select(ToolName));
+        var tool = tools.Single(tool => ToolName(tool) == "web_search");
         Assert.Equal("codex-built-in/web_search", tool.GetProperty("id").GetString());
         Assert.Equal("live", tool.GetProperty("_meta").GetProperty("mode").GetString());
         AssertNoDiscoveryContainerRuns();
@@ -151,7 +153,11 @@ public sealed class ToolsDiscoveryTests : IDisposable
             Assert.DoesNotContain("TOOLS_DISCOVERY_STDIO_SECRET", serialized, StringComparison.Ordinal);
             Assert.DoesNotContain("TOOLS_DISCOVERY_HTTP_SECRET", serialized, StringComparison.Ordinal);
             Assert.DoesNotContain("\"transport\"", serialized, StringComparison.Ordinal);
-            Assert.DoesNotContain("\"command\"", serialized, StringComparison.Ordinal);
+            foreach (var mcpServer in payload.GetProperty("data").EnumerateArray()
+                         .Where(server => server.GetProperty("id").GetString() != "codex-built-in"))
+            {
+                Assert.DoesNotContain("\"command\"", mcpServer.ToString(), StringComparison.Ordinal);
+            }
             Assert.DoesNotContain("\"arguments\"", serialized, StringComparison.Ordinal);
             Assert.DoesNotContain("\"environment_variables\"", serialized, StringComparison.Ordinal);
             Assert.DoesNotContain("\"environment_headers\"", serialized, StringComparison.Ordinal);
@@ -225,7 +231,9 @@ public sealed class ToolsDiscoveryTests : IDisposable
 
     private static void AssertDefaultKeyMetadata(JsonElement payload)
     {
-        var servers = payload.GetProperty("data").EnumerateArray().ToArray();
+        AssertNativeShellOnly(payload, containsMcpServers: true);
+        var servers = payload.GetProperty("data").EnumerateArray()
+            .Where(server => server.GetProperty("id").GetString() != "codex-built-in").ToArray();
         Assert.Equal(2, servers.Length);
 
         var alpha = servers[0];
@@ -277,7 +285,9 @@ public sealed class ToolsDiscoveryTests : IDisposable
 
     private static void AssertSecondaryKeyMetadata(JsonElement payload)
     {
-        var alpha = Assert.Single(payload.GetProperty("data").EnumerateArray());
+        AssertNativeShellOnly(payload, containsMcpServers: true);
+        var alpha = Assert.Single(payload.GetProperty("data").EnumerateArray(),
+            server => server.GetProperty("id").GetString() != "codex-built-in");
         AssertServer(alpha, "alpha", "Alpha", "1.2.3", required: true, hasOptionalMetadata: true);
         var tools = alpha.GetProperty("tools").EnumerateArray().ToArray();
         Assert.Equal(new[] { "delete", "write" }, tools.Select(ToolName).ToArray());
@@ -299,6 +309,24 @@ public sealed class ToolsDiscoveryTests : IDisposable
             delete.GetProperty("input_schema"));
 
         AssertWriteTool(tools[1]);
+    }
+
+    private static void AssertNativeShellOnly(JsonElement payload, bool containsMcpServers = false)
+    {
+        var servers = payload.GetProperty("data").EnumerateArray().ToArray();
+        if (!containsMcpServers)
+        {
+            Assert.Single(servers);
+        }
+
+        var builtIn = Assert.Single(servers, server => server.GetProperty("id").GetString() == "codex-built-in");
+        var shell = Assert.Single(builtIn.GetProperty("tools").EnumerateArray());
+        Assert.Equal("codex-built-in/shell", shell.GetProperty("id").GetString());
+        Assert.Equal("native-shell", shell.GetProperty("_meta").GetProperty("execution").GetString());
+        var schema = shell.GetProperty("input_schema");
+        Assert.Equal("string", schema.GetProperty("properties").GetProperty("command").GetProperty("type").GetString());
+        Assert.Equal("command", Assert.Single(schema.GetProperty("required").EnumerateArray()).GetString());
+        Assert.False(schema.GetProperty("additionalProperties").GetBoolean());
     }
 
     private static void AssertServer(
