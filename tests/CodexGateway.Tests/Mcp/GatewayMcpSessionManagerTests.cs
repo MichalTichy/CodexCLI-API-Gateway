@@ -194,8 +194,11 @@ public sealed class GatewayMcpSessionManagerTests
         }
     }
 
-    [Fact]
-    public async Task Http_session_materializes_explicit_artifact_resource_inside_its_run_workspace()
+    [Theory]
+    [InlineData("artifact://mail/report.txt", "get_email_attachment", "text/plain")]
+    [InlineData("https://files.todoist.com/user_upload/v2/123/file.xlsx", "view-attachment", "application/octet-stream")]
+    public async Task Http_session_materializes_binary_resource_inside_its_run_workspace(
+        string resourceUri, string toolName, string mimeType)
     {
         const string secretVariable = "CODEX_GATEWAY_MCP_ARTIFACT_TEST_SECRET";
         var previousValue = Environment.GetEnvironmentVariable(secretVariable);
@@ -218,8 +221,8 @@ public sealed class GatewayMcpSessionManagerTests
                             type = "resource",
                             resource = new
                             {
-                                uri = "artifact://mail/report.txt",
-                                mimeType = "text/plain",
+                                uri = resourceUri,
+                                mimeType,
                                 blob = Convert.ToBase64String(bytes)
                             }
                         }
@@ -230,13 +233,19 @@ public sealed class GatewayMcpSessionManagerTests
             var sessions = CreateManager(upstream);
             await using var lease = await sessions.CreateAsync(
                 workspace,
-                [new ResolvedMcpServer(CreateHttpServer(secretVariable), ["get_email_attachment"], false)],
+                [new ResolvedMcpServer(CreateHttpServer(secretVariable), [toolName], false)],
                 CancellationToken.None);
             var connection = Assert.Single(lease.Connections).Value!;
             var context = CreateRequest(
                 connection.Url!,
                 connection.SessionToken!,
-                """{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_email_attachment","arguments":{}}}""");
+                JsonSerializer.Serialize(new
+                {
+                    jsonrpc = "2.0",
+                    id = 1,
+                    method = "tools/call",
+                    @params = new { name = toolName, arguments = new { } }
+                }));
 
             await sessions.HandleAsync(
                 context,
@@ -333,6 +342,64 @@ public sealed class GatewayMcpSessionManagerTests
         finally
         {
             Environment.SetEnvironmentVariable(secretVariable, previousValue);
+            Directory.Delete(workspace, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Generated_file_is_forwarded_as_a_temporary_url_only_for_authorized_tools(bool allowed)
+    {
+        const string secretVariable = "CODEX_GATEWAY_OUTPUT_FILE_TEST_SECRET";
+        var previous = Environment.GetEnvironmentVariable(secretVariable);
+        Environment.SetEnvironmentVariable(secretVariable, "upstream-api-key");
+        var workspace = Path.Combine(Path.GetTempPath(), "gateway-output-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(workspace, "artifacts"));
+        try
+        {
+            var bytes = "generated report"u8.ToArray();
+            await File.WriteAllBytesAsync(Path.Combine(workspace, "artifacts", "report.xlsx"), bytes);
+            var upstream = new RecordingHttpMessageHandler();
+            var sessions = CreateManager(upstream);
+            string? token = null;
+            await using (var lease = await sessions.CreateAsync(workspace,
+                [new ResolvedMcpServer(CreateHttpServer(secretVariable), allowed ? ["send_files"] : ["read_files"], false)], CancellationToken.None))
+            {
+                var connection = Assert.Single(lease.Connections).Value!;
+                var context = CreateRequest(connection.Url!, connection.SessionToken!,
+                    """{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"send_files","arguments":{"files":[{"name":"report.xlsx","agentFileUrl":"./artifacts/report.xlsx"}]}}}""");
+                await sessions.HandleAsync(context, new Uri(connection.Url!).Segments.Last().TrimEnd('/'), CancellationToken.None);
+                Assert.Equal(allowed ? StatusCodes.Status200OK : StatusCodes.Status403Forbidden, context.Response.StatusCode);
+                if (!allowed)
+                {
+                    Assert.Null(upstream.Body);
+                    Assert.False(Directory.Exists(Path.Combine(workspace, ".gateway", "mcp-files")));
+                }
+                else
+                {
+                    using var body = JsonDocument.Parse(upstream.Body!);
+                    var url = body.RootElement.GetProperty("params").GetProperty("arguments")
+                        .GetProperty("files")[0].GetProperty("agentFileUrl").GetString()!;
+                    token = new Uri(url).Segments.Last();
+                    var download = new DefaultHttpContext();
+                    download.Response.Body = new MemoryStream();
+                    await sessions.HandleArtifactAsync(download, token, CancellationToken.None);
+                    Assert.Equal(StatusCodes.Status200OK, download.Response.StatusCode);
+                    Assert.Equal(bytes, ((MemoryStream)download.Response.Body).ToArray());
+                }
+            }
+            if (token is not null)
+            {
+                var expired = new DefaultHttpContext();
+                expired.Response.Body = new MemoryStream();
+                await sessions.HandleArtifactAsync(expired, token, CancellationToken.None);
+                Assert.Equal(StatusCodes.Status404NotFound, expired.Response.StatusCode);
+            }
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(secretVariable, previous);
             Directory.Delete(workspace, recursive: true);
         }
     }

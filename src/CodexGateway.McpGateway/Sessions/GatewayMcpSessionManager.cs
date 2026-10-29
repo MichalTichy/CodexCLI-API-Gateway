@@ -118,6 +118,8 @@ public sealed class GatewayMcpSessionManager(
                 var body = await GatewayMcpRequestBody.ReadAsync(context.Request, cancellationToken);
                 GatewayMcpToolCallAuthorizer.EnsureAllowed(body, session.EnabledTools);
                 shouldMaterializeFiles = GatewayMcpRequestBody.ContainsMethod(body, "tools/call");
+                if (shouldMaterializeFiles)
+                    body = await session.Materializer.PrepareRequestAsync(body, cancellationToken);
                 context.Request.Body = new MemoryStream(body, writable: false);
                 context.Request.ContentLength = body.Length;
             }

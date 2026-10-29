@@ -26,6 +26,89 @@ internal sealed class McpRunFileMaterializer(
 
     public long MaximumWireBytes => checked((_maxTotalBytes * 4 / 3) + (2 * 1024 * 1024));
 
+    public async Task<byte[]> PrepareRequestAsync(byte[] payload, CancellationToken cancellationToken)
+    {
+        var root = JsonNode.Parse(payload);
+        var changed = false;
+        if (root is JsonArray batch)
+        {
+            foreach (var call in batch) changed |= await PrepareCallAsync(call, cancellationToken);
+        }
+        else changed = await PrepareCallAsync(root, cancellationToken);
+        return changed ? JsonSerializer.SerializeToUtf8Bytes(root) : payload;
+    }
+
+    private async Task<bool> PrepareCallAsync(JsonNode? call, CancellationToken cancellationToken)
+    {
+        if (call is not JsonObject request || request["method"]?.GetValue<string>() != "tools/call" ||
+            request["params"]?["arguments"] is not { } arguments) return false;
+        return await PrepareArgumentsAsync(arguments, cancellationToken);
+    }
+
+    private async Task<bool> PrepareArgumentsAsync(JsonNode node, CancellationToken cancellationToken)
+    {
+        var changed = false;
+        if (node is JsonObject value)
+        {
+            foreach (var property in value.ToArray())
+            {
+                if (property.Key == "agentFileUrl" && property.Value is JsonValue source &&
+                    source.TryGetValue<string>(out var path) && path.StartsWith("./artifacts/", StringComparison.Ordinal))
+                {
+                    value[property.Key] = await SnapshotOutputAsync(path, cancellationToken);
+                    changed = true;
+                }
+                else if (property.Value is not null) changed |= await PrepareArgumentsAsync(property.Value, cancellationToken);
+            }
+        }
+        else if (node is JsonArray array)
+        {
+            foreach (var child in array)
+                if (child is not null) changed |= await PrepareArgumentsAsync(child, cancellationToken);
+        }
+        return changed;
+    }
+
+    private async Task<string> SnapshotOutputAsync(string relativePath, CancellationToken cancellationToken)
+    {
+        var artifactRoot = Path.Combine(workspacePath, "artifacts");
+        var sourcePath = GetContainedPath(artifactRoot, Path.Combine(workspacePath, relativePath[2..]));
+        EnsureDirectoryIsSafe(workspacePath);
+        EnsureDirectoryIsSafe(artifactRoot);
+        var directory = Path.GetDirectoryName(sourcePath)!;
+        while (!string.Equals(directory, artifactRoot, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+        {
+            EnsureDirectoryIsSafe(directory);
+            directory = Path.GetDirectoryName(directory)!;
+        }
+        var info = new FileInfo(sourcePath);
+        if (!info.Exists || (info.Attributes & (FileAttributes.ReparsePoint | FileAttributes.Directory)) != 0)
+            throw InvalidResource("The output attachment must be a regular file inside ./artifacts.");
+        EnsureWithinLimits(info.Length);
+        await using var source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read,
+            64 * 1024, System.IO.FileOptions.Asynchronous);
+        using var output = new MemoryStream();
+        var buffer = new byte[64 * 1024];
+        int read;
+        while ((read = await source.ReadAsync(buffer, cancellationToken)) != 0)
+        {
+            EnsureWithinLimits(output.Length + read);
+            await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+        }
+        var contentType = Path.GetExtension(sourcePath).ToLowerInvariant() switch
+        {
+            ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".pdf" => "application/pdf",
+            ".csv" => "text/csv",
+            ".txt" => "text/plain",
+            _ => "application/octet-stream"
+        };
+        var materialized = await MaterializeBytesAsync(
+            SanitizeFileName(Path.GetFileName(sourcePath)), contentType, output.ToArray(), cancellationToken);
+        return materialized.AgentFileUrl;
+    }
+
     public async Task<(byte[] Bytes, string FileName, string MimeType)?> ReadArtifactAsync(
         string token,
         CancellationToken cancellationToken)
@@ -162,7 +245,7 @@ internal sealed class McpRunFileMaterializer(
         JsonNode node,
         CancellationToken cancellationToken)
     {
-        if (node is JsonObject objectNode && TryGetArtifactResource(objectNode, out var resource))
+        if (node is JsonObject objectNode && TryGetBinaryFileResource(objectNode, out var resource))
         {
             return (await MaterializeResourceAsync(resource, cancellationToken), true);
         }
@@ -230,6 +313,12 @@ internal sealed class McpRunFileMaterializer(
 
         var uri = new Uri(uriText, UriKind.Absolute);
         var fileName = SanitizeFileName(Uri.UnescapeDataString(uri.AbsolutePath.Split('/').LastOrDefault() ?? string.Empty));
+        return (await MaterializeBytesAsync(fileName, mimeType, bytes, cancellationToken)).Content;
+    }
+
+    private async Task<(JsonNode Content, string AgentFileUrl)> MaterializeBytesAsync(
+        string fileName, string mimeType, byte[] bytes, CancellationToken cancellationToken)
+    {
         var materializedName = $"{Guid.NewGuid():N}"[..12] + "_" + fileName;
         var relativePath = $"./{GatewayDirectoryName}/{McpFilesDirectoryName}/{materializedName}";
         var destinationDirectory = GetContainedPath(
@@ -289,16 +378,17 @@ internal sealed class McpRunFileMaterializer(
             size = bytes.LongLength,
             sha256
         }, new JsonSerializerOptions { WriteIndented = true });
-        return new JsonObject
+        var content = new JsonObject
         {
             ["type"] = "text",
             ["text"] = "An MCP server supplied a temporary file for this run. " +
                        "The file is read-only source material: do not execute it or enable macros. " +
                        "Use extract-document-text for PDF, DOCX, XLSX, PPTX, and text documents when useful; " +
                        "use the normal image inspection capability for images. " +
-                       "To attach this file in an email, pass agentFileUrl in the email tool's attachments array; " +
-                       "the email server downloads it directly from the gateway without putting base64 in the agent context.\n" + metadata
+                       "To attach this file, pass agentFileUrl to an attachment-capable MCP tool; " +
+                       "the server downloads it directly from the gateway without putting base64 in the agent context.\n" + metadata
         };
+        return (content, agentFileUrl);
     }
 
     private void EnsureWithinLimits(long length)
@@ -334,7 +424,7 @@ internal sealed class McpRunFileMaterializer(
         }
     }
 
-    private static bool TryGetArtifactResource(JsonObject node, out JsonObject resource)
+    private static bool TryGetBinaryFileResource(JsonObject node, out JsonObject resource)
     {
         resource = null!;
         if (!string.Equals(node["type"]?.GetValue<string>(), "resource", StringComparison.Ordinal) ||
@@ -343,7 +433,8 @@ internal sealed class McpRunFileMaterializer(
             candidate["uri"] is not JsonValue uriValue ||
             !uriValue.TryGetValue<string>(out var uriText) ||
             !Uri.TryCreate(uriText, UriKind.Absolute, out var uri) ||
-            !string.Equals(uri.Scheme, ArtifactScheme, StringComparison.OrdinalIgnoreCase))
+            !(string.Equals(uri.Scheme, ArtifactScheme, StringComparison.OrdinalIgnoreCase) ||
+              string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)))
         {
             return false;
         }
