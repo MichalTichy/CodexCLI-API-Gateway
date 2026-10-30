@@ -9,6 +9,7 @@
         <div class="detail-savebar" data-testid="project-savebar">
             <div class="savebar-context"><strong>@Project.Name</strong><small>@Project.Id @SelectedContext</small><span class="save-state @SaveStateClass" role="status">@SaveState</span></div>
             <div class="editor-toolbar-actions">
+                <LumexButton Type="@ButtonType.Button" Color="@ThemeColor.Danger" Variant="@Variant.Light" Disabled="@_busy" OnClick="ConfirmDelete">@AdminUx.Text("DeleteProject")</LumexButton>
                 <LumexButton Type="@ButtonType.Button" Variant="@Variant.Light" Disabled="@(_busy || !IsDirty)" OnClick="DiscardChanges">@AdminUx.Text("Discard")</LumexButton>
                 <LumexButton Type="@ButtonType.Submit" Color="@ThemeColor.Primary" Disabled="@(_busy || !IsDirty || HasExternalChanges)">Save changes</LumexButton>
             </div>
@@ -27,7 +28,6 @@
                 <div><LumexTextbox id="@($"project-name-{Project.Id}")" Behavior="@InputBehavior.OnInput" @bind-Value="_editor.Name" Label="Project name" aria-label="Project name" LabelPlacement="@LabelPlacement.Outside" Variant="@InputVariant.Outlined" /><ValidationMessage For="() => _editor.Name" /></div>
                 <label class="toggle-field"><InputCheckbox @bind-Value="_editor.Enabled" /><span><strong>Accept API requests</strong><small>Turn off to block new requests for this project.</small></span></label>
             </div>
-            <div class="danger-zone"><LumexButton Type="@ButtonType.Button" Color="@ThemeColor.Danger" Variant="@Variant.Light" Disabled="@_busy" OnClick="ConfirmDelete">Delete project</LumexButton></div>
         }
         else if (_tab == "runner")
         {
@@ -140,6 +140,19 @@
         <LumexModalContent><LumexModalHeader>@AdminUx.Text("DiscardTitle")</LumexModalHeader><LumexModalBody>@AdminUx.Text("DiscardDescription")</LumexModalBody><LumexModalFooter><LumexButton Variant="@Variant.Light" OnClick="CancelDiscard">Cancel</LumexButton><LumexButton Color="@ThemeColor.Warning" OnClick="ConfirmDiscard">@AdminUx.Text("Discard")</LumexButton></LumexModalFooter></LumexModalContent>
     </LumexModal>
     <LumexModal @bind-Open="_confirmDelete">
-        <LumexModalContent><LumexModalHeader>Delete project @Project.Name?</LumexModalHeader><LumexModalBody><p>This permanently removes project <code>@Project.Id</code>, its access configuration, and its stored artifacts. New requests will stop working immediately.</p></LumexModalBody><LumexModalFooter><LumexButton Variant="@Variant.Light" OnClick="CancelDelete">Cancel</LumexButton><LumexButton Color="@ThemeColor.Danger" Disabled="@_busy" OnClick="DeleteAsync">Delete project</LumexButton></LumexModalFooter></LumexModalContent>
+        <LumexModalContent>
+            <LumexModalHeader>@AdminUx.Format("DeleteProjectTitle", Project.Name)</LumexModalHeader>
+            <LumexModalBody>
+                <p>@AdminUx.Format("DeleteProjectDescription", Project.Id)</p>
+                @if (_statusKind == "error")
+                {
+                    <LumexAlert Color="@ThemeColor.Danger" Description="@_status" />
+                }
+            </LumexModalBody>
+            <LumexModalFooter>
+                <LumexButton Variant="@Variant.Light" Disabled="@_busy" OnClick="CancelDelete">Cancel</LumexButton>
+                <LumexButton Color="@ThemeColor.Danger" Disabled="@_busy" OnClick="DeleteAsync">@AdminUx.Text("DeleteProject")</LumexButton>
+            </LumexModalFooter>
+        </LumexModalContent>
     </LumexModal>
 </article>

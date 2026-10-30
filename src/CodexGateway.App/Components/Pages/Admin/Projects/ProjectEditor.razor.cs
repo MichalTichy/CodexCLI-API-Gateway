@@ -292,7 +292,12 @@ public partial class ProjectEditor : ComponentBase, IDisposable
         }
     }
 
-    private void ConfirmDelete() => _confirmDelete = true;
+    private void ConfirmDelete()
+    {
+        _status = string.Empty;
+        _statusKind = string.Empty;
+        _confirmDelete = true;
+    }
 
     private void CancelDelete() => _confirmDelete = false;
 

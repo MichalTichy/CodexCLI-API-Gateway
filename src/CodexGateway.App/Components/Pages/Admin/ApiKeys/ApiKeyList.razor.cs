@@ -12,12 +12,12 @@ public partial class ApiKeyList : AdminComponentBase
 {
     private CreateApiKeyModel _create = new();
     private ApiKeyDefinition? _createdApiKey;
-    private string? _revokeKeyId;
-    private bool _revokeDialogOpen;
+    private string? _deleteKeyId;
+    private bool _deleteDialogOpen;
     private bool _revealCreatedSecret;
     private bool _secretCopied;
 
-    private ApiKeyIdentity? RevokeTarget => ApiKeys.FirstOrDefault(key => key.Id == _revokeKeyId);
+    private ApiKeyIdentity? DeleteTarget => ApiKeys.FirstOrDefault(key => key.Id == _deleteKeyId);
 
     [Inject]
     private ISender Sender { get; set; } = null!;
@@ -79,28 +79,42 @@ public partial class ApiKeyList : AdminComponentBase
         _secretCopied = false;
     }
 
-    private void AskToRevoke(string id)
+    private void AskToDelete(string id)
     {
-        _revokeKeyId = id;
-        _revokeDialogOpen = true;
+        SetStatus(string.Empty);
+        _deleteKeyId = id;
+        _deleteDialogOpen = true;
     }
 
-    private void CancelRevoke()
+    private void CancelDelete()
     {
-        _revokeDialogOpen = false;
-        _revokeKeyId = null;
+        _deleteDialogOpen = false;
+        _deleteKeyId = null;
     }
 
-    private async Task ConfirmRevokeAsync()
+    private async Task ConfirmDeleteAsync()
     {
-        if (_revokeKeyId is null)
+        if (_deleteKeyId is null)
         {
             return;
         }
 
-        var id = _revokeKeyId;
-        await DeleteAsync(id);
-        CancelRevoke();
+        var id = _deleteKeyId;
+        await RunAsync(
+            async () => await Sender.Send(new DeleteApiKeyUseCase(id), PageCancellationToken),
+            async () =>
+            {
+                if (_createdApiKey?.Id == id)
+                {
+                    DismissCreatedSecret();
+                }
+
+                CancelDelete();
+                await OnChanged.InvokeAsync(AdminUx.Format("ApiKeyDeleted", id));
+            },
+            Logger,
+            AdminUx.Text("DeletingApiKey"),
+            $"Unexpected failure while deleting API key {id}.");
     }
 
     private int ProjectGrantCount(string id) => Projects.Count(project =>
@@ -111,20 +125,4 @@ public partial class ApiKeyList : AdminComponentBase
         var count = ProjectGrantCount(id);
         return count == 1 ? "1 project grant" : $"{count} project grants";
     }
-
-    private string ProjectGrantImpact(string id)
-    {
-        var count = ProjectGrantCount(id);
-        return count == 1
-            ? "1 project grant currently references it."
-            : $"{count} project grants currently reference it.";
-    }
-
-    private async Task DeleteAsync(string id) =>
-        await RunAsync(
-            async () => await Sender.Send(new DeleteApiKeyUseCase(id), PageCancellationToken),
-            () => OnChanged.InvokeAsync($"API key {id} revoked."),
-            Logger,
-            "Revoking API key…",
-            $"Unexpected failure while revoking API key {id}.");
 }

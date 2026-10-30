@@ -69,4 +69,12 @@
 <data name="MatrixRiskUnavailable" xml:space="preserve"><value>Risk check unavailable</value></data>
 <data name="MatrixRiskUnchecked" xml:space="preserve"><value>Risk not checked yet</value></data>
 <data name="MatrixRiskExplanation" xml:space="preserve"><value>Counts cover allowed tools and use MCP server annotations. Tools without usable annotations have unknown risk.</value></data>
+<data name="DeleteProject" xml:space="preserve"><value>Delete project</value></data>
+<data name="DeleteProjectTitle" xml:space="preserve"><value>Delete project “{0}”?</value></data>
+<data name="DeleteProjectDescription" xml:space="preserve"><value>This permanently removes project {0}, its access configuration, and its stored artifacts. New requests will stop working immediately.</value></data>
+<data name="DeleteApiKey" xml:space="preserve"><value>Delete API key</value></data>
+<data name="DeleteApiKeyTitle" xml:space="preserve"><value>Delete API key “{0}”?</value></data>
+<data name="DeleteApiKeyDescription" xml:space="preserve"><value>This permanently deletes the key and all its project access. Project grants to remove: {0}. Clients using this key will immediately stop working.</value></data>
+<data name="DeletingApiKey" xml:space="preserve"><value>Deleting API key…</value></data>
+<data name="ApiKeyDeleted" xml:space="preserve"><value>API key {0} deleted.</value></data>
 </root>

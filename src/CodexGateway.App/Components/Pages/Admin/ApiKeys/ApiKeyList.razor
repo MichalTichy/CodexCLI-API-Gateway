@@ -115,7 +115,7 @@
                                     <span class="block truncate text-xs text-foreground-500">Key ID: <code>@key.Id</code> · @ProjectGrantSummary(key.Id)</span>
                                 </div>
                             </div>
-                            <div class="row-actions"><LumexButton Variant="@Variant.Light" Size="@Size.Small" OnClick="@(() => OnManageAccess.InvokeAsync(key.Id))">@AdminUx.Text("ManageAccess")</LumexButton><LumexButton Color="@ThemeColor.Danger" Variant="@Variant.Light" Size="@Size.Small" Disabled="@IsBusy" OnClick="@(() => AskToRevoke(key.Id))">Revoke</LumexButton></div>
+                            <div class="row-actions"><LumexButton Variant="@Variant.Light" Size="@Size.Small" OnClick="@(() => OnManageAccess.InvokeAsync(key.Id))">@AdminUx.Text("ManageAccess")</LumexButton><LumexButton Color="@ThemeColor.Danger" Variant="@Variant.Light" Size="@Size.Small" Disabled="@IsBusy" OnClick="@(() => AskToDelete(key.Id))">@AdminUx.Text("DeleteApiKey")</LumexButton></div>
                         </div>
                     }
                 </div>
@@ -123,21 +123,25 @@
         </LumexCardBody>
     </LumexCard>
 
-    <LumexModal @bind-Open="_revokeDialogOpen">
+    <LumexModal @bind-Open="_deleteDialogOpen">
         <LumexModalContent>
-            <LumexModalHeader>@(RevokeTarget is null ? "Revoke API key?" : $"Revoke “{RevokeTarget.Name}”?")</LumexModalHeader>
+            <LumexModalHeader>@AdminUx.Format("DeleteApiKeyTitle", DeleteTarget?.Name ?? _deleteKeyId ?? string.Empty)</LumexModalHeader>
             <LumexModalBody>
-                @if (RevokeTarget is not null)
+                @if (DeleteTarget is not null)
                 {
                     <div class="grid gap-3 text-sm text-foreground-600">
-                        <p>Key ID: <code>@RevokeTarget.Id</code></p>
-                        <p>Clients using this key will immediately stop working. @ProjectGrantImpact(RevokeTarget.Id)</p>
+                        <p>Key ID: <code>@DeleteTarget.Id</code></p>
+                        <p>@AdminUx.Format("DeleteApiKeyDescription", ProjectGrantCount(DeleteTarget.Id))</p>
                     </div>
+                }
+                @if (StatusKind == AdminStatusKind.Error)
+                {
+                    <LumexAlert Color="@ThemeColor.Danger" Description="@Status" />
                 }
             </LumexModalBody>
             <LumexModalFooter>
-                <LumexButton Variant="@Variant.Light" OnClick="CancelRevoke">Cancel</LumexButton>
-                <LumexButton Color="@ThemeColor.Danger" Disabled="@IsBusy" OnClick="ConfirmRevokeAsync">Revoke API key</LumexButton>
+                <LumexButton Variant="@Variant.Light" Disabled="@IsBusy" OnClick="CancelDelete">Cancel</LumexButton>
+                <LumexButton Color="@ThemeColor.Danger" Disabled="@IsBusy" OnClick="ConfirmDeleteAsync">@AdminUx.Text("DeleteApiKey")</LumexButton>
             </LumexModalFooter>
         </LumexModalContent>
     </LumexModal>
