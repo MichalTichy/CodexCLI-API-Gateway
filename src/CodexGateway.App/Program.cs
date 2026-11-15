@@ -6,6 +6,7 @@ using CodexGateway.App.Mcp;
 using FastEndpoints;
 using FastEndpoints.Swagger;
 using Microsoft.Extensions.Options;
+using CodexGateway.App.Setup;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
@@ -29,6 +30,7 @@ app.UseFastEndpoints(configuration =>
 app.UseSwaggerGen();
 
 app.MapGatewayMcpEndpoints();
+app.MapSetupEndpoints();
 app.MapDefaultEndpoints();
 app.MapStaticAssets();
 

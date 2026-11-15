@@ -110,6 +110,10 @@ Use `./scripts/build-images.ps1` to build and verify both images. It resolves np
 
 ## Quick start with Aspire
 
+For guided automation of projects, API keys, MCP discovery and exact tool grants,
+see the optional [AI-assisted setup API](docs/ai-setup-api.md). It is disabled by
+default and uses a separate temporary setup credential.
+
 Restore the pinned local Aspire CLI and run the AppHost:
 
 ```powershell

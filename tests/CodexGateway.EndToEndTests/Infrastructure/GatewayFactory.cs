@@ -20,6 +20,7 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>
     private readonly int? _maxArtifactTotalMegabytes;
     private readonly bool _adminEnabled;
     private readonly string _connectionString;
+    private readonly string? _setupApiKey;
 
     public GatewayFactory(
         int maxConcurrent = 2,
@@ -29,7 +30,8 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>
         int? deviceLoginTimeoutSeconds = null,
         int? maxArtifactFileMegabytes = null,
         int? maxArtifactTotalMegabytes = null,
-        bool adminEnabled = true)
+        bool adminEnabled = true,
+        string? setupApiKey = null)
     {
         _maxConcurrent = maxConcurrent;
         _maxQueued = maxQueued;
@@ -39,6 +41,7 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>
         _maxArtifactFileMegabytes = maxArtifactFileMegabytes;
         _maxArtifactTotalMegabytes = maxArtifactTotalMegabytes;
         _adminEnabled = adminEnabled;
+        _setupApiKey = setupApiKey;
         _connectionString = PostgreSqlTestDatabase.CreateConnectionString();
         RootPath = Path.Combine(Path.GetTempPath(), "codex-gateway-e2e", Guid.NewGuid().ToString("N"));
         StoragePath = Path.Combine(RootPath, "data");
@@ -109,6 +112,7 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>
                 ["AdminUi:Username"] = "test-admin",
                 ["AdminUi:Password"] = "test-password"
             };
+            settings["Setup:ApiKey"] = _setupApiKey;
             if (_timeoutSeconds is { } timeoutSeconds)
             {
                 settings["Gateway:Limits:TimeoutSeconds"] = timeoutSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
