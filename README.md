@@ -2,6 +2,8 @@
 
 An internal .NET gateway that exposes a dedicated Codex CLI identity through an OpenAI-compatible HTTP API. It uses [FastEndpoints](https://fast-endpoints.com/), includes a Blazor Web App management UI with Interactive Server rendering, and executes every model run in a short-lived Docker container.
 
+[Docker setup](#docker) · [Security](#security-and-isolation) · [API](#openai-client-configuration) · [Development](#component-map)
+
 ## What it provides
 
 - OpenAI-compatible `chat/completions`, non-streaming JSON-schema output, model listing, versioned MCP tool discovery, files, Bearer authentication, and SSE streaming.
@@ -79,19 +81,45 @@ flowchart LR
     Models --> API
 ```
 
-Every request starts exactly one sibling container from the configured `codex-gateway-runner:latest` image unless its project selects a trusted runner-image override in the admin UI. A project run first copies persistent artifacts into a private run snapshot. Only that snapshot is mounted at `/workspace`; the live project artifact directory is never mounted. A successful run is checked and atomically committed, while failed, cancelled, and timed-out runs are discarded.
+## Security and isolation
+
+Gateway enforces tool permissions at the API, runner configuration and MCP proxy boundaries. Model-generated commands run inside a separate sandbox within each run container. These controls limit which external actions a run can perform and which files its commands can access.
+
+### How unauthorized MCP calls are blocked
+
+1. **Authenticate and resolve scope.** The API authenticates the caller's Bearer key and checks its access to the selected project. Each key has its own project grants. Projectless runs receive no MCP servers.
+2. **Inject the permitted tools.** Gateway resolves the key's exact enabled-tool subset and passes it to Codex through `enabled_tools`. The public tool catalog is filtered for that key and project. Newly discovered tools require an explicit administrator grant; API callers cannot expand their permissions. User configuration, rules, apps and plugins are ignored so they cannot introduce additional integrations.
+3. **Authorize calls before forwarding.** For gateway-hosted MCP servers, the runner connects to a run-specific proxy session using a short-lived bearer token. That session fixes the upstream server and its enabled-tool allowlist. Gateway checks each `tools/call`, including calls in JSON-RPC batches, before forwarding the request. An ungranted tool returns HTTP 403 even if the model guesses its name; missing or incorrect tokens return 401, and expired or removed sessions return 404.
+
+For example, a planning key granted mail search but no send tool cannot invoke send through the proxy. A prompt or plan asking to send mail does not grant permission. A separate execution key can be granted send access in the same project without giving that access to the planning key.
+
+The allowlist is captured when the run session is created; changing a grant configures subsequent runs. Sessions are disposed when their run ends and have a maximum lifetime controlled by `McpGateway:SessionLifetimeMinutes`. Upstream HTTP credentials and STDIO environment secrets stay in the gateway process. The runner's session token authorizes only its internal MCP endpoint.
+
+**Gateway** is the default MCP execution mode. Advanced **Runner** mode connects directly from the runner and relies on Codex's injected tool restrictions; it does not pass through the gateway's per-call proxy check. Keep gateway-hosted HTTP MCP endpoints on a private backend network, reachable by Gateway without exposing them directly to runner containers. See [MCP configuration](#projects-and-mcp-servers) for both modes and their credential handling.
+
+### How runs are isolated
+
+Every model run starts exactly one sibling container from the configured `codex-gateway-runner:latest` image unless its project selects a trusted runner-image override in the admin UI. A project run first copies persistent artifacts into a private run snapshot. Only that snapshot is mounted at `/workspace`; the live project artifact directory is never mounted. A successful run is checked and atomically committed, while failed, cancelled, and timed-out runs are discarded. Discarding a workspace does not undo external effects already performed through MCP tools.
 
 The outer container has a read-only root filesystem, no Linux capabilities, CPU/memory/PID limits, a bounded tmpfs, a non-root UID, Docker init for descendant reaping, and two labelled mounts. The inner Bubblewrap sandbox gives model-generated commands a private PID view, so `/proc/1/root` cannot be used to reach the outer auth mount.
 
-The dedicated auth volume is mounted at `/codex-home` because the Codex process needs it, but a named inner Codex permission profile grants model-generated commands only minimal runtime reads plus write access to `/workspace` and the bounded `/tmp` tmpfs. Those commands cannot read `/codex-home`; direct command networking is also disabled by the inner sandbox. The container retains its configured network for Codex model/auth traffic and HTTP MCP servers. User configuration/rules/apps/plugins are ignored, and only the MCP servers and tools granted to the authenticated API key in the selected project are injected.
+The dedicated auth volume is mounted at `/codex-home` because the Codex process needs it, but a named inner Codex permission profile grants model-generated commands only minimal runtime reads plus write access to `/workspace` and the bounded `/tmp` tmpfs. Those commands cannot read `/codex-home`; direct command networking is also disabled by the inner sandbox. A shell command cannot use `curl` or another network client to bypass the MCP grants. The outer container retains its configured network for Codex model/auth traffic and MCP connections.
+
+### Credentials and data
 
 The container receives a small runtime environment allowlist. Gateway-hosted MCP servers receive only a short-lived, run-scoped token that authorizes their internal gateway endpoint; their upstream HTTP credentials and STDIO environment secrets remain in the gateway process. Runner-hosted MCP remains an explicit advanced mode and receives only its configured MCP environment variables. Gateway/API/admin/provider credentials are never inherited, and real `codex exec` runs apply a separate safe-core allowlist to model-generated commands based on the official [shell environment policy](https://learn.chatgpt.com/docs/config-file/config-advanced#shell-environment-policy).
+
+Self-hosting keeps Gateway's database and artifact storage on your infrastructure; inference still sends prompts, relevant workspace content and tool results to the configured AI service. Granted MCP tools send requests to their connected providers. Keep the dedicated Codex auth volume, environment secrets, database, artifacts and backups private. Treat prompts, incoming documents and tool output as untrusted content: restricted grants limit the effects of prompt injection, but an enabled tool can still perform the actions its credentials permit.
+
+### Cleanup and deployment boundary
 
 The gateway persists an identity beside its storage and labels containers with `com.codex-gateway.managed=true`, `com.codex-gateway.instance-id`, and `com.codex-gateway.run-id`. At startup it reconciles only stale containers belonging to that storage identity, then safely removes their abandoned run snapshots. Success, failure, cancellation, timeout, and quota enforcement force-remove the matching run container; an abrupt gateway or host crash is recovered on the next startup.
 
 A PostgreSQL database plus storage/auth volume pair supports one live gateway instance. Project serialization and admission locks are in memory, so multiple gateway processes sharing them are unsupported. High availability would require distributed coordination and a different orphan-lease design.
 
-This is strong workspace/process isolation for a trusted internal tool, not a hostile multi-tenant security boundary. Access to the Docker socket is effectively host-administrator access: compromise of the gateway control plane can control the Docker host. Keep the gateway private, use a dedicated Docker host where practical, and never expose the socket to untrusted code. Runner containers do not receive the socket.
+This is strong workspace/process isolation for a trusted internal tool, not a hostile multi-tenant security boundary. Access to the Docker socket is effectively host-administrator access: compromise of the gateway control plane can control the Docker host. Keep the gateway private, use a dedicated Docker host where practical, and never expose the socket to untrusted code. Runner containers do not receive the socket. Administrators, runner images and configured MCP servers remain trusted components.
+
+Enabled tools are pre-approved for non-interactive API runs. Gateway enforces the configured grants; applications such as [Samwise](https://github.com/MichalTichy/Samwise-Assistant) provide workflow-specific plan review and approval before using their execution key. A failed or interrupted API response does not prove that an external action failed; reconcile its result before retrying a tool that sends, creates or changes data.
 
 ## Prerequisites
 
